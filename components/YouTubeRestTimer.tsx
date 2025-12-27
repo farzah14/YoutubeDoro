@@ -12,23 +12,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 function extractYouTubeVideoId(input: string): string | null {
   const raw = input.trim();
 
-  // direct videoId (umumnya 11 chars)
+  // direct videoId
   if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) return raw;
 
   try {
     const url = new URL(raw);
 
-    // youtu.be/<id>
     if (url.hostname.includes("youtu.be")) {
       const id = url.pathname.split("/").filter(Boolean)[0];
       return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
     }
 
-    // youtube.com/watch?v=<id>
     const v = url.searchParams.get("v");
     if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
 
-    // youtube.com/embed/<id> or /shorts/<id>
     const parts = url.pathname.split("/").filter(Boolean);
     const embedIdx = parts.indexOf("embed");
     if (embedIdx >= 0 && parts[embedIdx + 1] && /^[a-zA-Z0-9_-]{11}$/.test(parts[embedIdx + 1])) {
@@ -58,6 +55,7 @@ function pad2(n: number) {
 function dayKey(d = new Date()) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
+
 function readNumber(key: string): number {
   try {
     const v = window.localStorage.getItem(key);
@@ -73,6 +71,11 @@ function writeNumber(key: string, value: number) {
   } catch {
     // ignore
   }
+}
+
+function defer(fn: () => void) {
+  if (typeof queueMicrotask === "function") queueMicrotask(fn);
+  else window.setTimeout(fn, 0);
 }
 
 /* =========================
@@ -159,6 +162,36 @@ function TinyPreset({ children, onClick }: { children: ReactNode; onClick: () =>
   );
 }
 
+function Segmented({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="inline-flex rounded-2xl border border-white/10 bg-white/5 p-1">
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+              active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/10"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function GlassCard({
   title,
   subtitle,
@@ -192,132 +225,10 @@ function Divider() {
 }
 
 /* =========================
-   PAGE
+   Beep hook (shared)
 ========================= */
 
-export default function Page() {
-  // IMPORTANT: untuk menghindari hydration mismatch:
-  // - Render awal selalu 0 (server & client sama)
-  // - Setelah mount, baru baca localStorage dan update state
-  const [today, setToday] = useState<string>(""); // ditampilkan setelah mount
-  const [totalLearnSec, setTotalLearnSec] = useState<number>(0);
-  const [totalBreakSec, setTotalBreakSec] = useState<number>(0);
-
-  const keys = useMemo(() => {
-    const d = today || ""; // jika belum mount, keys kosong dulu
-    return {
-      learn: d ? `ytdoro:${d}:learnSec` : "",
-      brk: d ? `ytdoro:${d}:breakSec` : "",
-    };
-  }, [today]);
-
-  useEffect(() => {
-    const d = dayKey();
-
-    const learnKey = `ytdoro:${d}:learnSec`;
-    const breakKey = `ytdoro:${d}:breakSec`;
-
-    const defer = (fn: () => void) => {
-      if (typeof queueMicrotask === "function") queueMicrotask(fn);
-      else window.setTimeout(fn, 0);
-    };
-
-    defer(() => {
-      setToday(d);
-      setTotalLearnSec(readNumber(learnKey));
-      setTotalBreakSec(readNumber(breakKey));
-    });
-  }, []);
-
-  function addLearn(seconds: number) {
-    const delta = Math.max(0, Math.floor(seconds));
-    setTotalLearnSec((prev) => {
-      const next = prev + delta;
-      if (keys.learn) writeNumber(keys.learn, next);
-      return next;
-    });
-  }
-
-  function addBreak(seconds: number) {
-    const delta = Math.max(0, Math.floor(seconds));
-    setTotalBreakSec((prev) => {
-      const next = prev + delta;
-      if (keys.brk) writeNumber(keys.brk, next);
-      return next;
-    });
-  }
-
-  function resetToday() {
-    setTotalLearnSec(0);
-    setTotalBreakSec(0);
-    if (keys.learn) writeNumber(keys.learn, 0);
-    if (keys.brk) writeNumber(keys.brk, 0);
-  }
-
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-zinc-950 text-white">
-      {/* background blobs */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-indigo-500/25 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/3 -right-28 h-[520px] w-[520px] rounded-full bg-purple-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-[-140px] left-1/3 h-[520px] w-[520px] rounded-full bg-sky-500/15 blur-3xl" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.08),transparent_60%)]" />
-
-      <div className="relative mx-auto max-w-6xl px-6 py-10">
-        {/* header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-3xl font-extrabold tracking-tight">youtubedoro</div>
-            <div className="mt-1 text-sm text-white/60">Learning countdown + break mengikuti durasi video YouTube.</div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Pill>{today ? `Tanggal: ${today}` : "Tanggal: --"}</Pill>
-            <Pill>
-              <span className="text-white/60">Total Learning:</span>
-              <span className="font-semibold">{formatMMSS(totalLearnSec)}</span>
-            </Pill>
-            <Pill>
-              <span className="text-white/60">Total Break:</span>
-              <span className="font-semibold">{formatMMSS(totalBreakSec)}</span>
-            </Pill>
-          </div>
-        </div>
-
-        {/* grid */}
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <LearningCard totalTodaySec={totalLearnSec} onAddLearn={addLearn} onResetToday={resetToday} />
-          <BreakCard totalTodaySec={totalBreakSec} onAddBreak={addBreak} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* =========================
-   Learning Card (with sound)
-========================= */
-
-function LearningCard({
-  totalTodaySec,
-  onAddLearn,
-  onResetToday,
-}: {
-  totalTodaySec: number;
-  onAddLearn: (seconds: number) => void;
-  onResetToday: () => void;
-}) {
-  const [minutes, setMinutes] = useState<number>(25);
-  const [status, setStatus] = useState<"Idle" | "Running" | "Paused" | "Done">("Idle");
-
-  const [startedAt, setStartedAt] = useState<Date | null>(null);
-  const [targetSec, setTargetSec] = useState<number>(25 * 60);
-
-  const [elapsedSec, setElapsedSec] = useState<number>(0);
-  const [remainingSec, setRemainingSec] = useState<number>(0);
-
-  const timerRef = useRef<number | null>(null);
-
-  // ---- SOUND ----
+function useBeep() {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   function getAudioContext(): AudioContext | null {
@@ -332,7 +243,6 @@ function LearningCard({
   }
 
   async function primeAudio() {
-    // dipanggil saat klik Start (user gesture)
     try {
       const ctx = getAudioContext();
       if (!ctx) return;
@@ -368,12 +278,157 @@ function LearningCard({
     }
   }
 
-  function playDoneBeep() {
-    // 3x
+  function beepTriple() {
     beepOnce(880, 220);
     window.setTimeout(() => beepOnce(880, 220), 260);
     window.setTimeout(() => beepOnce(880, 220), 520);
   }
+
+  function cleanup() {
+    try {
+      audioCtxRef.current?.close?.();
+    } catch {
+      // ignore
+    }
+    audioCtxRef.current = null;
+  }
+
+  return { primeAudio, beepTriple, cleanup };
+}
+
+/* =========================
+   PAGE
+========================= */
+
+export default function Page() {
+  // render awal = aman untuk hydration
+  const [today, setToday] = useState<string>("");
+  const [totalLearnSec, setTotalLearnSec] = useState<number>(0);
+  const [totalRestSec, setTotalRestSec] = useState<number>(0);
+
+  const keys = useMemo(() => {
+    const d = today || "";
+    return {
+      learn: d ? `ytdoro:${d}:learnSec` : "",
+      rest: d ? `ytdoro:${d}:restSec` : "", // total rest (gabungan: rest biasa + rest youtube)
+      // fallback kompatibilitas lama (kalau Anda dulu pakai breakSec)
+      legacyBreak: d ? `ytdoro:${d}:breakSec` : "",
+    };
+  }, [today]);
+
+  useEffect(() => {
+    const d = dayKey();
+
+    const learnKey = `ytdoro:${d}:learnSec`;
+    const restKey = `ytdoro:${d}:restSec`;
+    const legacyKey = `ytdoro:${d}:breakSec`;
+
+    defer(() => {
+      setToday(d);
+
+      const learn = readNumber(learnKey);
+
+      // Kalau user sebelumnya sudah punya data breakSec, kita ambil itu dulu,
+      // dan gunakan sebagai fallback jika restSec masih 0.
+      const legacy = readNumber(legacyKey);
+      const rest = readNumber(restKey) || legacy;
+
+      setTotalLearnSec(learn);
+      setTotalRestSec(rest);
+
+      // Optional: kalau restKey belum ada tapi legacy ada, migrate
+      if (rest === 0 && legacy > 0) writeNumber(restKey, legacy);
+    });
+  }, []);
+
+  function addLearn(seconds: number) {
+    const delta = Math.max(0, Math.floor(seconds));
+    setTotalLearnSec((prev) => {
+      const next = prev + delta;
+      if (keys.learn) writeNumber(keys.learn, next);
+      return next;
+    });
+  }
+
+  function addRest(seconds: number) {
+    const delta = Math.max(0, Math.floor(seconds));
+    setTotalRestSec((prev) => {
+      const next = prev + delta;
+      if (keys.rest) writeNumber(keys.rest, next);
+      return next;
+    });
+  }
+
+  function resetToday() {
+    setTotalLearnSec(0);
+    setTotalRestSec(0);
+    if (keys.learn) writeNumber(keys.learn, 0);
+    if (keys.rest) writeNumber(keys.rest, 0);
+    if (keys.legacyBreak) writeNumber(keys.legacyBreak, 0);
+  }
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-zinc-950 text-white">
+      <div className="pointer-events-none absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-indigo-500/25 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 -right-28 h-[520px] w-[520px] rounded-full bg-purple-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-140px] left-1/3 h-[520px] w-[520px] rounded-full bg-sky-500/15 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.08),transparent_60%)]" />
+
+      <div className="relative mx-auto max-w-6xl px-6 py-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-3xl font-extrabold tracking-tight">youtubedoro</div>
+            <div className="mt-1 text-sm text-white/60">
+              Learning countdown + rest (biasa atau YouTube) mengikuti kebutuhan Anda.
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Pill>{today ? `Tanggal: ${today}` : "Tanggal: --"}</Pill>
+            <Pill>
+              <span className="text-white/60">Total Learning:</span>
+              <span className="font-semibold">{formatMMSS(totalLearnSec)}</span>
+            </Pill>
+            <Pill>
+              <span className="text-white/60">Total Rest:</span>
+              <span className="font-semibold">{formatMMSS(totalRestSec)}</span>
+            </Pill>
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <LearningCard totalTodaySec={totalLearnSec} onAddLearn={addLearn} onResetToday={resetToday} />
+          <RestCard totalTodaySec={totalRestSec} onAddRest={addRest} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Learning Card (with sound)
+========================= */
+
+function LearningCard({
+  totalTodaySec,
+  onAddLearn,
+  onResetToday,
+}: {
+  totalTodaySec: number;
+  onAddLearn: (seconds: number) => void;
+  onResetToday: () => void;
+}) {
+  const [minutes, setMinutes] = useState<number>(25);
+  const [status, setStatus] = useState<"Idle" | "Running" | "Paused" | "Done">("Idle");
+
+  const [startedAt, setStartedAt] = useState<Date | null>(null);
+  const [targetSec, setTargetSec] = useState<number>(25 * 60);
+
+  const [elapsedSec, setElapsedSec] = useState<number>(0);
+  const [remainingSec, setRemainingSec] = useState<number>(0);
+
+  const timerRef = useRef<number | null>(null);
+  const { primeAudio, beepTriple, cleanup } = useBeep();
 
   function clear() {
     if (timerRef.current !== null) {
@@ -409,13 +464,11 @@ function LearningCard({
         setStatus("Done");
         onAddLearn(t);
 
-        // SOUND
-        playDoneBeep();
+        beepTriple();
 
-        // optional notification
         try {
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            new Notification("Learning selesai", { body: "Waktunya break." });
+            new Notification("Learning selesai", { body: "Waktunya rest." });
           }
         } catch {
           // ignore
@@ -434,12 +487,7 @@ function LearningCard({
   useEffect(() => {
     return () => {
       clear();
-      try {
-        audioCtxRef.current?.close?.();
-      } catch {
-        // ignore
-      }
-      audioCtxRef.current = null;
+      cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -498,24 +546,187 @@ function LearningCard({
       <div className="text-sm text-white/70">
         Total learning hari ini: <span className="font-semibold text-white">{formatMMSS(totalTodaySec)}</span>
       </div>
-      <div className="mt-2 text-xs text-white/50">
-        Suara beep akan berbunyi saat timer selesai (pastikan tab tidak mute).
-      </div>
+      <div className="mt-2 text-xs text-white/50">Suara beep berbunyi saat timer selesai (pastikan tab tidak mute).</div>
     </GlassCard>
   );
 }
 
 /* =========================
-   Break Card (YouTube)
+   Rest Card (mode: plain / youtube)
 ========================= */
 
-function BreakCard({
+function RestCard({
   totalTodaySec,
-  onAddBreak,
+  onAddRest,
 }: {
   totalTodaySec: number;
-  onAddBreak: (seconds: number) => void;
+  onAddRest: (seconds: number) => void;
 }) {
+  const [mode, setMode] = useState<"plain" | "youtube">("plain");
+
+  // shared subtitle + status
+  const statusLabel = mode === "plain" ? "Rest biasa" : "Rest YouTube";
+
+  return (
+    <GlassCard
+      title="Rest"
+      subtitle="Pilih rest biasa (tanpa YouTube) atau rest dengan YouTube."
+      status={statusLabel}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Segmented
+          value={mode}
+          onChange={(v) => setMode(v as "plain" | "youtube")}
+          options={[
+            { label: "Rest biasa", value: "plain" },
+            { label: "Rest (YouTube)", value: "youtube" },
+          ]}
+        />
+        <div className="text-sm text-white/70">
+          Total rest hari ini: <span className="font-semibold text-white">{formatMMSS(totalTodaySec)}</span>
+        </div>
+      </div>
+
+      <Divider />
+
+      {mode === "plain" ? <PlainRestPanel onAddRest={onAddRest} /> : <YouTubeRestPanel onAddRest={onAddRest} />}
+    </GlassCard>
+  );
+}
+
+/* =========================
+   Plain Rest Panel
+========================= */
+
+function PlainRestPanel({ onAddRest }: { onAddRest: (seconds: number) => void }) {
+  const [minutes, setMinutes] = useState<number>(5);
+  const [status, setStatus] = useState<"Idle" | "Running" | "Paused" | "Done">("Idle");
+  const [targetSec, setTargetSec] = useState<number>(5 * 60);
+  const [elapsedSec, setElapsedSec] = useState<number>(0);
+  const [remainingSec, setRemainingSec] = useState<number>(0);
+
+  const timerRef = useRef<number | null>(null);
+  const { primeAudio, beepTriple, cleanup } = useBeep();
+
+  function clear() {
+    if (timerRef.current !== null) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function start() {
+    primeAudio();
+    clear();
+
+    const m = Math.max(1, Math.floor(minutes));
+    const t = m * 60;
+
+    setTargetSec(t);
+    setElapsedSec(0);
+    setRemainingSec(t);
+    setStatus("Running");
+
+    const startTs = Date.now();
+
+    timerRef.current = window.setInterval(() => {
+      const el = Math.floor((Date.now() - startTs) / 1000);
+      const rem = Math.max(0, t - el);
+
+      setElapsedSec(el);
+      setRemainingSec(rem);
+
+      if (rem <= 0) {
+        clear();
+        setStatus("Done");
+        onAddRest(t);
+        beepTriple();
+      }
+    }, 250);
+  }
+
+  function stop() {
+    if (status !== "Running") return;
+    clear();
+    setStatus("Paused");
+    onAddRest(elapsedSec);
+  }
+
+  function reset() {
+    clear();
+    setStatus("Idle");
+    setElapsedSec(0);
+    setRemainingSec(0);
+  }
+
+  useEffect(() => {
+    return () => {
+      clear();
+      cleanup();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto] md:items-end">
+        <div>
+          <div className="text-xs text-white/60">Durasi rest (menit)</div>
+          <input
+            type="number"
+            value={minutes}
+            min={1}
+            onChange={(e) => setMinutes(Number(e.target.value))}
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-white/20"
+          />
+        </div>
+
+        <div className="md:text-right">
+          <div className="text-xs text-white/60">Preset</div>
+          <div className="mt-2 flex gap-2 md:justify-end">
+            <TinyPreset onClick={() => setMinutes(5)}>5</TinyPreset>
+            <TinyPreset onClick={() => setMinutes(10)}>10</TinyPreset>
+            <TinyPreset onClick={() => setMinutes(15)}>15</TinyPreset>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 text-6xl font-extrabold tracking-tight tabular-nums">{formatMMSS(remainingSec)}</div>
+
+      <div className="mt-4 flex flex-wrap gap-3 text-xs text-white/60">
+        <span>
+          Elapsed: <span className="text-white/80">{formatMMSS(elapsedSec)}</span>
+        </span>
+        <span>
+          Target: <span className="text-white/80">{formatMMSS(targetSec)}</span>
+        </span>
+        <span>
+          Status: <span className="text-white/80">{status}</span>
+        </span>
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-3">
+        <SoftButton onClick={start} disabled={status === "Running"}>
+          Start rest
+        </SoftButton>
+        <SoftButton onClick={stop} disabled={status !== "Running"} variant="ghost">
+          Stop
+        </SoftButton>
+        <SoftButton onClick={reset} variant="ghost">
+          Reset
+        </SoftButton>
+      </div>
+
+      <div className="mt-3 text-xs text-white/50">Rest biasa akan bunyi beep saat selesai.</div>
+    </div>
+  );
+}
+
+/* =========================
+   YouTube Rest Panel
+========================= */
+
+function YouTubeRestPanel({ onAddRest }: { onAddRest: (seconds: number) => void }) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<"Idle" | "Playing" | "Paused" | "Ended" | "Error">("Idle");
 
@@ -526,8 +737,6 @@ function BreakCard({
 
   const playerRef = useRef<PlayerLike | null>(null);
   const tickRef = useRef<number | null>(null);
-
-  // mencegah double-count jika onEnd dan stateChange(0) terpanggil keduanya
   const countedRef = useRef<boolean>(false);
 
   function clearTick() {
@@ -553,7 +762,7 @@ function BreakCard({
     tickRef.current = window.setInterval(tickOnce, 250);
   }
 
-  function startBreak() {
+  function startRestYoutube() {
     setErrorMsg("");
     clearTick();
 
@@ -571,14 +780,13 @@ function BreakCard({
     setStatus("Idle");
   }
 
-  function stopBreak() {
+  function stopRestYoutube() {
     const p = playerRef.current;
     if (!p) return;
 
-    // kalau belum dihitung, tambah durasi terpakai
     if (!countedRef.current) {
       const used = Math.max(0, durationSec - remainingSec);
-      if (used > 0) onAddBreak(used);
+      if (used > 0) onAddRest(used);
       countedRef.current = true;
     }
 
@@ -604,31 +812,29 @@ function BreakCard({
 
     const p = playerRef.current;
     const d = durationSec || Math.floor(p?.getDuration?.() ?? 0);
-    if (d > 0) onAddBreak(d);
+    if (d > 0) onAddRest(d);
   }
 
   return (
-    <GlassCard title="Break (YouTube)" subtitle="Break mengikuti video: PLAY mulai, PAUSE berhenti, ENDED selesai." status={status}>
-      <div className="mt-4">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Tempel link YouTube, lalu klik Start break (contoh: https://www.youtube.com/watch?v=...)"
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-white/20"
-        />
+    <div>
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Tempel link YouTube, lalu klik Start rest (contoh: https://www.youtube.com/watch?v=...)"
+        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-white/20"
+      />
 
-        <div className="mt-3 flex flex-wrap gap-3">
-          <SoftButton onClick={startBreak}>Start break</SoftButton>
-          <SoftButton onClick={stopBreak} variant="ghost" disabled={!videoId}>
-            Stop
-          </SoftButton>
-          <SoftButton onClick={openInYouTube} variant="ghost">
-            Open in YouTube
-          </SoftButton>
-        </div>
-
-        {status === "Error" && <div className="mt-3 text-sm text-red-300">{errorMsg}</div>}
+      <div className="mt-3 flex flex-wrap gap-3">
+        <SoftButton onClick={startRestYoutube}>Start rest</SoftButton>
+        <SoftButton onClick={stopRestYoutube} variant="ghost" disabled={!videoId}>
+          Stop
+        </SoftButton>
+        <SoftButton onClick={openInYouTube} variant="ghost">
+          Open in YouTube
+        </SoftButton>
       </div>
+
+      {status === "Error" && <div className="mt-3 text-sm text-red-300">{errorMsg}</div>}
 
       <Divider />
 
@@ -637,6 +843,7 @@ function BreakCard({
       <div className="mt-3 text-xs text-white/60">
         Video ID: <span className="text-white/80">{videoId ?? "-"}</span>
         &nbsp;&nbsp; Duration: <span className="text-white/80">{durationSec ? formatMMSS(durationSec) : "-"}</span>
+        &nbsp;&nbsp; Status: <span className="text-white/80">{status}</span>
       </div>
 
       {videoId && (
@@ -692,12 +899,6 @@ function BreakCard({
           />
         </div>
       )}
-
-      <Divider />
-
-      <div className="text-sm text-white/70">
-        Total break hari ini: <span className="font-semibold text-white">{formatMMSS(totalTodaySec)}</span>
-      </div>
-    </GlassCard>
+    </div>
   );
 }
