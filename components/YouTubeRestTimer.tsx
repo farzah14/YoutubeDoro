@@ -3,7 +3,7 @@
 
 import dynamic from "next/dynamic";
 import type { ComponentType, ReactNode } from "react";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 
 /* =========================
    Helpers (ONE FILE)
@@ -89,18 +89,41 @@ function writeJSON(key: string, value: unknown) {
   }
 }
 
-function removeKey(key: string) {
-  try {
-    window.localStorage.removeItem(key);
-  } catch {
-    // ignore
-  }
+function normalizeTitle(s: string) {
+  return s.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function makeId(): string {
-  const c = (globalThis as unknown as { crypto?: Crypto }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+// cyrb53-ish hash (stable, fast) -> number
+function hashTo53(str: string) {
+  let h1 = 0xdeadbeef ^ str.length;
+  let h2 = 0x41c6ce57 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  const hi = (h2 >>> 0) & 0x1fffff; // 21 bits
+  const lo = h1 >>> 0; // 32 bits
+  return hi * 4294967296 + lo; // up to 53-bit
+}
+
+function stableEntryId(day: string, title: string) {
+  const t = normalizeTitle(title);
+  const key = `${day}|${t || "(tanpa judul)"}`;
+  const h = hashTo53(key);
+  return `n_${h.toString(36)}`;
+}
+
+function shortId(id: string) {
+  if (id.length <= 14) return id;
+  return `${id.slice(0, 7)}…${id.slice(-5)}`;
+}
+
+function safeTitle(s: string) {
+  const t = s.trim();
+  return t ? t : "(Tanpa judul)";
 }
 
 /* =========================
@@ -128,6 +151,7 @@ function notesKeyByDay(day: string) {
 ========================= */
 
 type NoteKind =
+  | "learn_start"
   | "topic_set"
   | "learn_done"
   | "learn_stop"
@@ -140,18 +164,25 @@ type DailyNoteEntry = {
   id: string;
   ts: number;
   day: string;
+
   kind: NoteKind;
-  topic: string;
+  title: string;
+
+  // last delta
   deltaLearnSec: number;
   deltaRestSec: number;
-  totalLearnSec: number;
-  totalRestSec: number;
+
+  // totals PER TITLE (NOT total harian)
+  totalLearnTitleSec: number;
+  totalRestTitleSec: number;
 };
 
 function kindLabel(kind: NoteKind): string {
   switch (kind) {
+    case "learn_start":
+      return "Learning dimulai";
     case "topic_set":
-      return "Topik disimpan";
+      return "Judul disimpan";
     case "learn_done":
       return "Learning selesai";
     case "learn_stop":
@@ -189,6 +220,14 @@ function IconNotebook({ className }: { className?: string }) {
   );
 }
 
+function IconX({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function kindIcon(kind: NoteKind) {
   const base = "grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white/80";
   const svg = (path: ReactNode) => (
@@ -200,6 +239,13 @@ function kindIcon(kind: NoteKind) {
   );
 
   switch (kind) {
+    case "learn_start":
+      return svg(
+        <>
+          <path d="M10 8.5v7l6-3.5-6-3.5Z" fill="currentColor" />
+          <path d="M6 6h12v12H6z" stroke="currentColor" strokeWidth="1.4" opacity="0.35" />
+        </>
+      );
     case "topic_set":
       return svg(
         <>
@@ -212,48 +258,23 @@ function kindIcon(kind: NoteKind) {
         </>
       );
     case "learn_done":
-      return svg(
-        <>
-          <path
-            d="M20 6 9 17l-5-5"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </>
-      );
+      return svg(<path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />);
     case "learn_stop":
-      return svg(
-        <>
-          <path d="M7 7h10v10H7z" stroke="currentColor" strokeWidth="1.8" />
-        </>
-      );
+      return svg(<path d="M7 7h10v10H7z" stroke="currentColor" strokeWidth="1.8" />);
     case "rest_done":
       return svg(
         <>
-          <path
-            d="M7 8h9a4 4 0 0 1 0 8H7V8Z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-          />
+          <path d="M7 8h9a4 4 0 0 1 0 8H7V8Z" stroke="currentColor" strokeWidth="1.6" />
           <path d="M7 16h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           <path d="M6 6v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </>
       );
     case "rest_stop":
-      return svg(
-        <>
-          <path d="M7 6v12M17 6v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </>
-      );
+      return svg(<path d="M7 6v12M17 6v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />);
     case "yt_rest_done":
       return svg(
         <>
-          <path
-            d="M10 8.5v7l6-3.5-6-3.5Z"
-            fill="currentColor"
-          />
+          <path d="M10 8.5v7l6-3.5-6-3.5Z" fill="currentColor" />
           <path
             d="M4.5 9.3c.2-1.1 1-2 2.2-2.2A64 64 0 0 1 12 7c1.7 0 3.4.1 5.3.3 1.1.2 2 .9 2.2 2.2.2 1 .3 1.8.3 2.7 0 .9-.1 1.7-.3 2.7-.2 1.1-1 2-2.2 2.2-1.9.2-3.6.3-5.3.3-1.7 0-3.4-.1-5.3-.3-1.1-.2-2-.9-2.2-2.2-.2-1-.3-1.8-.3-2.7 0-.9.1-1.7.3-2.7Z"
             stroke="currentColor"
@@ -264,10 +285,7 @@ function kindIcon(kind: NoteKind) {
     case "yt_rest_stop":
       return svg(
         <>
-          <path
-            d="M10 8.5v7l6-3.5-6-3.5Z"
-            fill="currentColor"
-          />
+          <path d="M10 8.5v7l6-3.5-6-3.5Z" fill="currentColor" />
           <path d="M7 6v12M17 6v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </>
       );
@@ -342,6 +360,19 @@ function IconButton({
   );
 }
 
+function MiniDangerIconButton({ title, onClick }: { title: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-100 transition hover:bg-red-500/15"
+    >
+      <IconX className="h-4 w-4" />
+    </button>
+  );
+}
+
 function SoftButton({
   children,
   onClick,
@@ -353,18 +384,13 @@ function SoftButton({
   disabled?: boolean;
   variant?: "primary" | "ghost" | "danger";
 }) {
-  const base =
-    "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition border";
-  const primary =
-    "border-white/10 bg-white/10 hover:bg-white/15 active:bg-white/20 text-white";
-  const ghost =
-    "border-white/10 bg-transparent hover:bg-white/10 active:bg-white/15 text-white/80";
-  const danger =
-    "border-red-500/25 bg-red-500/10 hover:bg-red-500/15 active:bg-red-500/20 text-red-100";
+  const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition border";
+  const primary = "border-white/10 bg-white/10 hover:bg-white/15 active:bg-white/20 text-white";
+  const ghost = "border-white/10 bg-transparent hover:bg-white/10 active:bg-white/15 text-white/80";
+  const danger = "border-red-500/25 bg-red-500/10 hover:bg-red-500/15 active:bg-red-500/20 text-red-100";
   const dis = "opacity-40 cursor-not-allowed";
 
-  const cls =
-    variant === "danger" ? danger : variant === "ghost" ? ghost : primary;
+  const cls = variant === "danger" ? danger : variant === "ghost" ? ghost : primary;
 
   return (
     <button
@@ -480,11 +506,7 @@ function Modal({
 
   return (
     <div className="fixed inset-0 z-50">
-      <div
-        className="absolute inset-0 bg-black/60"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
       <div className="absolute inset-0 p-4 md:p-8">
         <div className="mx-auto h-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-[0_30px_120px_rgba(0,0,0,0.75)] backdrop-blur-xl">
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
@@ -493,9 +515,7 @@ function Modal({
               Tutup
             </SoftButton>
           </div>
-          <div className="h-[calc(100%-64px)] overflow-y-auto px-5 py-5">
-            {children}
-          </div>
+          <div className="h-[calc(100%-64px)] overflow-y-auto px-5 py-5">{children}</div>
         </div>
       </div>
     </div>
@@ -575,20 +595,80 @@ function useBeep() {
 }
 
 /* =========================
+   Notes sanitize/migrate
+========================= */
+
+function sanitizeNotes(raw: unknown): DailyNoteEntry[] {
+  const arr = Array.isArray(raw) ? raw : [];
+  const out: DailyNoteEntry[] = [];
+
+  for (const it of arr) {
+    const obj = (it ?? {}) as Record<string, unknown>;
+
+    const day = typeof obj.day === "string" ? obj.day : "";
+    const title =
+      typeof obj.title === "string"
+        ? obj.title
+        : typeof obj.topic === "string"
+          ? obj.topic
+          : "";
+
+    const id =
+      typeof obj.id === "string" && obj.id
+        ? obj.id
+        : stableEntryId(day || dayKey(), safeTitle(title));
+
+    const ts = typeof obj.ts === "number" && Number.isFinite(obj.ts) ? obj.ts : Date.now();
+
+    const kind = (typeof obj.kind === "string" ? obj.kind : "topic_set") as NoteKind;
+
+    const deltaLearnSec =
+      typeof obj.deltaLearnSec === "number" && Number.isFinite(obj.deltaLearnSec) ? obj.deltaLearnSec : 0;
+    const deltaRestSec =
+      typeof obj.deltaRestSec === "number" && Number.isFinite(obj.deltaRestSec) ? obj.deltaRestSec : 0;
+
+    // migrate from older shape:
+    const totalLearnTitleSec =
+      typeof obj.totalLearnTitleSec === "number" && Number.isFinite(obj.totalLearnTitleSec)
+        ? obj.totalLearnTitleSec
+        : 0;
+
+    const totalRestTitleSec =
+      typeof obj.totalRestTitleSec === "number" && Number.isFinite(obj.totalRestTitleSec)
+        ? obj.totalRestTitleSec
+        : 0;
+
+    out.push({
+      id,
+      ts,
+      day,
+      kind,
+      title: safeTitle(title),
+      deltaLearnSec,
+      deltaRestSec,
+      totalLearnTitleSec,
+      totalRestTitleSec,
+    });
+  }
+
+  return out;
+}
+
+/* =========================
    PAGE
 ========================= */
 
 export default function Page() {
-  // hydration-safe initial render
   const [today, setToday] = useState<string>("");
   const [topicToday, setTopicToday] = useState<string>("");
+
+  // totals harian
   const [totalLearnSec, setTotalLearnSec] = useState<number>(0);
   const [totalRestSec, setTotalRestSec] = useState<number>(0);
 
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesBump, setNotesBump] = useState<number>(0);
 
-  // refs (avoid stale)
   const todayRef = useRef<string>("");
   const topicRef = useRef<string>("");
   const learnRef = useRef<number>(0);
@@ -607,7 +687,6 @@ export default function Page() {
     restRef.current = totalRestSec;
   }, [totalRestSec]);
 
-  // load initial data on client
   useEffect(() => {
     const d = dayKey();
     const lk = learnKeyByDay(d);
@@ -628,43 +707,78 @@ export default function Page() {
       setTotalRestSec(rest);
       setTopicToday(t);
 
-      // migrate legacy break if needed
       if (readNumber(rk) === 0 && legacy > 0) writeNumber(rk, legacy);
     });
   }, []);
 
-  function appendNote(day: string, entry: DailyNoteEntry) {
-    const nk = notesKeyByDay(day);
-    const list = readJSON<DailyNoteEntry[]>(nk, []);
-    list.unshift(entry);
-    writeJSON(nk, list);
+  function readNotes(day: string) {
+    const raw = readJSON<unknown>(notesKeyByDay(day), []);
+    return sanitizeNotes(raw);
+  }
+
+  // update/merge per judul (id stabil day+judul)
+  function upsertTitleNote(day: string, payload: { kind: NoteKind; title: string; addLearn: number; addRest: number }) {
+    const title = safeTitle(payload.title);
+    const id = stableEntryId(day, title);
+
+    const list = readNotes(day);
+    const idx = list.findIndex((x) => x.id === id);
+
+    const addL = Math.max(0, Math.floor(payload.addLearn));
+    const addR = Math.max(0, Math.floor(payload.addRest));
+
+    if (idx >= 0) {
+      const prev = list[idx];
+      const next: DailyNoteEntry = {
+        ...prev,
+        id,
+        ts: Date.now(),
+        day,
+        kind: payload.kind,
+        title,
+
+        // last delta
+        deltaLearnSec: addL,
+        deltaRestSec: addR,
+
+        // totals per title
+        totalLearnTitleSec: (prev.totalLearnTitleSec || 0) + addL,
+        totalRestTitleSec: (prev.totalRestTitleSec || 0) + addR,
+      };
+
+      list.splice(idx, 1);
+      list.unshift(next);
+    } else {
+      list.unshift({
+        id,
+        ts: Date.now(),
+        day,
+        kind: payload.kind,
+        title,
+        deltaLearnSec: addL,
+        deltaRestSec: addR,
+        totalLearnTitleSec: addL,
+        totalRestTitleSec: addR,
+      });
+    }
+
+    writeJSON(notesKeyByDay(day), list);
     setNotesBump((v) => v + 1);
   }
 
-  function saveTopicForToday(topic: string) {
+  // dipanggil LearningCard ketika Start → autosave judul + pastikan entry muncul
+  function setTitleOnStart(title: string) {
     const day = todayRef.current;
     if (!day) return;
 
-    const t = topic.trim();
+    const t = safeTitle(title);
     window.localStorage.setItem(topicKeyByDay(day), t);
 
     setTopicToday(t);
     topicRef.current = t;
 
-    const learn = readNumber(learnKeyByDay(day));
-    const rest = readNumber(restKeyByDay(day)) || readNumber(legacyBreakKeyByDay(day));
-
-    appendNote(day, {
-      id: makeId(),
-      ts: Date.now(),
-      day,
-      kind: "topic_set",
-      topic: t,
-      deltaLearnSec: 0,
-      deltaRestSec: 0,
-      totalLearnSec: learn,
-      totalRestSec: rest,
-    });
+    // pastikan muncul di Entries saat Start (tanpa menambah total)
+    upsertTitleNote(day, { kind: "learn_start", title: t, addLearn: 0, addRest: 0 });
   }
 
   function logLearn(kind: "learn_done" | "learn_stop", seconds: number) {
@@ -678,17 +792,8 @@ export default function Page() {
     setTotalLearnSec(nextLearn);
     writeNumber(learnKeyByDay(day), nextLearn);
 
-    appendNote(day, {
-      id: makeId(),
-      ts: Date.now(),
-      day,
-      kind,
-      topic: topicRef.current || "",
-      deltaLearnSec: delta,
-      deltaRestSec: 0,
-      totalLearnSec: nextLearn,
-      totalRestSec: restRef.current,
-    });
+    const t = safeTitle(topicRef.current);
+    upsertTitleNote(day, { kind, title: t, addLearn: delta, addRest: 0 });
   }
 
   function logRest(kind: NoteKind, seconds: number) {
@@ -702,22 +807,19 @@ export default function Page() {
     setTotalRestSec(nextRest);
     writeNumber(restKeyByDay(day), nextRest);
 
-    appendNote(day, {
-      id: makeId(),
-      ts: Date.now(),
-      day,
-      kind,
-      topic: topicRef.current || "",
-      deltaLearnSec: 0,
-      deltaRestSec: delta,
-      totalLearnSec: learnRef.current,
-      totalRestSec: nextRest,
-    });
+    const t = safeTitle(topicRef.current);
+    upsertTitleNote(day, { kind, title: t, addLearn: 0, addRest: delta });
   }
 
   function clearNotesForDay(day: string) {
-    // remove ONLY entries (not totals, not topic)
     writeJSON(notesKeyByDay(day), []);
+    setNotesBump((v) => v + 1);
+  }
+
+  function removeOneNote(day: string, id: string) {
+    const list = readNotes(day);
+    const next = list.filter((x) => x.id !== id);
+    writeJSON(notesKeyByDay(day), next);
     setNotesBump((v) => v + 1);
   }
 
@@ -734,30 +836,24 @@ export default function Page() {
     writeNumber(restKeyByDay(day), 0);
     writeNumber(legacyBreakKeyByDay(day), 0);
 
-    // notes + topic tetap (tidak dihapus)
     setNotesBump((v) => v + 1);
   }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-zinc-950 text-white">
-      {/* background blobs */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-indigo-500/25 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 -right-28 h-[520px] w-[520px] rounded-full bg-purple-500/20 blur-3xl" />
       <div className="pointer-events-none absolute bottom-[-140px] left-1/3 h-[520px] w-[520px] rounded-full bg-sky-500/15 blur-3xl" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.08),transparent_60%)]" />
 
       <div className="relative mx-auto max-w-6xl px-6 py-10">
-        {/* header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="text-3xl font-extrabold tracking-tight">youtubedoro</div>
-            <div className="mt-1 text-sm text-white/60">
-              Learning countdown + Rest (biasa / YouTube) + Daily Notes.
-            </div>
+            <div className="mt-1 text-sm text-white/60">Learning countdown + Rest (biasa / YouTube) + Daily Notes.</div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* ICON notes terpisah (tidak menyatu dengan pill tanggal) */}
             <IconButton title="Daily Notes" onClick={() => setNotesOpen(true)}>
               <IconNotebook className="h-5 w-5" />
             </IconButton>
@@ -776,11 +872,10 @@ export default function Page() {
           </div>
         </div>
 
-        {/* main cards */}
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <LearningCard
             topicToday={topicToday}
-            onSaveTopic={saveTopicForToday}
+            onStartWithTitle={setTitleOnStart}
             totalTodaySec={totalLearnSec}
             onLearnDone={(sec) => logLearn("learn_done", sec)}
             onLearnStop={(sec) => logLearn("learn_stop", sec)}
@@ -798,12 +893,12 @@ export default function Page() {
         </div>
       </div>
 
-      {/* DAILY NOTES MODAL */}
       <Modal open={notesOpen} title="Daily Notes" onClose={() => setNotesOpen(false)}>
         <NotesPanel
           today={today}
           notesBump={notesBump}
           onClearNotesForDay={clearNotesForDay}
+          onRemoveOne={removeOneNote}
         />
       </Modal>
     </div>
@@ -811,19 +906,21 @@ export default function Page() {
 }
 
 /* =========================
-   Learning Card
+   Learning Card (AUTO SAVE TITLE ON START)
+   - Timer selalu mulai dari 0 untuk sesi baru
+   - Start dari status Paused akan: (1) log Stop utk sesi lama, (2) mulai sesi baru
 ========================= */
 
 function LearningCard({
   topicToday,
-  onSaveTopic,
+  onStartWithTitle,
   totalTodaySec,
   onLearnDone,
   onLearnStop,
   onResetToday,
 }: {
   topicToday: string;
-  onSaveTopic: (topic: string) => void;
+  onStartWithTitle: (title: string) => void;
   totalTodaySec: number;
   onLearnDone: (seconds: number) => void;
   onLearnStop: (seconds: number) => void;
@@ -835,15 +932,22 @@ function LearningCard({
   const [status, setStatus] = useState<"Idle" | "Running" | "Paused" | "Done">("Idle");
 
   const [startedAt, setStartedAt] = useState<Date | null>(null);
-  const [targetSec, setTargetSec] = useState<number>(25 * 60);
 
+  const [targetSec, setTargetSec] = useState<number>(25 * 60);
   const [elapsedSec, setElapsedSec] = useState<number>(0);
-  const [remainingSec, setRemainingSec] = useState<number>(0);
+  const [remainingSec, setRemainingSec] = useState<number>(25 * 60);
+
+  const statusRef = useRef<"Idle" | "Running" | "Paused" | "Done">("Idle");
+  const targetRef = useRef<number>(25 * 60);
 
   const timerRef = useRef<number | null>(null);
+  const runStartedMsRef = useRef<number>(0);
+  const elapsedBeforeRef = useRef<number>(0);
+
   const { primeAudio, beepTriple, cleanup } = useBeep();
 
   useEffect(() => {
+    // sync draft ketika topicToday berubah (misal setelah Start)
     setTopicDraft(topicToday);
   }, [topicToday]);
 
@@ -854,55 +958,134 @@ function LearningCard({
     }
   }
 
-  function saveTopic() {
-    onSaveTopic(topicDraft);
+  function computeElapsedNow() {
+    const base = elapsedBeforeRef.current;
+    if (statusRef.current !== "Running") return base;
+    const add = Math.floor((Date.now() - runStartedMsRef.current) / 1000);
+    return Math.max(0, base + add);
   }
 
-  function start() {
-    primeAudio();
+  function syncUIFromRefs() {
+    const el = computeElapsedNow();
+    const rem = Math.max(0, targetRef.current - el);
+    setElapsedSec(el);
+    setRemainingSec(rem);
+  }
+
+  function tickOnce() {
+    if (statusRef.current !== "Running") return;
+
+    const el = computeElapsedNow();
+    const rem = Math.max(0, targetRef.current - el);
+
+    setElapsedSec(el);
+    setRemainingSec(rem);
+
+    if (rem <= 0) {
+      clear();
+      statusRef.current = "Done";
+      setStatus("Done");
+
+      setElapsedSec(targetRef.current);
+      setRemainingSec(0);
+
+      onLearnDone(targetRef.current);
+      beepTriple();
+
+      try {
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          new Notification("Learning selesai", { body: "Waktunya rest." });
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  function startInterval() {
     clear();
+    timerRef.current = window.setInterval(tickOnce, 250);
+  }
+
+  function startNewSession() {
+    primeAudio();
+
+    // jika sebelumnya Paused (atau Running via edge), log stop dulu agar tidak "nyangkut"
+    if (statusRef.current === "Paused" || statusRef.current === "Running") {
+      const used = statusRef.current === "Running" ? computeElapsedNow() : elapsedBeforeRef.current;
+      const u = Math.max(0, Math.floor(used));
+      if (u > 0) onLearnStop(u);
+    }
+
+    // AUTO SAVE title saat Start
+    onStartWithTitle(topicDraft);
 
     const m = Math.max(1, Math.floor(minutes));
     const t = m * 60;
 
+    targetRef.current = t;
+    elapsedBeforeRef.current = 0;
+    runStartedMsRef.current = Date.now();
+    statusRef.current = "Running";
+
     setTargetSec(t);
-    setElapsedSec(0);
-    setRemainingSec(t);
     setStartedAt(new Date());
     setStatus("Running");
+    setElapsedSec(0);
+    setRemainingSec(t);
 
-    const startTs = Date.now();
-
-    timerRef.current = window.setInterval(() => {
-      const el = Math.floor((Date.now() - startTs) / 1000);
-      const rem = Math.max(0, t - el);
-
-      setElapsedSec(el);
-      setRemainingSec(rem);
-
-      if (rem <= 0) {
-        clear();
-        setStatus("Done");
-
-        onLearnDone(t);
-        beepTriple();
-
-        try {
-          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            new Notification("Learning selesai", { body: "Waktunya rest." });
-          }
-        } catch {
-          // ignore
-        }
-      }
-    }, 250);
+    tickOnce();
+    startInterval();
   }
 
-  function stop() {
-    if (status !== "Running") return;
-    clear();
+  function pause() {
+    if (statusRef.current !== "Running") return;
+
+    elapsedBeforeRef.current = computeElapsedNow();
+    statusRef.current = "Paused";
     setStatus("Paused");
-    onLearnStop(elapsedSec);
+
+    clear();
+    syncUIFromRefs();
+  }
+
+  function resume() {
+    if (statusRef.current !== "Paused") return;
+
+    runStartedMsRef.current = Date.now();
+    statusRef.current = "Running";
+    setStatus("Running");
+
+    tickOnce();
+    startInterval();
+  }
+
+  function stopAndLog() {
+    if (statusRef.current !== "Running" && statusRef.current !== "Paused") return;
+
+    if (statusRef.current === "Running") elapsedBeforeRef.current = computeElapsedNow();
+
+    clear();
+    statusRef.current = "Idle";
+    setStatus("Idle");
+
+    syncUIFromRefs();
+
+    const used = Math.max(0, elapsedBeforeRef.current);
+    onLearnStop(used);
+  }
+
+  function resetLocalTimerOnly() {
+    clear();
+    statusRef.current = "Idle";
+    setStatus("Idle");
+
+    elapsedBeforeRef.current = 0;
+    runStartedMsRef.current = 0;
+
+    setStartedAt(null);
+    setElapsedSec(0);
+    setRemainingSec(targetRef.current);
   }
 
   useEffect(() => {
@@ -914,23 +1097,20 @@ function LearningCard({
   }, []);
 
   return (
-    <GlassCard title="Learning" subtitle="Isi topik dulu, lalu mulai. Catatan otomatis dibuat saat selesai/stop." status={status}>
-      <div>
-        <div className="text-xs text-white/60">Belajar apa?</div>
-        <textarea
-          value={topicDraft}
-          onChange={(e) => setTopicDraft(e.target.value)}
-          placeholder="Contoh: React Hooks, Next.js routing, dsb."
-          rows={3}
-          className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-white/20"
-        />
-        <div className="mt-3 flex flex-wrap gap-3">
-          <SoftButton onClick={saveTopic}>Simpan topik</SoftButton>
-          <Pill>
-            <span className="text-white/60">Topik tersimpan:</span>
-            <span className="font-semibold text-white">{topicToday?.trim() ? topicToday : "-"}</span>
-          </Pill>
-        </div>
+    <GlassCard title="Learning" subtitle="Judul otomatis tersimpan saat Start (masuk Entries Notes)." status={status}>
+      {/* TIMER TOP */}
+      <div className="mt-1 text-6xl font-extrabold tracking-tight tabular-nums">{formatMMSS(remainingSec)}</div>
+
+      <div className="mt-4 flex flex-wrap gap-3 text-xs text-white/60">
+        <span>
+          Started at: <span className="text-white/80">{startedAt ? startedAt.toLocaleTimeString() : "-"}</span>
+        </span>
+        <span>
+          Elapsed: <span className="text-white/80">{formatMMSS(elapsedSec)}</span>
+        </span>
+        <span>
+          Target: <span className="text-white/80">{formatMMSS(targetSec)}</span>
+        </span>
       </div>
 
       <Divider />
@@ -956,26 +1136,21 @@ function LearningCard({
         </div>
       </div>
 
-      <div className="mt-6 text-6xl font-extrabold tracking-tight tabular-nums">{formatMMSS(remainingSec)}</div>
-
-      <div className="mt-4 flex flex-wrap gap-3 text-xs text-white/60">
-        <span>
-          Started at: <span className="text-white/80">{startedAt ? startedAt.toLocaleTimeString() : "-"}</span>
-        </span>
-        <span>
-          Elapsed: <span className="text-white/80">{formatMMSS(elapsedSec)}</span>
-        </span>
-        <span>
-          Target: <span className="text-white/80">{formatMMSS(targetSec)}</span>
-        </span>
-      </div>
-
       <div className="mt-5 flex flex-wrap gap-3">
-        <SoftButton onClick={start} disabled={status === "Running"}>
-          Start learning
+        <SoftButton onClick={startNewSession} disabled={status === "Running"}>
+          Start
         </SoftButton>
-        <SoftButton onClick={stop} disabled={status !== "Running"} variant="ghost">
-          Stop
+        <SoftButton onClick={pause} disabled={status !== "Running"} variant="ghost">
+          Pause
+        </SoftButton>
+        <SoftButton onClick={resume} disabled={status !== "Paused"} variant="ghost">
+          Resume
+        </SoftButton>
+        <SoftButton onClick={stopAndLog} disabled={status === "Idle" || status === "Done"} variant="ghost">
+          Stop (log)
+        </SoftButton>
+        <SoftButton onClick={resetLocalTimerOnly} variant="ghost">
+          Reset timer
         </SoftButton>
         <SoftButton onClick={onResetToday} variant="ghost">
           Reset hari ini
@@ -984,10 +1159,32 @@ function LearningCard({
 
       <Divider />
 
+      {/* INPUT JUDUL BOTTOM (TANPA BUTTON SIMPAN) */}
+      <div>
+        <div className="text-xs text-white/60">Judul / Topik belajar</div>
+        <textarea
+          value={topicDraft}
+          onChange={(e) => setTopicDraft(e.target.value)}
+          placeholder="Contoh: Spanish Language, React Hooks, Next.js routing, dsb."
+          rows={3}
+          className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-white/20"
+        />
+        <div className="mt-3">
+          <Pill>
+            <span className="text-white/60">Judul tersimpan (terakhir Start):</span>
+            <span className="font-semibold text-white">{topicToday?.trim() ? topicToday : "-"}</span>
+          </Pill>
+        </div>
+      </div>
+
+      <Divider />
+
       <div className="text-sm text-white/70">
         Total learning hari ini: <span className="font-semibold text-white">{formatMMSS(totalTodaySec)}</span>
       </div>
-      <div className="mt-2 text-xs text-white/50">Beep lebih besar saat timer selesai (pastikan tab tidak mute).</div>
+      <div className="mt-2 text-xs text-white/50">
+        Catatan: total di Entries Notes adalah total per-judul (bukan total harian).
+      </div>
     </GlassCard>
   );
 }
@@ -1015,7 +1212,7 @@ function RestCard({
   const statusLabel = mode === "plain" ? "Rest biasa" : "Rest YouTube";
 
   return (
-    <GlassCard title="Rest" subtitle="Rest biasa atau rest dengan YouTube. Catatan otomatis dibuat saat selesai/stop." status={statusLabel}>
+    <GlassCard title="Rest" subtitle="Rest biasa atau rest dengan YouTube." status={statusLabel}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Segmented
           value={mode}
@@ -1026,7 +1223,7 @@ function RestCard({
           ]}
         />
         <Pill>
-          <span className="text-white/60">Topik:</span>
+          <span className="text-white/60">Judul (dari Start terakhir):</span>
           <span className="font-semibold text-white">{topicToday?.trim() ? topicToday : "-"}</span>
         </Pill>
       </div>
@@ -1043,7 +1240,7 @@ function RestCard({
 }
 
 /* =========================
-   Plain Rest Panel
+   Plain Rest Panel (Start/Pause/Resume stable)
 ========================= */
 
 function PlainRestPanel({
@@ -1060,9 +1257,15 @@ function PlainRestPanel({
 
   const [targetSec, setTargetSec] = useState<number>(5 * 60);
   const [elapsedSec, setElapsedSec] = useState<number>(0);
-  const [remainingSec, setRemainingSec] = useState<number>(0);
+  const [remainingSec, setRemainingSec] = useState<number>(5 * 60);
+
+  const statusRef = useRef<"Idle" | "Running" | "Paused" | "Done">("Idle");
+  const targetRef = useRef<number>(5 * 60);
 
   const timerRef = useRef<number | null>(null);
+  const runStartedMsRef = useRef<number>(0);
+  const elapsedBeforeRef = useRef<number>(0);
+
   const { primeAudio, beepTriple, cleanup } = useBeep();
 
   function clear() {
@@ -1072,48 +1275,113 @@ function PlainRestPanel({
     }
   }
 
+  function computeElapsedNow() {
+    const base = elapsedBeforeRef.current;
+    if (statusRef.current !== "Running") return base;
+    const add = Math.floor((Date.now() - runStartedMsRef.current) / 1000);
+    return Math.max(0, base + add);
+  }
+
+  function syncUIFromRefs() {
+    const el = computeElapsedNow();
+    const rem = Math.max(0, targetRef.current - el);
+    setElapsedSec(el);
+    setRemainingSec(rem);
+  }
+
+  function tickOnce() {
+    if (statusRef.current !== "Running") return;
+
+    const el = computeElapsedNow();
+    const rem = Math.max(0, targetRef.current - el);
+
+    setElapsedSec(el);
+    setRemainingSec(rem);
+
+    if (rem <= 0) {
+      clear();
+      statusRef.current = "Done";
+      setStatus("Done");
+      setElapsedSec(targetRef.current);
+      setRemainingSec(0);
+
+      onDone(targetRef.current);
+      beepTriple();
+    }
+  }
+
+  function startInterval() {
+    clear();
+    timerRef.current = window.setInterval(tickOnce, 250);
+  }
+
   function start() {
     primeAudio();
-    clear();
 
     const m = Math.max(1, Math.floor(minutes));
     const t = m * 60;
+
+    targetRef.current = t;
+    elapsedBeforeRef.current = 0;
+    runStartedMsRef.current = Date.now();
+    statusRef.current = "Running";
 
     setTargetSec(t);
     setElapsedSec(0);
     setRemainingSec(t);
     setStatus("Running");
 
-    const startTs = Date.now();
-
-    timerRef.current = window.setInterval(() => {
-      const el = Math.floor((Date.now() - startTs) / 1000);
-      const rem = Math.max(0, t - el);
-
-      setElapsedSec(el);
-      setRemainingSec(rem);
-
-      if (rem <= 0) {
-        clear();
-        setStatus("Done");
-        onDone(t);
-        beepTriple();
-      }
-    }, 250);
+    tickOnce();
+    startInterval();
   }
 
-  function stop() {
-    if (status !== "Running") return;
-    clear();
+  function pause() {
+    if (statusRef.current !== "Running") return;
+
+    elapsedBeforeRef.current = computeElapsedNow();
+    statusRef.current = "Paused";
     setStatus("Paused");
-    onStop(elapsedSec);
+
+    clear();
+    syncUIFromRefs();
+  }
+
+  function resume() {
+    if (statusRef.current !== "Paused") return;
+
+    runStartedMsRef.current = Date.now();
+    statusRef.current = "Running";
+    setStatus("Running");
+
+    tickOnce();
+    startInterval();
+  }
+
+  function stopAndLog() {
+    if (statusRef.current !== "Running" && statusRef.current !== "Paused") return;
+
+    if (statusRef.current === "Running") elapsedBeforeRef.current = computeElapsedNow();
+
+    clear();
+    statusRef.current = "Idle";
+    setStatus("Idle");
+
+    syncUIFromRefs();
+
+    const used = Math.max(0, elapsedBeforeRef.current);
+    onStop(used);
   }
 
   function reset() {
     clear();
+    statusRef.current = "Idle";
     setStatus("Idle");
+
+    elapsedBeforeRef.current = 0;
+    runStartedMsRef.current = 0;
+
     setElapsedSec(0);
-    setRemainingSec(0);
+    setRemainingSec(targetRef.current);
   }
 
   useEffect(() => {
@@ -1166,8 +1434,14 @@ function PlainRestPanel({
         <SoftButton onClick={start} disabled={status === "Running"}>
           Start rest
         </SoftButton>
-        <SoftButton onClick={stop} disabled={status !== "Running"} variant="ghost">
-          Stop
+        <SoftButton onClick={pause} disabled={status !== "Running"} variant="ghost">
+          Pause
+        </SoftButton>
+        <SoftButton onClick={resume} disabled={status !== "Paused"} variant="ghost">
+          Resume
+        </SoftButton>
+        <SoftButton onClick={stopAndLog} disabled={status === "Idle" || status === "Done"} variant="ghost">
+          Stop (log)
         </SoftButton>
         <SoftButton onClick={reset} variant="ghost">
           Reset
@@ -1207,7 +1481,6 @@ function YouTubeRestPanel({
   const playerRef = useRef<PlayerLike | null>(null);
   const tickRef = useRef<number | null>(null);
 
-  // prevent double count (onEnd + onStateChange(0))
   const countedRef = useRef<boolean>(false);
 
   function clearTick() {
@@ -1269,6 +1542,18 @@ function YouTubeRestPanel({
     setRemainingSec(0);
   }
 
+  function pauseVideo() {
+    const p = playerRef.current;
+    if (!p) return;
+    p.pauseVideo?.();
+  }
+
+  function resumeVideo() {
+    const p = playerRef.current;
+    if (!p) return;
+    p.playVideo?.();
+  }
+
   function openInYouTube() {
     const id = extractYouTubeVideoId(input) || videoId;
     if (!id) return;
@@ -1297,8 +1582,14 @@ function YouTubeRestPanel({
 
       <div className="mt-3 flex flex-wrap gap-3">
         <SoftButton onClick={startRestYoutube}>Start rest</SoftButton>
+        <SoftButton onClick={pauseVideo} variant="ghost" disabled={!videoId}>
+          Pause
+        </SoftButton>
+        <SoftButton onClick={resumeVideo} variant="ghost" disabled={!videoId}>
+          Resume
+        </SoftButton>
         <SoftButton onClick={stopRestYoutube} variant="ghost" disabled={!videoId}>
-          Stop
+          Stop (log)
         </SoftButton>
         <SoftButton onClick={openInYouTube} variant="ghost">
           Open in YouTube
@@ -1381,38 +1672,39 @@ function YouTubeRestPanel({
 }
 
 /* =========================
-   Notes Panel (NO TOPIC INPUT)
+   Notes Panel
 ========================= */
 
 function NotesPanel({
   today,
   notesBump,
   onClearNotesForDay,
+  onRemoveOne,
 }: {
   today: string;
   notesBump: number;
   onClearNotesForDay: (day: string) => void;
+  onRemoveOne: (day: string, id: string) => void;
 }) {
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [learnTotal, setLearnTotal] = useState<number>(0);
   const [restTotal, setRestTotal] = useState<number>(0);
   const [entries, setEntries] = useState<DailyNoteEntry[]>([]);
 
-  // default day = today
   useEffect(() => {
     if (!today) return;
     if (selectedDay) return;
     startTransition(() => setSelectedDay(today));
   }, [today, selectedDay]);
 
-  // load data
   useEffect(() => {
     if (!selectedDay) return;
 
     startTransition(() => {
       const learn = readNumber(learnKeyByDay(selectedDay));
       const rest = readNumber(restKeyByDay(selectedDay)) || readNumber(legacyBreakKeyByDay(selectedDay));
-      const list = readJSON<DailyNoteEntry[]>(notesKeyByDay(selectedDay), []);
+      const raw = readJSON<unknown>(notesKeyByDay(selectedDay), []);
+      const list = sanitizeNotes(raw);
 
       setLearnTotal(learn);
       setRestTotal(rest);
@@ -1420,15 +1712,28 @@ function NotesPanel({
     });
   }, [selectedDay, notesBump]);
 
-  function removeNotes() {
+  function removeAllNotes() {
     if (!selectedDay) return;
     if (entries.length === 0) return;
 
-    const ok = window.confirm(`Hapus semua notes untuk tanggal ${selectedDay}? (Tidak menghapus total waktu & topik tersimpan)`);
+    const ok = window.confirm(
+      `Hapus SEMUA notes untuk tanggal ${selectedDay}?\n(Tidak menghapus total harian & judul tersimpan)`
+    );
     if (!ok) return;
 
     onClearNotesForDay(selectedDay);
     setEntries([]);
+  }
+
+  function removeOne(id: string) {
+    if (!selectedDay) return;
+    const e = entries.find((x) => x.id === id);
+    const label = e?.title?.trim() ? e.title.trim() : "(Tanpa judul)";
+    const ok = window.confirm(`Hapus note ini?\nJudul: ${label}\nID: ${id}`);
+    if (!ok) return;
+
+    onRemoveOne(selectedDay, id);
+    setEntries((prev) => prev.filter((x) => x.id !== id));
   }
 
   return (
@@ -1446,18 +1751,18 @@ function NotesPanel({
           </div>
 
           <Pill>
-            <span className="text-white/60">Total Belajar:</span>
+            <span className="text-white/60">Total Belajar (hari):</span>
             <span className="font-semibold text-white">{formatMMSS(learnTotal)}</span>
           </Pill>
 
           <Pill>
-            <span className="text-white/60">Total Rest:</span>
+            <span className="text-white/60">Total Rest (hari):</span>
             <span className="font-semibold text-white">{formatMMSS(restTotal)}</span>
           </Pill>
         </div>
 
-        <SoftButton variant="danger" onClick={removeNotes} disabled={!selectedDay || entries.length === 0}>
-          Remove Notes
+        <SoftButton variant="danger" onClick={removeAllNotes} disabled={!selectedDay || entries.length === 0}>
+          Remove All Notes
         </SoftButton>
       </div>
 
@@ -1466,7 +1771,7 @@ function NotesPanel({
       <div>
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm font-semibold text-white">Entries</div>
-          <div className="text-xs text-white/50">Tampilan rapat: icon kiri + info ringkas</div>
+          <div className="text-xs text-white/50">Total entry = total per-judul (judul baru mulai dari 0)</div>
         </div>
 
         {entries.length === 0 ? (
@@ -1475,32 +1780,34 @@ function NotesPanel({
           <div className="mt-3 space-y-2">
             {entries.map((e) => {
               const time = new Date(e.ts).toLocaleTimeString();
-              const topicText = e.topic?.trim() ? e.topic : "-";
+              const titleText = e.title?.trim() ? e.title.trim() : "(Tanpa judul)";
 
               return (
                 <div key={e.id} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
                   {kindIcon(e.kind)}
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm font-semibold text-white">
-                        {kindLabel(e.kind)}
-                        <span className="ml-2 text-xs font-normal text-white/50">{time}</span>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-white">{titleText}</div>
+                        <div className="mt-0.5 text-xs text-white/50">
+                          {kindLabel(e.kind)} · {time} · ID{" "}
+                          <span className="font-mono text-white/70">{shortId(e.id)}</span>
+                        </div>
                       </div>
-                      <div className="text-xs text-white/60">
-                        ΔL <span className="text-white/80">{formatMMSS(e.deltaLearnSec)}</span> · ΔR{" "}
-                        <span className="text-white/80">{formatMMSS(e.deltaRestSec)}</span>
+
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-white/60">
+                          ΔL <span className="text-white/80">{formatMMSS(e.deltaLearnSec)}</span> · ΔR{" "}
+                          <span className="text-white/80">{formatMMSS(e.deltaRestSec)}</span>
+                        </div>
+                        <MiniDangerIconButton title="Hapus note ini" onClick={() => removeOne(e.id)} />
                       </div>
                     </div>
 
-                    <div className="mt-1 min-w-0 text-sm text-white/80">
-                      <span className="text-white/60">Topik:</span>{" "}
-                      <span className="inline-block max-w-full truncate align-bottom">{topicText}</span>
-                    </div>
-
-                    <div className="mt-1 text-xs text-white/60">
-                      Total Belajar: <span className="text-white/80">{formatMMSS(e.totalLearnSec)}</span> · Total Rest:{" "}
-                      <span className="text-white/80">{formatMMSS(e.totalRestSec)}</span>
+                    <div className="mt-2 text-xs text-white/60">
+                      Total Learn (judul): <span className="text-white/80">{formatMMSS(e.totalLearnTitleSec)}</span> ·
+                      Total Rest (judul): <span className="text-white/80">{formatMMSS(e.totalRestTitleSec)}</span>
                     </div>
                   </div>
                 </div>
@@ -1510,7 +1817,7 @@ function NotesPanel({
         )}
 
         <div className="mt-4 text-xs text-white/50">
-          “Remove Notes” hanya menghapus entries pada tanggal itu. Total waktu & topik tersimpan tidak ikut terhapus.
+          Remove per-entry menghapus 1 judul saja. Remove All menghapus semua entries pada tanggal itu. Total harian & judul tersimpan tidak ikut terhapus.
         </div>
       </div>
     </div>
