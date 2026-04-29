@@ -43,6 +43,8 @@ export type YouTubeComponentProps = {
     height?: string | number;
     playerVars?: Record<string, string | number>;
   };
+  className?: string;
+  iframeClassName?: string;
   onReady?: (event: YouTubeReadyEvent) => void;
   onPlay?: () => void;
   onPause?: () => void;
