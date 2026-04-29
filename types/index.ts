@@ -30,6 +30,7 @@ export type PlayerLike = {
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
   getDuration: () => number;
   getCurrentTime: () => number;
+  setVolume: (volume: number) => void;
 };
 
 export type YouTubeReadyEvent = { target: PlayerLike };
@@ -46,6 +47,6 @@ export type YouTubeComponentProps = {
   onPlay?: () => void;
   onPause?: () => void;
   onEnd?: () => void;
-  onError?: () => void;
+  onError?: (event: unknown) => void;
   onStateChange?: (event: YouTubeStateChangeEvent) => void;
 };
