@@ -5,6 +5,7 @@ import { dayKey } from "@/lib/time";
 import { readNumber, writeNumber, readString, writeString } from "@/lib/storage";
 import { KEYS } from "@/lib/constants";
 import { useDailyNotes } from "@/hooks/useDailyNotes";
+import { useNotionSync } from "@/hooks/useNotionSync";
 import { Header } from "./layout/Header";
 import { DailyStats } from "./stats/DailyStats";
 import { LearningCard } from "./timer/LearningCard";
@@ -12,6 +13,7 @@ import { RestCardContainer } from "./timer/RestCardContainer";
 import { Modal } from "./ui/Modal";
 import { NotesPanel } from "./notes/NotesPanel";
 import { MarkdownScratchpad } from "./notes/MarkdownScratchpad";
+import { NotionSettingsModal } from "./notion/NotionSettingsModal";
 
 export default function YouTubeRestTimer() {
   const [today, setToday] = useState<string>("");
@@ -22,7 +24,80 @@ export default function YouTubeRestTimer() {
 
   const [focusMode, setFocusMode] = useState(false);
 
-  const { upsertTitleNote } = useDailyNotes(today);
+  const { upsertTitleNote, getNotes } = useDailyNotes(today);
+
+  // ── Notion Integration ──
+  const {
+    syncState,
+    settingsOpen,
+    setSettingsOpen,
+    validate,
+    disconnect,
+    syncDebounced,
+    syncNow,
+    pullFromNotion,
+  } = useNotionSync();
+
+  // Helper to build sync payload from current state
+  const buildSyncPayload = useCallback(() => {
+    const scratchpad = typeof window !== "undefined"
+      ? window.localStorage.getItem("ytdoro:scratchpad") || ""
+      : "";
+    return {
+      day: today,
+      topic: topicToday,
+      learnSec: totalLearnSec,
+      restSec: totalRestSec,
+      notes: getNotes(),
+      scratchpad,
+    };
+  }, [today, topicToday, totalLearnSec, totalRestSec, getNotes]);
+
+  // Auto-sync trigger (called after state updates)
+  const triggerNotionSync = useCallback(() => {
+    if (!syncState.connected || !today) return;
+    // Use setTimeout to ensure state is updated before building payload
+    setTimeout(() => {
+      const payload = buildSyncPayload();
+      syncDebounced(payload);
+    }, 100);
+  }, [syncState.connected, today, buildSyncPayload, syncDebounced]);
+
+  // Manual sync handler
+  const handleManualSync = useCallback(() => {
+    if (!today) return;
+    const payload = buildSyncPayload();
+    syncNow(payload);
+  }, [today, buildSyncPayload, syncNow]);
+
+  // Pull handler
+  const handlePull = useCallback(async () => {
+    const result = await pullFromNotion(today);
+    if (result?.success && result?.data) {
+      const data = result.data;
+      // Update local state with pulled data
+      if (data.learnSec !== undefined) {
+        setTotalLearnSec(data.learnSec);
+        writeNumber(KEYS.learnByDay(today), data.learnSec);
+      }
+      if (data.restSec !== undefined) {
+        setTotalRestSec(data.restSec);
+        writeNumber(KEYS.restByDay(today), data.restSec);
+      }
+      if (data.topic) {
+        setTopicToday(data.topic);
+        writeString(KEYS.topicByDay(today), data.topic);
+      }
+      if (data.scratchpad) {
+        try {
+          window.localStorage.setItem("ytdoro:scratchpad", data.scratchpad);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return result;
+  }, [today, pullFromNotion]);
 
   useEffect(() => {
     const d = dayKey();
@@ -37,49 +112,56 @@ export default function YouTubeRestTimer() {
     writeString(KEYS.topicByDay(today), t);
     setTopicToday(t);
     upsertTitleNote({ kind: "learn_start", title: t, addLearn: 0, addRest: 0 });
-  }, [today, upsertTitleNote]);
+    triggerNotionSync();
+  }, [today, upsertTitleNote, triggerNotionSync]);
 
   const handleLearnDone = useCallback((sec: number) => {
     const next = totalLearnSec + sec;
     setTotalLearnSec(next);
     writeNumber(KEYS.learnByDay(today), next);
     upsertTitleNote({ kind: "learn_done", title: topicToday, addLearn: sec, addRest: 0 });
-  }, [today, topicToday, totalLearnSec, upsertTitleNote]);
+    triggerNotionSync();
+  }, [today, topicToday, totalLearnSec, upsertTitleNote, triggerNotionSync]);
 
   const handleLearnStop = useCallback((sec: number) => {
     const next = totalLearnSec + sec;
     setTotalLearnSec(next);
     writeNumber(KEYS.learnByDay(today), next);
     upsertTitleNote({ kind: "learn_stop", title: topicToday, addLearn: sec, addRest: 0 });
-  }, [today, topicToday, totalLearnSec, upsertTitleNote]);
+    triggerNotionSync();
+  }, [today, topicToday, totalLearnSec, upsertTitleNote, triggerNotionSync]);
 
   const handleRestDone = useCallback((sec: number) => {
     const next = totalRestSec + sec;
     setTotalRestSec(next);
     writeNumber(KEYS.restByDay(today), next);
     upsertTitleNote({ kind: "rest_done", title: topicToday, addLearn: 0, addRest: sec });
-  }, [today, topicToday, totalRestSec, upsertTitleNote]);
+    triggerNotionSync();
+  }, [today, topicToday, totalRestSec, upsertTitleNote, triggerNotionSync]);
 
   const handleRestStop = useCallback((sec: number) => {
     const next = totalRestSec + sec;
     setTotalRestSec(next);
     writeNumber(KEYS.restByDay(today), next);
     upsertTitleNote({ kind: "rest_stop", title: topicToday, addLearn: 0, addRest: sec });
-  }, [today, topicToday, totalRestSec, upsertTitleNote]);
+    triggerNotionSync();
+  }, [today, topicToday, totalRestSec, upsertTitleNote, triggerNotionSync]);
 
   const handleYTDone = useCallback((sec: number) => {
     const next = totalRestSec + sec;
     setTotalRestSec(next);
     writeNumber(KEYS.restByDay(today), next);
     upsertTitleNote({ kind: "yt_rest_done", title: topicToday, addLearn: 0, addRest: sec });
-  }, [today, topicToday, totalRestSec, upsertTitleNote]);
+    triggerNotionSync();
+  }, [today, topicToday, totalRestSec, upsertTitleNote, triggerNotionSync]);
 
   const handleYTStop = useCallback((sec: number) => {
     const next = totalRestSec + sec;
     setTotalRestSec(next);
     writeNumber(KEYS.restByDay(today), next);
     upsertTitleNote({ kind: "yt_rest_stop", title: topicToday, addLearn: 0, addRest: sec });
-  }, [today, topicToday, totalRestSec, upsertTitleNote]);
+    triggerNotionSync();
+  }, [today, topicToday, totalRestSec, upsertTitleNote, triggerNotionSync]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -97,12 +179,13 @@ export default function YouTubeRestTimer() {
       if (e.key === 'Escape') {
         setFocusMode(false);
         setNotesOpen(false);
+        setSettingsOpen(false);
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [setSettingsOpen]);
 
   return (
     <div className={`min-h-screen bg-background text-foreground selection:bg-accent/30 flex flex-col items-center transition-all duration-500 ${focusMode ? 'justify-center py-0' : ''}`}>
@@ -113,7 +196,10 @@ export default function YouTubeRestTimer() {
               today={today} 
               totalLearnSec={totalLearnSec} 
               totalRestSec={totalRestSec} 
-              onOpenNotes={() => setNotesOpen(true)} 
+              onOpenNotes={() => setNotesOpen(true)}
+              notionSyncState={syncState}
+              onNotionSync={handleManualSync}
+              onNotionOpenSettings={() => setSettingsOpen(true)}
             />
             <DailyStats totalLearnSec={totalLearnSec} totalRestSec={totalRestSec} />
           </>
@@ -153,6 +239,16 @@ export default function YouTubeRestTimer() {
           <MarkdownScratchpad />
         </div>
       </Modal>
+
+      {/* Notion Settings Modal */}
+      <NotionSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        syncState={syncState}
+        onValidate={validate}
+        onDisconnect={disconnect}
+        onPull={handlePull}
+      />
     </div>
   );
 }

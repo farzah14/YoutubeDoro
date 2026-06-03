@@ -10,7 +10,7 @@ import { YouTubeComponentProps } from "@/types";
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
 
-const LOFI_GIRL_VIDEO_ID = "jfKfPfyJRdk"; // Famous 24/7 lofi hip hop radio
+const LOFI_GIRL_VIDEO_ID = "lTRiuFIWV54"; // Stable 1 A.M. Study Session lofi compilation (highly reliable & embeddable)
 
 export function LoFiPlayer() {
   const [isEnabled, setIsEnabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
@@ -73,8 +73,9 @@ export function LoFiPlayer() {
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onEnd={() => setIsPlaying(false)}
-          onError={(e) => {
-            console.error("LoFi player error:", e);
+          onError={(e: any) => {
+            const errorCode = e?.data || "unknown";
+            console.error("LoFi player error (YouTube error code):", errorCode);
             setIsPlaying(false);
           }}
         />

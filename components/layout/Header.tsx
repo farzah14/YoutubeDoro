@@ -4,6 +4,8 @@ import { formatMMSS } from "@/lib/time";
 import { Badge } from "../ui/Badge";
 import { LoFiPlayer } from "../audio/LoFiPlayer";
 import { ThemeToggle } from "../ui/ThemeToggle";
+import { NotionSyncButton } from "../notion/NotionSyncButton";
+import type { NotionSyncState } from "@/types";
 
 interface HeaderProps {
   today: string;
@@ -11,9 +13,22 @@ interface HeaderProps {
   totalRestSec: number;
   onOpenNotes: () => void;
   onOpenSettings?: () => void;
+  // Notion props
+  notionSyncState?: NotionSyncState;
+  onNotionSync?: () => void;
+  onNotionOpenSettings?: () => void;
 }
 
-export function Header({ today, totalLearnSec, totalRestSec, onOpenNotes, onOpenSettings }: HeaderProps) {
+export function Header({
+  today,
+  totalLearnSec,
+  totalRestSec,
+  onOpenNotes,
+  onOpenSettings,
+  notionSyncState,
+  onNotionSync,
+  onNotionOpenSettings,
+}: HeaderProps) {
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-8 pt-6">
       <div>
@@ -31,6 +46,15 @@ export function Header({ today, totalLearnSec, totalRestSec, onOpenNotes, onOpen
           <span className="mx-2 text-border-subtle">|</span>
           <span className="text-text-secondary">{formatMMSS(totalRestSec)}</span>
         </div>
+
+        {/* Notion Sync Button */}
+        {notionSyncState && onNotionSync && onNotionOpenSettings && (
+          <NotionSyncButton
+            syncState={notionSyncState}
+            onSync={onNotionSync}
+            onOpenSettings={onNotionOpenSettings}
+          />
+        )}
 
         <ThemeToggle />
         <LoFiPlayer />

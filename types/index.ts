@@ -52,3 +52,41 @@ export type YouTubeComponentProps = {
   onError?: (event: unknown) => void;
   onStateChange?: (event: YouTubeStateChangeEvent) => void;
 };
+
+// ──────────────────────────────────────────────
+// Notion Integration Types
+// ──────────────────────────────────────────────
+
+export type NotionSyncStatus = "idle" | "syncing" | "success" | "error";
+
+export type NotionConfig = {
+  connected: boolean;
+  databaseId: string;
+  lastSync: string | null;
+};
+
+export type SyncPayload = {
+  day: string;
+  topic: string;
+  learnSec: number;
+  restSec: number;
+  notes: DailyNoteEntry[];
+  scratchpad?: string;
+};
+
+export type PullResult = {
+  day: string;
+  topic: string;
+  learnSec: number;
+  restSec: number;
+  notes: DailyNoteEntry[];
+  scratchpad?: string;
+  notionPageId: string;
+};
+
+export type NotionSyncState = {
+  status: NotionSyncStatus;
+  lastSync: string | null;
+  connected: boolean;
+  error: string | null;
+};
