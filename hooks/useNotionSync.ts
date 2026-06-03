@@ -199,7 +199,7 @@ export function useNotionSync() {
 
   // ── PULL (from Notion) ──
   const pullFromNotion = useCallback(
-    async (day?: string) => {
+    async (day?: string, topic?: string) => {
       const config = getConfig();
       if (!config.connected || !config.databaseId) {
         return { success: false, error: "Not connected" };
@@ -213,6 +213,7 @@ export function useNotionSync() {
             token: "env",
             databaseId: config.databaseId,
             day,
+            topic,
           }),
         });
 

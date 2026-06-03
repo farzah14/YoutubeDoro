@@ -1,6 +1,8 @@
 export const KEYS = {
   learnByDay: (day: string) => `ytdoro:${day}:learnSec`,
   restByDay: (day: string) => `ytdoro:${day}:restSec`,
+  learnByDayAndTopic: (day: string, topic: string) => `ytdoro:${day}:${topic}:learnSec`,
+  restByDayAndTopic: (day: string, topic: string) => `ytdoro:${day}:${topic}:restSec`,
   legacyBreakByDay: (day: string) => `ytdoro:${day}:breakSec`,
   topicByDay: (day: string) => `ytdoro:${day}:topic`,
   notesByDay: (day: string) => `ytdoro:${day}:notes`,

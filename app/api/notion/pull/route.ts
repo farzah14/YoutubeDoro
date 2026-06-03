@@ -4,10 +4,11 @@ import { getNotionClient, parseNotionPage } from "@/lib/notion";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { token, databaseId, day } = body as {
+    const { token, databaseId, day, topic } = body as {
       token?: string;
       databaseId?: string;
       day?: string;
+      topic?: string;
     };
 
     const targetDatabaseId = databaseId || process.env.NOTION_DATABASE_ID;
@@ -22,13 +23,26 @@ export async function POST(req: NextRequest) {
     const client = getNotionClient(token);
 
     if (day) {
-      // ── Pull specific day ──
-      const query = await client.dataSources.query({
-        data_source_id: targetDatabaseId,
-        filter: {
+      // ── Pull specific day + topic ──
+      const filterConditions: any[] = [
+        {
           property: "Date",
           title: { equals: day },
         },
+      ];
+
+      if (topic) {
+        filterConditions.push({
+          property: "Topic",
+          rich_text: { equals: topic },
+        });
+      }
+
+      const query = await client.dataSources.query({
+        data_source_id: targetDatabaseId,
+        filter: filterConditions.length > 1
+          ? { and: filterConditions }
+          : filterConditions[0],
         page_size: 1,
       });
 
@@ -36,7 +50,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: true,
           data: null,
-          message: `No data found for ${day}`,
+          message: `No data found for ${day}${topic ? ` and topic "${topic}"` : ""}`,
         });
       }
 

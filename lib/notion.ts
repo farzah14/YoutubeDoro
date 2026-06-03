@@ -39,8 +39,8 @@ export async function createNotionDatabase(
       properties: {
         Date: { type: "title", title: {} },
         Topic: { type: "rich_text", rich_text: {} },
-        "Focus (sec)": { type: "number", number: { format: "number" } },
-        "Rest (sec)": { type: "number", number: { format: "number" } },
+        "Focus (min)": { type: "number", number: { format: "number" } },
+        "Rest (min)": { type: "number", number: { format: "number" } },
         Sessions: { type: "number", number: { format: "number" } },
         Status: {
           type: "select",
@@ -149,11 +149,11 @@ export function buildPageProperties(payload: {
     Topic: {
       rich_text: [{ text: { content: payload.topic || "(No topic)" } }],
     },
-    "Focus (sec)": {
-      number: payload.learnSec,
+    "Focus (min)": {
+      number: Math.round((payload.learnSec / 60) * 100) / 100,
     },
-    "Rest (sec)": {
-      number: payload.restSec,
+    "Rest (min)": {
+      number: Math.round((payload.restSec / 60) * 100) / 100,
     },
     Sessions: {
       number: sessionCount,
@@ -301,14 +301,20 @@ export function parseNotionPage(page: any): {
     props.Date?.title?.[0]?.plain_text || "";
   const topic =
     props.Topic?.rich_text?.[0]?.plain_text || "";
-  const learnSec =
-    typeof props["Focus (sec)"]?.number === "number"
-      ? props["Focus (sec)"].number
+  const learnMin =
+    typeof props["Focus (min)"]?.number === "number"
+      ? props["Focus (min)"].number
+      : typeof props["Focus (sec)"]?.number === "number"
+      ? props["Focus (sec)"].number / 60
       : 0;
-  const restSec =
-    typeof props["Rest (sec)"]?.number === "number"
-      ? props["Rest (sec)"].number
+  const restMin =
+    typeof props["Rest (min)"]?.number === "number"
+      ? props["Rest (min)"].number
+      : typeof props["Rest (sec)"]?.number === "number"
+      ? props["Rest (sec)"].number / 60
       : 0;
+  const learnSec = Math.round(learnMin * 60);
+  const restSec = Math.round(restMin * 60);
   const scratchpad =
     props.Scratchpad?.rich_text?.[0]?.plain_text || "";
 

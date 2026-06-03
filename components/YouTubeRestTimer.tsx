@@ -18,8 +18,10 @@ import { NotionSettingsModal } from "./notion/NotionSettingsModal";
 export default function YouTubeRestTimer() {
   const [today, setToday] = useState<string>("");
   const [topicToday, setTopicToday] = useState<string>("");
-  const [totalLearnSec, setTotalLearnSec] = useState<number>(0);
-  const [totalRestSec, setTotalRestSec] = useState<number>(0);
+  const [totalLearnSec, setTotalLearnSec] = useState<number>(0); // daily total
+  const [totalRestSec, setTotalRestSec] = useState<number>(0);   // daily total
+  const [topicLearnSec, setTopicLearnSec] = useState<number>(0); // topic-specific total
+  const [topicRestSec, setTopicRestSec] = useState<number>(0);   // topic-specific total
   const [notesOpen, setNotesOpen] = useState(false);
 
   const [focusMode, setFocusMode] = useState(false);
@@ -46,12 +48,12 @@ export default function YouTubeRestTimer() {
     return {
       day: today,
       topic: topicToday,
-      learnSec: totalLearnSec,
-      restSec: totalRestSec,
-      notes: getNotes(),
+      learnSec: topicLearnSec, // Send topic-specific focus time
+      restSec: topicRestSec,   // Send topic-specific rest time
+      notes: getNotes(),       // notes will be filtered on the backend by topic
       scratchpad,
     };
-  }, [today, topicToday, totalLearnSec, totalRestSec, getNotes]);
+  }, [today, topicToday, topicLearnSec, topicRestSec, getNotes]);
 
   // Auto-sync trigger (called after state updates)
   const triggerNotionSync = useCallback(() => {
@@ -72,22 +74,40 @@ export default function YouTubeRestTimer() {
 
   // Pull handler
   const handlePull = useCallback(async () => {
-    const result = await pullFromNotion(today);
+    const result = await pullFromNotion(today, topicToday);
     if (result?.success && result?.data) {
       const data = result.data;
-      // Update local state with pulled data
+      
+      // Update topic-specific state and localStorage
       if (data.learnSec !== undefined) {
-        setTotalLearnSec(data.learnSec);
-        writeNumber(KEYS.learnByDay(today), data.learnSec);
+        const localTopicKey = KEYS.learnByDayAndTopic(today, topicToday);
+        const prevTopicVal = readNumber(localTopicKey) || 0;
+        setTopicLearnSec(data.learnSec);
+        writeNumber(localTopicKey, data.learnSec);
+        
+        // Adjust the daily total by the difference
+        const diff = data.learnSec - prevTopicVal;
+        if (diff !== 0) {
+          const nextDaily = Math.max(0, totalLearnSec + diff);
+          setTotalLearnSec(nextDaily);
+          writeNumber(KEYS.learnByDay(today), nextDaily);
+        }
       }
+      
       if (data.restSec !== undefined) {
-        setTotalRestSec(data.restSec);
-        writeNumber(KEYS.restByDay(today), data.restSec);
+        const localTopicKey = KEYS.restByDayAndTopic(today, topicToday);
+        const prevTopicVal = readNumber(localTopicKey) || 0;
+        setTopicRestSec(data.restSec);
+        writeNumber(localTopicKey, data.restSec);
+        
+        const diff = data.restSec - prevTopicVal;
+        if (diff !== 0) {
+          const nextDaily = Math.max(0, totalRestSec + diff);
+          setTotalRestSec(nextDaily);
+          writeNumber(KEYS.restByDay(today), nextDaily);
+        }
       }
-      if (data.topic) {
-        setTopicToday(data.topic);
-        writeString(KEYS.topicByDay(today), data.topic);
-      }
+      
       if (data.scratchpad) {
         try {
           window.localStorage.setItem("ytdoro:scratchpad", data.scratchpad);
@@ -97,71 +117,129 @@ export default function YouTubeRestTimer() {
       }
     }
     return result;
-  }, [today, pullFromNotion]);
+  }, [today, topicToday, totalLearnSec, totalRestSec, pullFromNotion]);
 
   useEffect(() => {
     const d = dayKey();
     setToday(d);
+    
+    // Load daily totals
     setTotalLearnSec(readNumber(KEYS.learnByDay(d)));
     setTotalRestSec(readNumber(KEYS.restByDay(d)) || readNumber(KEYS.legacyBreakByDay(d)));
-    setTopicToday(readString(KEYS.topicByDay(d)));
+    
+    // Load active topic
+    const activeTopic = readString(KEYS.topicByDay(d));
+    setTopicToday(activeTopic);
+
+    // Load active topic totals
+    setTopicLearnSec(readNumber(KEYS.learnByDayAndTopic(d, activeTopic)) || 0);
+    setTopicRestSec(readNumber(KEYS.restByDayAndTopic(d, activeTopic)) || 0);
   }, []);
 
   const handleStartWithTitle = useCallback((title: string) => {
     const t = title.trim() || "(Untitled)";
     writeString(KEYS.topicByDay(today), t);
     setTopicToday(t);
+
+    // Load topic-specific times from localStorage
+    const newTopicLearn = readNumber(KEYS.learnByDayAndTopic(today, t)) || 0;
+    const newTopicRest = readNumber(KEYS.restByDayAndTopic(today, t)) || 0;
+    setTopicLearnSec(newTopicLearn);
+    setTopicRestSec(newTopicRest);
+
     upsertTitleNote({ kind: "learn_start", title: t, addLearn: 0, addRest: 0 });
     triggerNotionSync();
   }, [today, upsertTitleNote, triggerNotionSync]);
 
   const handleLearnDone = useCallback((sec: number) => {
-    const next = totalLearnSec + sec;
-    setTotalLearnSec(next);
-    writeNumber(KEYS.learnByDay(today), next);
+    // 1. Update daily total
+    const nextDaily = totalLearnSec + sec;
+    setTotalLearnSec(nextDaily);
+    writeNumber(KEYS.learnByDay(today), nextDaily);
+
+    // 2. Update topic total
+    const nextTopic = topicLearnSec + sec;
+    setTopicLearnSec(nextTopic);
+    writeNumber(KEYS.learnByDayAndTopic(today, topicToday), nextTopic);
+
     upsertTitleNote({ kind: "learn_done", title: topicToday, addLearn: sec, addRest: 0 });
     triggerNotionSync();
-  }, [today, topicToday, totalLearnSec, upsertTitleNote, triggerNotionSync]);
+  }, [today, topicToday, totalLearnSec, topicLearnSec, upsertTitleNote, triggerNotionSync]);
 
   const handleLearnStop = useCallback((sec: number) => {
-    const next = totalLearnSec + sec;
-    setTotalLearnSec(next);
-    writeNumber(KEYS.learnByDay(today), next);
+    // 1. Update daily total
+    const nextDaily = totalLearnSec + sec;
+    setTotalLearnSec(nextDaily);
+    writeNumber(KEYS.learnByDay(today), nextDaily);
+
+    // 2. Update topic total
+    const nextTopic = topicLearnSec + sec;
+    setTopicLearnSec(nextTopic);
+    writeNumber(KEYS.learnByDayAndTopic(today, topicToday), nextTopic);
+
     upsertTitleNote({ kind: "learn_stop", title: topicToday, addLearn: sec, addRest: 0 });
     triggerNotionSync();
-  }, [today, topicToday, totalLearnSec, upsertTitleNote, triggerNotionSync]);
+  }, [today, topicToday, totalLearnSec, topicLearnSec, upsertTitleNote, triggerNotionSync]);
 
   const handleRestDone = useCallback((sec: number) => {
-    const next = totalRestSec + sec;
-    setTotalRestSec(next);
-    writeNumber(KEYS.restByDay(today), next);
+    // 1. Update daily total
+    const nextDaily = totalRestSec + sec;
+    setTotalRestSec(nextDaily);
+    writeNumber(KEYS.restByDay(today), nextDaily);
+
+    // 2. Update topic total
+    const nextTopic = topicRestSec + sec;
+    setTopicRestSec(nextTopic);
+    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
+
     upsertTitleNote({ kind: "rest_done", title: topicToday, addLearn: 0, addRest: sec });
     triggerNotionSync();
-  }, [today, topicToday, totalRestSec, upsertTitleNote, triggerNotionSync]);
+  }, [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]);
 
   const handleRestStop = useCallback((sec: number) => {
-    const next = totalRestSec + sec;
-    setTotalRestSec(next);
-    writeNumber(KEYS.restByDay(today), next);
+    // 1. Update daily total
+    const nextDaily = totalRestSec + sec;
+    setTotalRestSec(nextDaily);
+    writeNumber(KEYS.restByDay(today), nextDaily);
+
+    // 2. Update topic total
+    const nextTopic = topicRestSec + sec;
+    setTopicRestSec(nextTopic);
+    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
+
     upsertTitleNote({ kind: "rest_stop", title: topicToday, addLearn: 0, addRest: sec });
     triggerNotionSync();
-  }, [today, topicToday, totalRestSec, upsertTitleNote, triggerNotionSync]);
+  }, [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]);
 
   const handleYTDone = useCallback((sec: number) => {
-    const next = totalRestSec + sec;
-    setTotalRestSec(next);
-    writeNumber(KEYS.restByDay(today), next);
+    // 1. Update daily total
+    const nextDaily = totalRestSec + sec;
+    setTotalRestSec(nextDaily);
+    writeNumber(KEYS.restByDay(today), nextDaily);
+
+    // 2. Update topic total
+    const nextTopic = topicRestSec + sec;
+    setTopicRestSec(nextTopic);
+    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
+
     upsertTitleNote({ kind: "yt_rest_done", title: topicToday, addLearn: 0, addRest: sec });
     triggerNotionSync();
-  }, [today, topicToday, totalRestSec, upsertTitleNote, triggerNotionSync]);
+  }, [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]);
 
   const handleYTStop = useCallback((sec: number) => {
-    const next = totalRestSec + sec;
-    setTotalRestSec(next);
-    writeNumber(KEYS.restByDay(today), next);
+    // 1. Update daily total
+    const nextDaily = totalRestSec + sec;
+    setTotalRestSec(nextDaily);
+    writeNumber(KEYS.restByDay(today), nextDaily);
+
+    // 2. Update topic total
+    const nextTopic = topicRestSec + sec;
+    setTopicRestSec(nextTopic);
+    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
+
     upsertTitleNote({ kind: "yt_rest_stop", title: topicToday, addLearn: 0, addRest: sec });
     triggerNotionSync();
-  }, [today, topicToday, totalRestSec, upsertTitleNote, triggerNotionSync]);
+  }, [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -208,7 +286,7 @@ export default function YouTubeRestTimer() {
         <main className={`grid gap-8 mt-4 ${focusMode ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
           <LearningCard
             topicToday={topicToday}
-            totalTodaySec={totalLearnSec}
+            totalTodaySec={topicLearnSec}
             onStartWithTitle={handleStartWithTitle}
             onLearnDone={handleLearnDone}
             onLearnStop={handleLearnStop}
@@ -217,7 +295,7 @@ export default function YouTubeRestTimer() {
           {!focusMode && (
             <RestCardContainer
               topicToday={topicToday}
-              totalTodaySec={totalRestSec}
+              totalTodaySec={topicRestSec}
               onRestDone={handleRestDone}
               onRestStop={handleRestStop}
               onYTDone={handleYTDone}
