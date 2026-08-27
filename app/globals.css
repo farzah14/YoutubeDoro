@@ -183,8 +183,18 @@ textarea:focus-visible,
 .workspace-grid {
   display: grid;
   gap: 1rem;
+  grid-template-areas:
+    "focus"
+    "tasks"
+    "stats"
+    "activity";
   grid-template-columns: 1fr;
 }
+
+.workspace-zone--stats { grid-area: stats; }
+.workspace-zone--focus { grid-area: focus; }
+.workspace-zone--tasks { grid-area: tasks; }
+.workspace-zone--activity { grid-area: activity; }
 
 .ambient-background {
   position: fixed;
@@ -279,12 +289,19 @@ textarea:focus-visible,
 
 @media (min-width: 768px) {
   .workspace-grid {
+    grid-template-areas:
+      "focus tasks"
+      "stats stats"
+      "activity activity";
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
   }
 }
 
 @media (min-width: 1180px) {
   .workspace-grid {
+    grid-template-areas:
+      "stats focus tasks"
+      "activity activity activity";
     grid-template-columns: minmax(13rem, 0.72fr) minmax(30rem, 1.55fr) minmax(18rem, 0.95fr);
   }
 }

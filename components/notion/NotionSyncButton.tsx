@@ -32,10 +32,11 @@ export function NotionSyncButton({
     return (
       <button
         onClick={onOpenSettings}
-        className="group relative flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border-subtle hover:border-border-focus bg-surface hover:bg-surface-hover text-text-secondary hover:text-foreground transition-all duration-200 text-sm"
+        className="group flex h-9 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-xs text-text-secondary transition-colors duration-150 hover:border-border-focus hover:bg-surface-hover hover:text-foreground"
         title="Connect to Notion"
+        aria-label="Connect to Notion"
       >
-        <NotionIcon className="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity" />
+        <NotionIcon className="h-4 w-4 opacity-60 transition-opacity group-hover:opacity-100" />
         <span className="hidden sm:inline">Connect Notion</span>
       </button>
     );
@@ -47,17 +48,15 @@ export function NotionSyncButton({
       <button
         onClick={onSync}
         disabled={status === "syncing"}
-        className={`
-          group relative flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-all duration-300
-          ${status === "syncing"
-            ? "border-blue-500/30 bg-blue-500/5 text-blue-400 cursor-wait"
+        className={`group flex h-9 items-center gap-2 rounded-lg border px-3 text-xs transition-colors duration-150 ${
+          status === "syncing"
+            ? "cursor-wait border-border-focus/50 bg-surface-secondary text-accent"
             : status === "success"
-              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
+              ? "border-success/50 bg-surface-secondary text-success"
               : status === "error"
-                ? "border-red-500/30 bg-red-500/5 text-red-400 hover:border-red-500/50"
-                : "border-border-subtle hover:border-border-focus bg-surface hover:bg-surface-hover text-text-secondary hover:text-foreground"
-          }
-        `}
+                ? "border-danger/60 bg-surface-secondary text-danger hover:border-danger"
+                : "border-border-subtle bg-surface text-text-secondary hover:border-border-focus hover:bg-surface-hover hover:text-foreground"
+        }`}
         title={
           status === "syncing"
             ? "Syncing..."
@@ -65,11 +64,19 @@ export function NotionSyncButton({
               ? syncState.error || "Sync error"
               : lastSync
                 ? `Last synced: ${formatLastSync(lastSync)}`
+              : "Sync to Notion"
+        }
+        aria-label={
+          status === "error"
+            ? "Notion sync error. Open settings for details."
+            : status === "syncing"
+              ? "Syncing to Notion"
+              : status === "success"
+                ? "Synced to Notion. Sync again"
                 : "Sync to Notion"
         }
       >
-        {/* Animated sync icon */}
-        <span className={`inline-flex ${status === "syncing" ? "animate-spin" : ""}`}>
+        <span className={`inline-flex ${status === "syncing" ? "animate-spin" : ""}`} aria-hidden="true">
           {status === "success" ? (
             <CheckIcon className="w-4 h-4" />
           ) : status === "error" ? (
@@ -89,27 +96,16 @@ export function NotionSyncButton({
                 : "Sync"}
         </span>
 
-        {/* Live pulse dot */}
-        {status === "syncing" && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
-          </span>
-        )}
-        {status === "success" && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-          </span>
-        )}
       </button>
 
       {/* Settings gear */}
       <button
         onClick={onOpenSettings}
-        className="p-1.5 rounded-md text-text-muted hover:text-foreground hover:bg-surface-hover transition-colors"
+        className="h-9 w-9 rounded-lg p-1.5 text-text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         title="Notion Settings"
+        aria-label="Open Notion settings"
       >
-        <GearIcon className="w-3.5 h-3.5" />
+        <GearIcon className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     </div>
   );

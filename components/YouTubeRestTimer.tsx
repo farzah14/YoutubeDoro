@@ -342,7 +342,7 @@ export default function YouTubeRestTimer() {
 
   return (
     <div
-      className={`min-h-screen relative text-foreground selection:bg-accent/30 flex flex-col items-center transition-all duration-400 overflow-x-hidden ${
+      className={`relative flex min-h-screen w-full flex-col items-center overflow-x-hidden text-foreground selection:bg-accent/30 transition-all duration-400 ${
         focusMode ? "justify-center py-0" : ""
       }`}
     >
@@ -351,8 +351,8 @@ export default function YouTubeRestTimer() {
 
       {/* ── Layer 4: Application Shell & Workspace ── */}
       <div
-        className={`w-full px-4 sm:px-6 lg:px-8 pb-20 md:pb-12 transition-all duration-400 relative z-10 ${
-          focusMode ? "max-w-2xl" : "max-w-7xl"
+        className={`relative z-10 w-full px-4 pb-24 transition-all duration-400 sm:px-6 md:pb-14 lg:px-8 ${
+          focusMode ? "max-w-2xl" : "max-w-[1440px]"
         }`}
       >
         {!focusMode && (
@@ -369,13 +369,13 @@ export default function YouTubeRestTimer() {
           />
         )}
 
-        {/* ── ADAPTIVE RESPONSIVE COMPOSITIONS (Single React tree instance) ── */}
+        {/* ── Adaptive responsive composition: one React tree instance ── */}
         {!focusMode ? (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            {/* Zone 1: Daily Progress & Goals */}
-            {/* Desktop: col-span-3 order-1 | Tablet: col-span-6 order-3 | Mobile: conditional on tab */}
+          <div className="workspace-grid items-start pt-5 md:pt-6">
             <aside
-              className={`space-y-6 md:col-span-6 lg:col-span-3 order-3 md:order-3 lg:order-1 ${
+              id="stats"
+              aria-label="Today’s progress"
+              className={`workspace-zone workspace-zone--stats min-w-0 space-y-4 ${
                 mobileTab === "stats" ? "block" : "hidden md:block"
               }`}
             >
@@ -387,10 +387,10 @@ export default function YouTubeRestTimer() {
               />
             </aside>
 
-            {/* Zone 2: Central Focus & Rest Stage */}
-            {/* Desktop: col-span-5 order-2 | Tablet: col-span-6 order-1 | Mobile: conditional on tab */}
             <main
-              className={`space-y-6 md:col-span-6 lg:col-span-5 order-1 md:order-1 lg:order-2 ${
+              id="focus"
+              aria-label="Focus workspace"
+              className={`workspace-zone workspace-zone--focus min-w-0 space-y-4 ${
                 mobileTab === "focus" ? "block" : "hidden md:block"
               }`}
             >
@@ -422,10 +422,10 @@ export default function YouTubeRestTimer() {
               />
             </main>
 
-            {/* Zone 3: Productivity & Task Queue */}
-            {/* Desktop: col-span-4 order-3 | Tablet: col-span-6 order-2 | Mobile: conditional on tab */}
             <aside
-              className={`space-y-6 md:col-span-6 lg:col-span-4 order-2 md:order-2 lg:order-3 ${
+              id="tasks"
+              aria-label="Task queue"
+              className={`workspace-zone workspace-zone--tasks min-w-0 space-y-4 ${
                 mobileTab === "tasks" ? "block" : "hidden md:block"
               }`}
             >
@@ -440,10 +440,10 @@ export default function YouTubeRestTimer() {
               />
             </aside>
 
-            {/* Zone 4: Focus Activity Heatmap */}
-            {/* Full width row below on desktop/tablet | Included in stats tab on mobile */}
             <section
-              className={`pt-2 md:col-span-12 lg:col-span-12 order-4 ${
+              id="activity"
+              aria-label="Focus activity"
+              className={`workspace-zone workspace-zone--activity min-w-0 pt-1 ${
                 mobileTab === "stats" ? "block" : "hidden md:block"
               }`}
             >
@@ -451,8 +451,7 @@ export default function YouTubeRestTimer() {
             </section>
           </div>
         ) : (
-          /* FOCUS MODE (Minimalist Clean Stage) */
-          <div className="w-full space-y-6">
+          <div className="w-full space-y-5 pt-6">
             <LearningCard
               topicToday={topicToday}
               totalTodaySec={topicLearnSec}
@@ -470,7 +469,7 @@ export default function YouTubeRestTimer() {
               onLearnDone={handleLearnDone}
               onLearnStop={handleLearnStop}
             />
-            <div className="text-center text-text-muted text-xs opacity-75">
+            <div className="text-center text-xs text-text-muted">
               Press <kbd className="px-2 py-1 bg-surface-secondary rounded font-mono text-xs mx-1">F</kbd> or{" "}
               <kbd className="px-2 py-1 bg-surface-secondary rounded font-mono text-xs mx-1">Esc</kbd> to exit focus mode
             </div>
