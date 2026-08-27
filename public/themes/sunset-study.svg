@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Sunset study window</title>
+  <desc id="desc">An illustrated plum study room with peach sunset light, soft clouds, and a quiet desk.</desc>
+  <defs>
+    <linearGradient id="sunset-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5c3a62" />
+      <stop offset="0.48" stop-color="#d7797b" />
+      <stop offset="1" stop-color="#f3b176" />
+    </linearGradient>
+    <radialGradient id="sunset-glow" cx="0.72" cy="0.48" r="0.5">
+      <stop offset="0" stop-color="#ffe0a2" stop-opacity="0.74" />
+      <stop offset="1" stop-color="#f4a574" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="sunset-desk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#563346" />
+      <stop offset="1" stop-color="#2f1d30" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#2d1e31" />
+  <rect x="80" y="60" width="1440" height="760" rx="16" fill="url(#sunset-sky)" />
+  <rect x="80" y="60" width="1440" height="760" rx="16" fill="url(#sunset-glow)" />
+
+  <circle cx="1120" cy="425" r="120" fill="#ffe0a2" />
+  <g fill="#f6c2aa" opacity="0.72">
+    <path d="M280 250c50-62 146-62 196 0 45-34 112-16 126 39H150c15-52 79-72 130-39Z" />
+    <path d="M1050 210c43-50 120-52 164 0 40-26 91-12 106 31H940c13-39 65-55 110-31Z" />
+  </g>
+  <path d="M80 600 270 510 440 575 630 445 820 565 1000 470 1170 585 1360 455 1520 540V820H80Z" fill="#9b566e" opacity="0.82" />
+  <path d="M80 680 260 595 430 660 620 545 820 665 1010 555 1180 660 1390 535 1520 610V820H80Z" fill="#653e58" />
+  <rect x="80" y="60" width="1440" height="760" rx="16" fill="none" stroke="#81516a" stroke-width="24" />
+  <path d="M800 60v760M80 430h1440" stroke="#81516a" stroke-width="18" opacity="0.9" />
+
+  <rect y="800" width="1600" height="200" fill="url(#sunset-desk)" />
+  <path d="M0 842h1600" stroke="#d88978" stroke-width="4" opacity="0.45" />
+  <path d="M420 820h370v30H420zM455 850h300v28H455z" fill="#f2b27f" opacity="0.55" />
+  <path d="M1110 838h205v18h-205zM1135 856h155v45h-155z" fill="#70465b" />
+  <path d="M1150 838v-64h82v64" fill="none" stroke="#e2a16e" stroke-width="8" />
+  <path d="M1160 775c-5-42 17-72 46-89 29 17 51 47 46 89" fill="#a86c70" />
+  <path d="M1265 695c23-23 51-27 69-22-8 26-30 43-58 46" fill="#c4857c" />
+  <g fill="#ffe0a2" opacity="0.58">
+    <circle cx="360" cy="330" r="5" /><circle cx="410" cy="380" r="3" /><circle cx="690" cy="270" r="4" />
+    <circle cx="890" cy="360" r="3" /><circle cx="1340" cy="320" r="5" />
+  </g>
+</svg>

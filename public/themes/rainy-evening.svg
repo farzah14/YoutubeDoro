@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Rainy evening window</title>
+  <desc id="desc">An illustrated blue-gray room with a rain-marked window and muted city reflections.</desc>
+  <defs>
+    <linearGradient id="rain-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#172839" />
+      <stop offset="0.56" stop-color="#36576a" />
+      <stop offset="1" stop-color="#6b8c9a" />
+    </linearGradient>
+    <linearGradient id="rain-desk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#213b4d" />
+      <stop offset="1" stop-color="#0b1a29" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#0f2030" />
+  <rect x="80" y="60" width="1440" height="760" rx="16" fill="url(#rain-sky)" />
+  <path d="M80 560 230 505 390 560 545 450 710 555 890 470 1080 570 1250 455 1520 555V820H80Z" fill="#294554" />
+  <path d="M80 650 260 570 420 640 600 535 780 640 980 550 1160 640 1350 520 1520 605V820H80Z" fill="#172f40" />
+
+  <g fill="#c1e7ef" opacity="0.48">
+    <rect x="270" y="610" width="10" height="18" rx="3" />
+    <rect x="302" y="596" width="10" height="32" rx="3" />
+    <rect x="820" y="605" width="10" height="24" rx="3" />
+    <rect x="850" y="580" width="10" height="48" rx="3" />
+    <rect x="1170" y="600" width="10" height="18" rx="3" />
+    <rect x="1200" y="575" width="10" height="43" rx="3" />
+  </g>
+
+  <rect x="80" y="60" width="1440" height="760" rx="16" fill="none" stroke="#58798a" stroke-width="24" />
+  <path d="M800 60v760M80 430h1440" stroke="#58798a" stroke-width="18" opacity="0.9" />
+  <g stroke="#c4eaf0" stroke-width="7" stroke-linecap="round" opacity="0.32">
+    <path d="M190 155 145 260" /><path d="M320 250 270 380" /><path d="M470 120 425 230" />
+    <path d="M620 300 570 430" /><path d="M760 170 710 300" /><path d="M930 270 880 400" />
+    <path d="M1080 130 1030 260" /><path d="M1215 270 1165 400" /><path d="M1390 160 1340 290" />
+  </g>
+  <g fill="none" stroke="#b7dce5" stroke-width="9" opacity="0.22">
+    <path d="M220 220c35 20 35 55 0 75s-35 55 0 75" />
+    <path d="M1270 165c35 20 35 55 0 75s-35 55 0 75" />
+  </g>
+
+  <rect y="800" width="1600" height="200" fill="url(#rain-desk)" />
+  <path d="M0 842h1600" stroke="#6a92a0" stroke-width="4" opacity="0.4" />
+  <path d="M310 835h250l-24 24H286z" fill="#8bbeca" opacity="0.34" />
+  <path d="M1110 835h220v20h-220zM1142 855h156v45h-156z" fill="#2b5060" />
+  <path d="M1158 835v-66h84v66" fill="none" stroke="#83b8c4" stroke-width="8" opacity="0.68" />
+  <path d="M1168 770c-5-42 17-72 46-89 29 17 51 47 46 89" fill="#487384" />
+</svg>

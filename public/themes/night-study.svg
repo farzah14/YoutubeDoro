@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Night study window</title>
+  <desc id="desc">An illustrated navy study room with moonlight, distant rooftops, and a warm desk lamp.</desc>
+  <defs>
+    <linearGradient id="night-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1830" />
+      <stop offset="0.62" stop-color="#17294a" />
+      <stop offset="1" stop-color="#263650" />
+    </linearGradient>
+    <radialGradient id="lamp-glow" cx="0.12" cy="0.78" r="0.48">
+      <stop offset="0" stop-color="#f6c76d" stop-opacity="0.38" />
+      <stop offset="1" stop-color="#f6c76d" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="desk-wood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#202b3d" />
+      <stop offset="1" stop-color="#0b1423" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#091424" />
+  <rect x="80" y="60" width="1440" height="760" rx="16" fill="url(#night-sky)" />
+  <rect x="80" y="60" width="1440" height="760" rx="16" fill="url(#lamp-glow)" />
+
+  <circle cx="1265" cy="215" r="88" fill="#f5f0e7" />
+  <circle cx="1300" cy="185" r="88" fill="#142645" />
+  <g fill="#f7df9a" opacity="0.8">
+    <circle cx="260" cy="185" r="4" />
+    <circle cx="380" cy="300" r="3" />
+    <circle cx="535" cy="160" r="5" />
+    <circle cx="715" cy="255" r="3" />
+    <circle cx="895" cy="150" r="4" />
+    <circle cx="1040" cy="330" r="3" />
+    <circle cx="1420" cy="350" r="4" />
+  </g>
+
+  <path d="M80 565 255 470 385 535 560 410 735 535 940 405 1100 515 1270 410 1520 555V820H80Z" fill="#142541" />
+  <path d="M80 650 270 570 440 640 650 510 820 640 1030 555 1220 635 1410 500 1520 560V820H80Z" fill="#0d1b31" />
+  <g fill="#f6c76d" opacity="0.55">
+    <rect x="230" y="630" width="8" height="8" rx="2" />
+    <rect x="260" y="612" width="8" height="8" rx="2" />
+    <rect x="420" y="675" width="8" height="8" rx="2" />
+    <rect x="1160" y="655" width="8" height="8" rx="2" />
+    <rect x="1190" y="638" width="8" height="8" rx="2" />
+    <rect x="1360" y="610" width="8" height="8" rx="2" />
+  </g>
+
+  <rect x="80" y="60" width="1440" height="760" rx="16" fill="none" stroke="#304966" stroke-width="24" />
+  <path d="M800 60v760M80 430h1440" stroke="#304966" stroke-width="18" opacity="0.9" />
+
+  <rect y="800" width="1600" height="200" fill="url(#desk-wood)" />
+  <path d="M0 842h1600" stroke="#46617a" stroke-width="4" opacity="0.45" />
+  <path d="M220 800h160v-20c0-20 16-36 36-36h38c20 0 36 16 36 36v20h42" fill="none" stroke="#f6c76d" stroke-width="16" stroke-linecap="round" />
+  <path d="M302 744h88l-14-56h-60z" fill="#f6c76d" />
+  <path d="M326 690h40l28-92h-96z" fill="#f6c76d" opacity="0.92" />
+  <path d="M1200 838h210v18h-210zM1230 856h150v46h-150z" fill="#24344a" />
+  <path d="M1250 838v-58h90v58" fill="none" stroke="#5a7387" stroke-width="8" />
+  <path d="M1258 780c-5-45 18-78 48-94 30 16 53 49 48 94" fill="#36506b" />
+  <path d="M1335 687c25-26 57-32 77-26-8 29-32 48-64 52" fill="#46657a" />
+</svg>
