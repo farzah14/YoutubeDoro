@@ -4,29 +4,80 @@ import { useState, useEffect, useCallback } from "react";
 import { dayKey } from "@/lib/time";
 import { readNumber, writeNumber, readString, writeString } from "@/lib/storage";
 import { KEYS } from "@/lib/constants";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useDailyNotes } from "@/hooks/useDailyNotes";
 import { useNotionSync } from "@/hooks/useNotionSync";
+import { useTasks } from "@/hooks/useTasks";
+import { CozyAnimeTheme } from "@/types/theme";
+import { DEFAULT_THEME } from "@/lib/themeConfig";
+import { AmbientBackground } from "./anime/AmbientBackground";
 import { Header } from "./layout/Header";
+import { MobileNav, MobileTab } from "./layout/MobileNav";
 import { DailyStats } from "./stats/DailyStats";
+import { WeeklyHeatmap } from "./stats/WeeklyHeatmap";
 import { LearningCard } from "./timer/LearningCard";
 import { RestCardContainer } from "./timer/RestCardContainer";
+import { TaskQueue } from "./tasks/TaskQueue";
 import { Modal } from "./ui/Modal";
 import { NotesPanel } from "./notes/NotesPanel";
 import { MarkdownScratchpad } from "./notes/MarkdownScratchpad";
 import { NotionSettingsModal } from "./notion/NotionSettingsModal";
 
 export default function YouTubeRestTimer() {
-  const [today, setToday] = useState<string>("");
-  const [topicToday, setTopicToday] = useState<string>("");
-  const [totalLearnSec, setTotalLearnSec] = useState<number>(0); // daily total
-  const [totalRestSec, setTotalRestSec] = useState<number>(0);   // daily total
-  const [topicLearnSec, setTopicLearnSec] = useState<number>(0); // topic-specific total
-  const [topicRestSec, setTopicRestSec] = useState<number>(0);   // topic-specific total
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [today] = useState<string>(() => dayKey());
+  const [topicToday, setTopicToday] = useState<string>(() => {
+    return readString(KEYS.topicByDay(dayKey())) || "";
+  });
+  const [totalLearnSec, setTotalLearnSec] = useState<number>(() => {
+    return readNumber(KEYS.learnByDay(dayKey())) || 0;
+  });
+  const [totalRestSec, setTotalRestSec] = useState<number>(() => {
+    return readNumber(KEYS.restByDay(dayKey())) || readNumber(KEYS.legacyBreakByDay(dayKey())) || 0;
+  });
+  const [topicLearnSec, setTopicLearnSec] = useState<number>(() => {
+    const d = dayKey();
+    const active = readString(KEYS.topicByDay(d)) || "";
+    return readNumber(KEYS.learnByDayAndTopic(d, active)) || 0;
+  });
+  const [topicRestSec, setTopicRestSec] = useState<number>(() => {
+    const d = dayKey();
+    const active = readString(KEYS.topicByDay(d)) || "";
+    return readNumber(KEYS.restByDayAndTopic(d, active)) || 0;
+  });
+  const [pomodoroRounds, setPomodoroRounds] = useState<number>(() => {
+    return readNumber(KEYS.pomodoroRoundsByDay(dayKey())) || 0;
+  });
 
+  const [initialBreakMin, setInitialBreakMin] = useState<number>(5);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("focus");
+
+  // ── Cozy Anime Theme System (Default: Night Study) ──
+  const [currentTheme, setCurrentTheme] = useLocalStorage<CozyAnimeTheme>(
+    KEYS.theme,
+    DEFAULT_THEME
+  );
+
+  // Apply presentation-only theme state to the document root.
+  useEffect(() => {
+    const validTheme =
+      currentTheme === "rainy-evening" || currentTheme === "sunset-study"
+        ? currentTheme
+        : "night-study";
+    document.documentElement.dataset.theme = validTheme;
+  }, [currentTheme]);
 
   const { upsertTitleNote, getNotes } = useDailyNotes(today);
+  const {
+    tasks,
+    activeTaskId,
+    setActiveTaskId,
+    addTask,
+    toggleTask,
+    deleteTask,
+    incrementTaskPomodoro,
+  } = useTasks(today);
 
   // ── Notion Integration ──
   const {
@@ -42,23 +93,23 @@ export default function YouTubeRestTimer() {
 
   // Helper to build sync payload from current state
   const buildSyncPayload = useCallback(() => {
-    const scratchpad = typeof window !== "undefined"
-      ? window.localStorage.getItem("ytdoro:scratchpad") || ""
-      : "";
+    const scratchpad =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem("ytdoro:scratchpad") || ""
+        : "";
     return {
       day: today,
       topic: topicToday,
-      learnSec: topicLearnSec, // Send topic-specific focus time
-      restSec: topicRestSec,   // Send topic-specific rest time
-      notes: getNotes(),       // notes will be filtered on the backend by topic
+      learnSec: topicLearnSec,
+      restSec: topicRestSec,
+      notes: getNotes(),
       scratchpad,
     };
   }, [today, topicToday, topicLearnSec, topicRestSec, getNotes]);
 
-  // Auto-sync trigger (called after state updates)
+  // Auto-sync trigger
   const triggerNotionSync = useCallback(() => {
     if (!syncState.connected || !today) return;
-    // Use setTimeout to ensure state is updated before building payload
     setTimeout(() => {
       const payload = buildSyncPayload();
       syncDebounced(payload);
@@ -77,15 +128,13 @@ export default function YouTubeRestTimer() {
     const result = await pullFromNotion(today, topicToday);
     if (result?.success && result?.data) {
       const data = result.data;
-      
-      // Update topic-specific state and localStorage
+
       if (data.learnSec !== undefined) {
         const localTopicKey = KEYS.learnByDayAndTopic(today, topicToday);
         const prevTopicVal = readNumber(localTopicKey) || 0;
         setTopicLearnSec(data.learnSec);
         writeNumber(localTopicKey, data.learnSec);
-        
-        // Adjust the daily total by the difference
+
         const diff = data.learnSec - prevTopicVal;
         if (diff !== 0) {
           const nextDaily = Math.max(0, totalLearnSec + diff);
@@ -93,13 +142,13 @@ export default function YouTubeRestTimer() {
           writeNumber(KEYS.learnByDay(today), nextDaily);
         }
       }
-      
+
       if (data.restSec !== undefined) {
         const localTopicKey = KEYS.restByDayAndTopic(today, topicToday);
         const prevTopicVal = readNumber(localTopicKey) || 0;
         setTopicRestSec(data.restSec);
         writeNumber(localTopicKey, data.restSec);
-        
+
         const diff = data.restSec - prevTopicVal;
         if (diff !== 0) {
           const nextDaily = Math.max(0, totalRestSec + diff);
@@ -107,7 +156,7 @@ export default function YouTubeRestTimer() {
           writeNumber(KEYS.restByDay(today), nextDaily);
         }
       }
-      
+
       if (data.scratchpad) {
         try {
           window.localStorage.setItem("ytdoro:scratchpad", data.scratchpad);
@@ -119,127 +168,153 @@ export default function YouTubeRestTimer() {
     return result;
   }, [today, topicToday, totalLearnSec, totalRestSec, pullFromNotion]);
 
-  useEffect(() => {
-    const d = dayKey();
-    setToday(d);
-    
-    // Load daily totals
-    setTotalLearnSec(readNumber(KEYS.learnByDay(d)));
-    setTotalRestSec(readNumber(KEYS.restByDay(d)) || readNumber(KEYS.legacyBreakByDay(d)));
-    
-    // Load active topic
-    const activeTopic = readString(KEYS.topicByDay(d));
-    setTopicToday(activeTopic);
+  const handleStartWithTitle = useCallback(
+    (title: string) => {
+      const t = title.trim() || "(Untitled)";
+      writeString(KEYS.topicByDay(today), t);
+      setTopicToday(t);
 
-    // Load active topic totals
-    setTopicLearnSec(readNumber(KEYS.learnByDayAndTopic(d, activeTopic)) || 0);
-    setTopicRestSec(readNumber(KEYS.restByDayAndTopic(d, activeTopic)) || 0);
+      const newTopicLearn = readNumber(KEYS.learnByDayAndTopic(today, t)) || 0;
+      const newTopicRest = readNumber(KEYS.restByDayAndTopic(today, t)) || 0;
+      setTopicLearnSec(newTopicLearn);
+      setTopicRestSec(newTopicRest);
+
+      upsertTitleNote({ kind: "learn_start", title: t, addLearn: 0, addRest: 0 });
+      triggerNotionSync();
+    },
+    [today, upsertTitleNote, triggerNotionSync]
+  );
+
+  const handleLearnDone = useCallback(
+    (sec: number) => {
+      const nextDaily = totalLearnSec + sec;
+      setTotalLearnSec(nextDaily);
+      writeNumber(KEYS.learnByDay(today), nextDaily);
+
+      const nextTopic = topicLearnSec + sec;
+      setTopicLearnSec(nextTopic);
+      writeNumber(KEYS.learnByDayAndTopic(today, topicToday), nextTopic);
+
+      const nextRounds = pomodoroRounds + 1;
+      setPomodoroRounds(nextRounds);
+      writeNumber(KEYS.pomodoroRoundsByDay(today), nextRounds);
+
+      incrementTaskPomodoro(activeTaskId || topicToday);
+
+      upsertTitleNote({ kind: "learn_done", title: topicToday, addLearn: sec, addRest: 0 });
+      triggerNotionSync();
+    },
+    [
+      today,
+      topicToday,
+      totalLearnSec,
+      topicLearnSec,
+      pomodoroRounds,
+      activeTaskId,
+      incrementTaskPomodoro,
+      upsertTitleNote,
+      triggerNotionSync,
+    ]
+  );
+
+  const handleLearnStop = useCallback(
+    (sec: number) => {
+      const nextDaily = totalLearnSec + sec;
+      setTotalLearnSec(nextDaily);
+      writeNumber(KEYS.learnByDay(today), nextDaily);
+
+      const nextTopic = topicLearnSec + sec;
+      setTopicLearnSec(nextTopic);
+      writeNumber(KEYS.learnByDayAndTopic(today, topicToday), nextTopic);
+
+      upsertTitleNote({ kind: "learn_stop", title: topicToday, addLearn: sec, addRest: 0 });
+      triggerNotionSync();
+    },
+    [today, topicToday, totalLearnSec, topicLearnSec, upsertTitleNote, triggerNotionSync]
+  );
+
+  const handleRestDone = useCallback(
+    (sec: number) => {
+      const nextDaily = totalRestSec + sec;
+      setTotalRestSec(nextDaily);
+      writeNumber(KEYS.restByDay(today), nextDaily);
+
+      const nextTopic = topicRestSec + sec;
+      setTopicRestSec(nextTopic);
+      writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
+
+      upsertTitleNote({ kind: "rest_done", title: topicToday, addLearn: 0, addRest: sec });
+      triggerNotionSync();
+    },
+    [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]
+  );
+
+  const handleRestStop = useCallback(
+    (sec: number) => {
+      const nextDaily = totalRestSec + sec;
+      setTotalRestSec(nextDaily);
+      writeNumber(KEYS.restByDay(today), nextDaily);
+
+      const nextTopic = topicRestSec + sec;
+      setTopicRestSec(nextTopic);
+      writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
+
+      upsertTitleNote({ kind: "rest_stop", title: topicToday, addLearn: 0, addRest: sec });
+      triggerNotionSync();
+    },
+    [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]
+  );
+
+  const handleYTDone = useCallback(
+    (sec: number) => {
+      const nextDaily = totalRestSec + sec;
+      setTotalRestSec(nextDaily);
+      writeNumber(KEYS.restByDay(today), nextDaily);
+
+      const nextTopic = topicRestSec + sec;
+      setTopicRestSec(nextTopic);
+      writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
+
+      upsertTitleNote({ kind: "yt_rest_done", title: topicToday, addLearn: 0, addRest: sec });
+      triggerNotionSync();
+    },
+    [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]
+  );
+
+  const handleYTStop = useCallback(
+    (sec: number) => {
+      const nextDaily = totalRestSec + sec;
+      setTotalRestSec(nextDaily);
+      writeNumber(KEYS.restByDay(today), nextDaily);
+
+      const nextTopic = topicRestSec + sec;
+      setTopicRestSec(nextTopic);
+      writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
+
+      upsertTitleNote({ kind: "yt_rest_stop", title: topicToday, addLearn: 0, addRest: sec });
+      triggerNotionSync();
+    },
+    [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]
+  );
+
+  const handleResetCycle = useCallback(() => {
+    setPomodoroRounds(0);
+    if (today) {
+      writeNumber(KEYS.pomodoroRoundsByDay(today), 0);
+    }
+  }, [today]);
+
+  const handleSelectLongBreak = useCallback(() => {
+    setInitialBreakMin(15);
   }, []);
 
-  const handleStartWithTitle = useCallback((title: string) => {
-    const t = title.trim() || "(Untitled)";
-    writeString(KEYS.topicByDay(today), t);
-    setTopicToday(t);
-
-    // Load topic-specific times from localStorage
-    const newTopicLearn = readNumber(KEYS.learnByDayAndTopic(today, t)) || 0;
-    const newTopicRest = readNumber(KEYS.restByDayAndTopic(today, t)) || 0;
-    setTopicLearnSec(newTopicLearn);
-    setTopicRestSec(newTopicRest);
-
-    upsertTitleNote({ kind: "learn_start", title: t, addLearn: 0, addRest: 0 });
-    triggerNotionSync();
-  }, [today, upsertTitleNote, triggerNotionSync]);
-
-  const handleLearnDone = useCallback((sec: number) => {
-    // 1. Update daily total
-    const nextDaily = totalLearnSec + sec;
-    setTotalLearnSec(nextDaily);
-    writeNumber(KEYS.learnByDay(today), nextDaily);
-
-    // 2. Update topic total
-    const nextTopic = topicLearnSec + sec;
-    setTopicLearnSec(nextTopic);
-    writeNumber(KEYS.learnByDayAndTopic(today, topicToday), nextTopic);
-
-    upsertTitleNote({ kind: "learn_done", title: topicToday, addLearn: sec, addRest: 0 });
-    triggerNotionSync();
-  }, [today, topicToday, totalLearnSec, topicLearnSec, upsertTitleNote, triggerNotionSync]);
-
-  const handleLearnStop = useCallback((sec: number) => {
-    // 1. Update daily total
-    const nextDaily = totalLearnSec + sec;
-    setTotalLearnSec(nextDaily);
-    writeNumber(KEYS.learnByDay(today), nextDaily);
-
-    // 2. Update topic total
-    const nextTopic = topicLearnSec + sec;
-    setTopicLearnSec(nextTopic);
-    writeNumber(KEYS.learnByDayAndTopic(today, topicToday), nextTopic);
-
-    upsertTitleNote({ kind: "learn_stop", title: topicToday, addLearn: sec, addRest: 0 });
-    triggerNotionSync();
-  }, [today, topicToday, totalLearnSec, topicLearnSec, upsertTitleNote, triggerNotionSync]);
-
-  const handleRestDone = useCallback((sec: number) => {
-    // 1. Update daily total
-    const nextDaily = totalRestSec + sec;
-    setTotalRestSec(nextDaily);
-    writeNumber(KEYS.restByDay(today), nextDaily);
-
-    // 2. Update topic total
-    const nextTopic = topicRestSec + sec;
-    setTopicRestSec(nextTopic);
-    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
-
-    upsertTitleNote({ kind: "rest_done", title: topicToday, addLearn: 0, addRest: sec });
-    triggerNotionSync();
-  }, [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]);
-
-  const handleRestStop = useCallback((sec: number) => {
-    // 1. Update daily total
-    const nextDaily = totalRestSec + sec;
-    setTotalRestSec(nextDaily);
-    writeNumber(KEYS.restByDay(today), nextDaily);
-
-    // 2. Update topic total
-    const nextTopic = topicRestSec + sec;
-    setTopicRestSec(nextTopic);
-    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
-
-    upsertTitleNote({ kind: "rest_stop", title: topicToday, addLearn: 0, addRest: sec });
-    triggerNotionSync();
-  }, [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]);
-
-  const handleYTDone = useCallback((sec: number) => {
-    // 1. Update daily total
-    const nextDaily = totalRestSec + sec;
-    setTotalRestSec(nextDaily);
-    writeNumber(KEYS.restByDay(today), nextDaily);
-
-    // 2. Update topic total
-    const nextTopic = topicRestSec + sec;
-    setTopicRestSec(nextTopic);
-    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
-
-    upsertTitleNote({ kind: "yt_rest_done", title: topicToday, addLearn: 0, addRest: sec });
-    triggerNotionSync();
-  }, [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]);
-
-  const handleYTStop = useCallback((sec: number) => {
-    // 1. Update daily total
-    const nextDaily = totalRestSec + sec;
-    setTotalRestSec(nextDaily);
-    writeNumber(KEYS.restByDay(today), nextDaily);
-
-    // 2. Update topic total
-    const nextTopic = topicRestSec + sec;
-    setTopicRestSec(nextTopic);
-    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
-
-    upsertTitleNote({ kind: "yt_rest_stop", title: topicToday, addLearn: 0, addRest: sec });
-    triggerNotionSync();
-  }, [today, topicToday, totalRestSec, topicRestSec, upsertTitleNote, triggerNotionSync]);
+  const handleTaskSelected = useCallback(
+    (task: { id: string; text: string }) => {
+      setActiveTaskId(task.id);
+      handleStartWithTitle(task.text);
+    },
+    [setActiveTaskId, handleStartWithTitle]
+  );
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -247,78 +322,179 @@ export default function YouTubeRestTimer() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
-      
-      if (e.key.toLowerCase() === 'n') {
-        setNotesOpen(prev => !prev);
+
+      if (e.key.toLowerCase() === "n") {
+        setNotesOpen((prev) => !prev);
       }
-      if (e.key.toLowerCase() === 'f') {
-        setFocusMode(prev => !prev);
+      if (e.key.toLowerCase() === "f") {
+        setFocusMode((prev) => !prev);
       }
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setFocusMode(false);
         setNotesOpen(false);
         setSettingsOpen(false);
       }
     };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setSettingsOpen]);
 
   return (
-    <div className={`min-h-screen bg-background text-foreground selection:bg-accent/30 flex flex-col items-center transition-all duration-500 ${focusMode ? 'justify-center py-0' : ''}`}>
-      <div className={`w-full px-4 sm:px-6 lg:px-8 pb-12 transition-all duration-500 ${focusMode ? 'max-w-2xl' : 'max-w-5xl'}`}>
+    <div
+      className={`min-h-screen relative text-foreground selection:bg-accent/30 flex flex-col items-center transition-all duration-400 overflow-x-hidden ${
+        focusMode ? "justify-center py-0" : ""
+      }`}
+    >
+      {/* ── Layer 1, 2, 3: Environment Artwork, Ambience & Readability Overlay ── */}
+      <AmbientBackground theme={currentTheme} />
+
+      {/* ── Layer 4: Application Shell & Workspace ── */}
+      <div
+        className={`w-full px-4 sm:px-6 lg:px-8 pb-20 md:pb-12 transition-all duration-400 relative z-10 ${
+          focusMode ? "max-w-2xl" : "max-w-7xl"
+        }`}
+      >
         {!focusMode && (
-          <>
-            <Header 
-              today={today} 
-              totalLearnSec={totalLearnSec} 
-              totalRestSec={totalRestSec} 
-              onOpenNotes={() => setNotesOpen(true)}
-              notionSyncState={syncState}
-              onNotionSync={handleManualSync}
-              onNotionOpenSettings={() => setSettingsOpen(true)}
-            />
-            <DailyStats totalLearnSec={totalLearnSec} totalRestSec={totalRestSec} />
-          </>
+          <Header
+            today={today}
+            totalLearnSec={totalLearnSec}
+            totalRestSec={totalRestSec}
+            currentTheme={currentTheme}
+            onSelectTheme={setCurrentTheme}
+            onOpenNotes={() => setNotesOpen(true)}
+            notionSyncState={syncState}
+            onNotionSync={handleManualSync}
+            onNotionOpenSettings={() => setSettingsOpen(true)}
+          />
         )}
 
-        <main className={`grid gap-8 mt-4 ${focusMode ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
-          <LearningCard
-            topicToday={topicToday}
-            totalTodaySec={topicLearnSec}
-            onStartWithTitle={handleStartWithTitle}
-            onLearnDone={handleLearnDone}
-            onLearnStop={handleLearnStop}
-          />
-          
-          {!focusMode && (
-            <RestCardContainer
+        {/* ── ADAPTIVE RESPONSIVE COMPOSITIONS (Single React tree instance) ── */}
+        {!focusMode ? (
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            {/* Zone 1: Daily Progress & Goals */}
+            {/* Desktop: col-span-3 order-1 | Tablet: col-span-6 order-3 | Mobile: conditional on tab */}
+            <aside
+              className={`space-y-6 md:col-span-6 lg:col-span-3 order-3 md:order-3 lg:order-1 ${
+                mobileTab === "stats" ? "block" : "hidden md:block"
+              }`}
+            >
+              <DailyStats
+                totalLearnSec={totalLearnSec}
+                totalRestSec={totalRestSec}
+                pomodoroRounds={pomodoroRounds}
+                today={today}
+              />
+            </aside>
+
+            {/* Zone 2: Central Focus & Rest Stage */}
+            {/* Desktop: col-span-5 order-2 | Tablet: col-span-6 order-1 | Mobile: conditional on tab */}
+            <main
+              className={`space-y-6 md:col-span-6 lg:col-span-5 order-1 md:order-1 lg:order-2 ${
+                mobileTab === "focus" ? "block" : "hidden md:block"
+              }`}
+            >
+              <LearningCard
+                topicToday={topicToday}
+                totalTodaySec={topicLearnSec}
+                pomodoroRounds={pomodoroRounds}
+                tasks={tasks}
+                activeTaskId={activeTaskId}
+                hideEmbeddedTasks={true}
+                onSelectTask={handleTaskSelected}
+                onAddTask={addTask}
+                onToggleTask={toggleTask}
+                onDeleteTask={deleteTask}
+                onResetCycle={handleResetCycle}
+                onSelectLongBreak={handleSelectLongBreak}
+                onStartWithTitle={handleStartWithTitle}
+                onLearnDone={handleLearnDone}
+                onLearnStop={handleLearnStop}
+              />
+
+              <RestCardContainer
+                totalTodaySec={topicRestSec}
+                initialBreakMin={initialBreakMin}
+                onRestDone={handleRestDone}
+                onRestStop={handleRestStop}
+                onYTDone={handleYTDone}
+                onYTStop={handleYTStop}
+              />
+            </main>
+
+            {/* Zone 3: Productivity & Task Queue */}
+            {/* Desktop: col-span-4 order-3 | Tablet: col-span-6 order-2 | Mobile: conditional on tab */}
+            <aside
+              className={`space-y-6 md:col-span-6 lg:col-span-4 order-2 md:order-2 lg:order-3 ${
+                mobileTab === "tasks" ? "block" : "hidden md:block"
+              }`}
+            >
+              <TaskQueue
+                tasks={tasks}
+                activeTaskId={activeTaskId}
+                currentTopic={topicToday}
+                onSelectTask={handleTaskSelected}
+                onAddTask={addTask}
+                onToggleTask={toggleTask}
+                onDeleteTask={deleteTask}
+              />
+            </aside>
+
+            {/* Zone 4: Focus Activity Heatmap */}
+            {/* Full width row below on desktop/tablet | Included in stats tab on mobile */}
+            <section
+              className={`pt-2 md:col-span-12 lg:col-span-12 order-4 ${
+                mobileTab === "stats" ? "block" : "hidden md:block"
+              }`}
+            >
+              <WeeklyHeatmap />
+            </section>
+          </div>
+        ) : (
+          /* FOCUS MODE (Minimalist Clean Stage) */
+          <div className="w-full space-y-6">
+            <LearningCard
               topicToday={topicToday}
-              totalTodaySec={topicRestSec}
-              onRestDone={handleRestDone}
-              onRestStop={handleRestStop}
-              onYTDone={handleYTDone}
-              onYTStop={handleYTStop}
+              totalTodaySec={topicLearnSec}
+              pomodoroRounds={pomodoroRounds}
+              tasks={tasks}
+              activeTaskId={activeTaskId}
+              hideEmbeddedTasks={true}
+              onSelectTask={handleTaskSelected}
+              onAddTask={addTask}
+              onToggleTask={toggleTask}
+              onDeleteTask={deleteTask}
+              onResetCycle={handleResetCycle}
+              onSelectLongBreak={handleSelectLongBreak}
+              onStartWithTitle={handleStartWithTitle}
+              onLearnDone={handleLearnDone}
+              onLearnStop={handleLearnStop}
             />
-          )}
-        </main>
-        
-        {focusMode && (
-          <div className="text-center mt-8 text-text-muted text-sm opacity-50 animate-pulse">
-            Press <kbd className="px-2 py-1 bg-surface rounded font-mono text-xs mx-1">F</kbd> or <kbd className="px-2 py-1 bg-surface rounded font-mono text-xs mx-1">Esc</kbd> to exit focus mode
+            <div className="text-center text-text-muted text-xs opacity-75">
+              Press <kbd className="px-2 py-1 bg-surface-secondary rounded font-mono text-xs mx-1">F</kbd> or{" "}
+              <kbd className="px-2 py-1 bg-surface-secondary rounded font-mono text-xs mx-1">Esc</kbd> to exit focus mode
+            </div>
           </div>
         )}
       </div>
 
-      <Modal open={notesOpen} onClose={() => setNotesOpen(false)} title="Daily Notes & Logs">
+      {/* ── Mobile Bottom Navigation Bar (Mobile only) ── */}
+      {!focusMode && (
+        <MobileNav
+          activeTab={mobileTab}
+          onSelectTab={setMobileTab}
+          onOpenNotes={() => setNotesOpen(true)}
+        />
+      )}
+
+      {/* ── Modals & Drawers ── */}
+      <Modal open={notesOpen} onClose={() => setNotesOpen(false)} title="Daily Notes & Scratchpad">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <NotesPanel initialDay={today} />
           <MarkdownScratchpad />
         </div>
       </Modal>
 
-      {/* Notion Settings Modal */}
       <NotionSettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
