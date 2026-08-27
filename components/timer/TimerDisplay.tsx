@@ -1,47 +1,48 @@
 import { formatMMSS } from "@/lib/time";
 import { ProgressRing } from "../ui/ProgressRing";
-import { cx } from "@/lib/utils";
 
 interface TimerDisplayProps {
   remainingSec: number;
   totalSec: number;
+  label?: string;
+  variant?: "focus" | "rest";
 }
 
-export function TimerDisplay({ remainingSec, totalSec }: TimerDisplayProps) {
-  // calculate progress (1 when full, 0 when empty)
+export function TimerDisplay({
+  remainingSec,
+  totalSec,
+  label,
+  variant = "focus",
+}: TimerDisplayProps) {
   const progress = totalSec > 0 ? remainingSec / totalSec : 0;
-  
-  // Decide the color class based on progress
-  let ringClass = "text-accent";
-  if (progress < 0.2) {
-    ringClass = "text-amber-500";
-  }
-  if (progress < 0.05) {
-    ringClass = "text-danger";
-  }
-
-  // Pulse effect when time is very low (e.g. <= 60 seconds)
-  const isPulsing = remainingSec <= 60 && remainingSec > 0;
+  const percentage = Math.round(progress * 100);
+  const modeLabel = variant === "rest" ? "Rest timer" : "Focus timer";
 
   return (
-    <div 
-      className="flex justify-center py-6"
+    <div
+      className="flex w-full justify-center py-1 sm:py-2"
       role="timer"
-      aria-live="polite"
+      aria-live="off"
       aria-atomic="true"
+      aria-label={`${modeLabel}: ${formatMMSS(remainingSec)}`}
     >
-      <ProgressRing 
-        progress={progress} 
-        size={260} 
-        strokeWidth={4}
-        className={cx(ringClass, isPulsing && "motion-safe:animate-pulse")}
+      <ProgressRing
+        progress={progress}
+        size={320}
+        strokeWidth={7}
+        variant={variant}
       >
         <div className="flex flex-col items-center">
-          <span className="font-mono text-6xl tracking-tighter sm:text-7xl">
+          <span className="font-mono text-[3.25rem] font-bold tracking-[-0.06em] text-foreground select-none sm:text-7xl">
             {formatMMSS(remainingSec)}
           </span>
-          <span className="mt-2 text-sm text-text-muted">
-            {Math.round(progress * 100)}% remaining
+          <span className="mt-3 flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+            <span>{percentage}% remaining</span>
+            {label && (
+              <span className="text-[10px] text-accent font-mono font-semibold">
+                • {label}
+              </span>
+            )}
           </span>
         </div>
       </ProgressRing>

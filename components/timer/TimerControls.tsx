@@ -22,38 +22,54 @@ export function TimerControls({
   showReset = true,
 }: TimerControlsProps) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3">
+    <div className="flex flex-wrap items-center justify-center gap-2.5">
       {status === "Idle" || status === "Done" ? (
-        <Button onClick={onStart} size="lg" className="w-32">
-          <PlayIcon className="mr-2 h-4 w-4" /> Start
+        <Button
+          onClick={onStart}
+          size="lg"
+          variant="primary"
+          className="min-w-40 text-sm"
+        >
+          <PlayIcon className="mr-2 h-4 w-4 fill-current" /> Start Focus
         </Button>
       ) : status === "Running" ? (
-        <Button onClick={onPause} size="lg" variant="secondary" className="w-32">
-          <PauseIcon className="mr-2 h-4 w-4" /> Pause
+        <Button
+          onClick={onPause}
+          size="lg"
+          variant="primary"
+          className="min-w-40 text-sm"
+        >
+          <PauseIcon className="mr-2 h-4 w-4 fill-current" /> Pause
         </Button>
       ) : (
-        <Button onClick={onResume} size="lg" className="w-32">
-          <PlayIcon className="mr-2 h-4 w-4" /> Resume
+        <Button
+          onClick={onResume}
+          size="lg"
+          variant="primary"
+          className="min-w-40 text-sm"
+        >
+          <PlayIcon className="mr-2 h-4 w-4 fill-current" /> Resume
         </Button>
       )}
 
       <Button
         onClick={onStop}
         size="lg"
-        variant="ghost"
+        variant="secondary"
         disabled={status === "Idle" || status === "Done"}
-        className="w-32"
+        className="min-w-24 text-sm"
       >
         <SquareIcon className="mr-2 h-4 w-4" /> Stop
       </Button>
 
-      {showReset && (
+      {showReset && onReset && (
         <Button
           onClick={onReset}
-          size="lg"
+          size="icon"
           variant="ghost"
-          className="w-12 px-0"
-          title="Reset Timer"
+          className="h-11 w-11 text-text-muted hover:text-foreground"
+          aria-label="Reset timer"
+          title="Reset timer"
         >
           <RotateCcwIcon className="h-4 w-4" />
         </Button>

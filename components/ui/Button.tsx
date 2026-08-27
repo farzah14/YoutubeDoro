@@ -15,19 +15,19 @@ export function Button({
   return (
     <button
       className={cx(
-        "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex min-h-10 items-center justify-center font-medium transition-colors duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:pointer-events-none disabled:opacity-40 cursor-pointer select-none",
         
         // Variants
-        variant === "primary" && "bg-accent text-accent-fg hover:bg-accent-hover",
-        variant === "secondary" && "bg-surface hover:bg-surface-hover text-foreground border border-border-subtle",
-        variant === "ghost" && "hover:bg-surface hover:text-foreground text-text-secondary",
-        variant === "danger" && "bg-danger text-white hover:bg-danger-hover",
+        variant === "primary" && "bg-accent text-accent-fg hover:bg-accent-hover font-semibold shadow-sm",
+        variant === "secondary" && "bg-surface-secondary hover:bg-surface-hover text-foreground border border-border hover:border-border-focus",
+        variant === "ghost" && "hover:bg-surface-hover text-text-secondary hover:text-foreground",
+        variant === "danger" && "bg-danger text-white hover:bg-danger-hover shadow-sm",
         
         // Sizes
-        size === "sm" && "h-8 px-3 text-xs rounded-sm",
-        size === "md" && "h-10 px-4 text-sm rounded-md",
-        size === "lg" && "h-12 px-6 text-base rounded-md",
-        size === "icon" && "h-10 w-10 rounded-md",
+        size === "sm" && "h-9 px-3 text-xs rounded-lg",
+        size === "md" && "h-10 px-4 text-sm rounded-lg",
+        size === "lg" && "h-12 px-6 text-base rounded-lg font-semibold",
+        size === "icon" && "h-10 w-10 rounded-lg",
         
         className
       )}

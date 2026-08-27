@@ -9,13 +9,13 @@ export function Badge({ className, variant = "default", ...props }: BadgeProps) 
   return (
     <div
       className={cx(
-        "inline-flex items-center rounded-sm border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus",
-        variant === "default" && "border-transparent bg-accent text-accent-fg hover:bg-accent-hover",
-        variant === "secondary" && "border-transparent bg-surface hover:bg-surface-hover text-foreground",
-        variant === "outline" && "text-foreground border-border-subtle",
-        variant === "danger" && "border-transparent bg-danger text-white hover:bg-danger-hover",
-        variant === "success" && "border-transparent bg-emerald-500/15 text-emerald-400",
-        variant === "warning" && "border-transparent bg-amber-500/15 text-amber-500",
+        "inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus",
+        variant === "default" && "border-accent bg-accent text-accent-fg",
+        variant === "secondary" && "border-border-subtle bg-surface-secondary text-text-secondary",
+        variant === "outline" && "text-foreground border-border bg-surface/40",
+        variant === "danger" && "border-danger/50 bg-danger/10 text-danger",
+        variant === "success" && "border-success/50 bg-success/10 text-success",
+        variant === "warning" && "border-warning/50 bg-warning/10 text-warning",
         className
       )}
       {...props}

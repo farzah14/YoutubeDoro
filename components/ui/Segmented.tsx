@@ -7,13 +7,16 @@ interface SegmentedProps {
   onChange: (value: string) => void;
   options: Array<{ label: string; value: string }>;
   className?: string;
+  "aria-label"?: string;
 }
 
-export function Segmented({ value, onChange, options, className }: SegmentedProps) {
+export function Segmented({ value, onChange, options, className, "aria-label": ariaLabel }: SegmentedProps) {
   return (
     <div
+      role="group"
+      aria-label={ariaLabel}
       className={cx(
-        "inline-flex h-9 items-center justify-center rounded-md border border-border-subtle bg-surface p-1 text-text-muted",
+        "inline-flex h-10 items-center justify-center rounded-lg border border-border bg-surface-secondary/80 p-1 text-text-muted",
         className
       )}
     >
@@ -24,11 +27,12 @@ export function Segmented({ value, onChange, options, className }: SegmentedProp
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
+            aria-pressed={isActive}
             className={cx(
-              "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus",
+              "inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus cursor-pointer",
               isActive 
-                ? "bg-border-subtle text-foreground shadow-sm" 
-                : "hover:bg-surface-hover hover:text-foreground"
+                ? "bg-accent text-accent-fg shadow-sm"
+                : "text-text-secondary hover:bg-surface-hover hover:text-foreground"
             )}
           >
             {option.label}
