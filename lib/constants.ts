@@ -1,16 +1,4 @@
 export const KEYS = {
-  learnByDay: (day: string) => `ytdoro:${day}:learnSec`,
-  restByDay: (day: string) => `ytdoro:${day}:restSec`,
-  learnByDayAndTopic: (day: string, topic: string) => `ytdoro:${day}:${topic}:learnSec`,
-  restByDayAndTopic: (day: string, topic: string) => `ytdoro:${day}:${topic}:restSec`,
-  legacyBreakByDay: (day: string) => `ytdoro:${day}:breakSec`,
-  topicByDay: (day: string) => `ytdoro:${day}:topic`,
-  notesByDay: (day: string) => `ytdoro:${day}:notes`,
-  taskNotesByDay: (day: string) => `ytdoro:${day}:taskNotes`,
-  tasksByDay: (day: string) => `ytdoro:${day}:tasks`,
-  pomodoroRoundsByDay: (day: string) => `ytdoro:${day}:pomodoroRounds`,
-  taskCompletionsByDay: (day: string) => `ytdoro:${day}:tasksCompleted`,
-  sessionGoal: "ytdoro:sessionGoal",
   dailyGoalSec: "ytdoro:dailyGoalSec",
   isLoFiEnabled: "ytdoro:isLoFiEnabled",
   lofiStation: "ytdoro:lofi:station",
@@ -38,19 +26,10 @@ export const KEYS = {
   animeScenery: "ytdoro:animeScenery",
   particlesEnabled: "ytdoro:particlesEnabled",
 
-  // Notion Integration
-  notionConnected: "ytdoro:notion:connected",
-  notionDatabaseId: "ytdoro:notion:databaseId",
-  notionLastSync: "ytdoro:notion:lastSync",
-  notionSyncQueue: "ytdoro:notion:syncQueue",
-  notionPageIdByDay: (day: string) => `ytdoro:notion:${day}:pageId`,
 };
 
 export const PRESETS = {
   learning: [25, 45, 50],
   rest: [5, 10, 15],
-  longRest: [15, 20, 30],
   defaultGoalHours: 2,
 };
-
-export const NOTION_SYNC_DEBOUNCE_MS = 3000;

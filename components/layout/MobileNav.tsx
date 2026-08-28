@@ -8,10 +8,10 @@ export type MobileTab = "focus" | "tasks" | "stats";
 interface MobileNavProps {
   activeTab: MobileTab;
   onSelectTab: (tab: MobileTab) => void;
-  onOpenNotes: () => void;
+  onOpenHistory: () => void;
 }
 
-export function MobileNav({ activeTab, onSelectTab, onOpenNotes }: MobileNavProps) {
+export function MobileNav({ activeTab, onSelectTab, onOpenHistory }: MobileNavProps) {
   const mode: WorkspaceMode = activeTab === "focus" ? "focus" : "home";
   const activePanel: WorkspacePanel | null = activeTab === "tasks" ? "tasks" : activeTab === "stats" ? "stats" : null;
 
@@ -21,7 +21,7 @@ export function MobileNav({ activeTab, onSelectTab, onOpenNotes }: MobileNavProp
       openPanel={activePanel}
       onModeChange={(nextMode) => onSelectTab(nextMode === "focus" ? "focus" : "stats")}
       onPanelToggle={(panel) => {
-        if (panel === "notes") onOpenNotes();
+        if (panel === "history") onOpenHistory();
         else if (panel === "tasks" || panel === "stats") onSelectTab(panel);
       }}
     />

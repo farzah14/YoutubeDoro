@@ -4,16 +4,18 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const hookSource = readFileSync(
-  fileURLToPath(new URL("../hooks/useTasks.ts", import.meta.url)),
+  fileURLToPath(new URL("../hooks/useCloudTasks.ts", import.meta.url)),
   "utf8"
 );
 
-test("useTasks exposes nested subtask actions through daily task persistence", () => {
-  assert.match(hookSource, /addSubtaskItem/);
-  assert.match(hookSource, /toggleSubtaskItem/);
-  assert.match(hookSource, /deleteSubtaskItem/);
-  assert.match(hookSource, /writeJSON\(KEYS\.tasksByDay\(day\), newTasks\)/);
+test("cloud task hook exposes account-backed nested subtask actions", () => {
+  assert.match(hookSource, /trackerApi\.listTasks/);
+  assert.match(hookSource, /trackerApi\.createTask/);
+  assert.match(hookSource, /trackerApi\.createSubtask/);
+  assert.match(hookSource, /trackerApi\.updateSubtask/);
+  assert.match(hookSource, /trackerApi\.deleteSubtask/);
   assert.match(hookSource, /addSubtask,/);
   assert.match(hookSource, /toggleSubtask,/);
   assert.match(hookSource, /deleteSubtask,/);
+  assert.doesNotMatch(hookSource, /writeJSON|tasksByDay|learnByDay/);
 });

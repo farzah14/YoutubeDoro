@@ -24,6 +24,7 @@ function toTaskItem(task: TrackerTask): TaskItem {
     color: task.color,
     estimatedMinutes: task.estimatedMinutes,
     focusedSeconds: task.focusedSeconds,
+    linkedSessionCount: task.linkedSessionCount,
     order: task.order,
     subtasks: task.subtasks.map((subtask) => ({
       id: subtask.id,
@@ -102,6 +103,8 @@ export function useCloudTasks() {
   }, [tasks]);
 
   const deleteTask = useCallback(async (id: string) => {
+    const task = tasks.find((item) => item.id === id);
+    if (!task || (typeof window !== "undefined" && !window.confirm(`Delete “${task.text}” permanently? This also removes ${task.linkedSessionCount ?? 0} linked session${task.linkedSessionCount === 1 ? "" : "s"} and its subtasks.`))) return;
     try {
       await trackerApi.deleteTask(id);
       setTasks((current) => current.filter((task) => task.id !== id).map((task, order) => ({ ...task, order })));
@@ -110,7 +113,7 @@ export function useCloudTasks() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not delete task.");
     }
-  }, []);
+  }, [tasks]);
 
   const updateTask = useCallback(async (id: string, patch: Partial<TaskItem>) => {
     try {

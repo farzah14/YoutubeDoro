@@ -24,22 +24,28 @@ export function useSessionRecorder() {
   const sessionId = useRef<string | null>(null);
   const finalized = useRef(false);
   const finalizing = useRef(false);
+  const saveQueue = useRef(Promise.resolve());
   const measurements = useRef<SessionMeasurements>(EMPTY_MEASUREMENTS);
-  const metadata = useRef<{ title?: string; taskId?: string | null; note?: string }>({});
   const [session, setSession] = useState<LearningSession | null>(null);
   const [error, setError] = useState("");
+
+  const enqueueUpdate = useCallback((id: string, payload: Record<string, unknown>) => {
+    const request = saveQueue.current.then(() => trackerApi.updateSession(id, payload));
+    saveQueue.current = request.then(() => undefined, () => undefined);
+    return request;
+  }, []);
 
   const flush = useCallback(async () => {
     if (!sessionId.current || finalized.current) return false;
     try {
-      await trackerApi.updateSession(sessionId.current, measurements.current);
+      await enqueueUpdate(sessionId.current, { ...measurements.current });
       setError("");
       return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save the session checkpoint.");
       return false;
     }
-  }, []);
+  }, [enqueueUpdate]);
 
   useEffect(() => {
     const interval = window.setInterval(() => { void flush(); }, 5_000);
@@ -54,7 +60,6 @@ export function useSessionRecorder() {
       finalized.current = false;
       finalizing.current = false;
       measurements.current = { ...EMPTY_MEASUREMENTS };
-      metadata.current = {};
       setSession(result.session);
       setError("");
       return result.session;
@@ -92,7 +97,7 @@ export function useSessionRecorder() {
     finalizing.current = true;
     measurements.current = { ...next };
     try {
-      const result = await trackerApi.updateSession(sessionId.current, {
+      const result = await enqueueUpdate(sessionId.current, {
         ...measurements.current,
         status,
         note,
@@ -107,13 +112,12 @@ export function useSessionRecorder() {
     } finally {
       finalizing.current = false;
     }
-  }, []);
+  }, [enqueueUpdate]);
 
   const updateMetadata = useCallback(async (next: { title?: string; taskId?: string | null; note?: string }) => {
-    metadata.current = { ...metadata.current, ...next };
     if (!sessionId.current) return false;
     try {
-      const result = await trackerApi.updateSession(sessionId.current, next);
+      const result = await enqueueUpdate(sessionId.current, next);
       setSession(result.session);
       setError("");
       return true;
@@ -121,7 +125,7 @@ export function useSessionRecorder() {
       setError(cause instanceof Error ? cause.message : "Could not save session details.");
       return false;
     }
-  }, []);
+  }, [enqueueUpdate]);
 
   const recover = useCallback(async () => {
     try {
@@ -133,6 +137,8 @@ export function useSessionRecorder() {
       return [];
     }
   }, []);
+
+  const getLastMeasurements = useCallback(() => ({ ...measurements.current }), []);
 
   return {
     session,
@@ -146,6 +152,6 @@ export function useSessionRecorder() {
     finalize,
     updateMetadata,
     recover,
-    getLastMeasurements: () => ({ ...measurements.current }),
+    getLastMeasurements,
   };
 }

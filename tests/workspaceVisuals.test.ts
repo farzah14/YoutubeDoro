@@ -85,8 +85,8 @@ test("focus surface removes the helper copy and hides the running dock", () => {
   assert.match(stylesSource, /\.workspace-dock--hidden\s*\{[\s\S]*transform:\s*translateY/);
 });
 
-test("Notes sits beside the Sub-tasks dock action", () => {
+test("History sits beside the Sub-tasks dock action", () => {
   assert.match(dockSource, /BookIcon/);
-  assert.match(dockSource, /onPanelToggle\("notes"\)/);
-  assert.match(dockSource, /title="Notes"/);
+  assert.match(dockSource, /onPanelToggle\("history"\)/);
+  assert.match(dockSource, /title="History"/);
 });

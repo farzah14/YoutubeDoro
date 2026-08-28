@@ -53,7 +53,8 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
       setError(result.error.message);
       return;
     }
-    if (mode === "sign-up") setMessage("Account created. You can continue to sign in.");
+    if (result.data.session) window.location.assign("/");
+    else if (mode === "sign-up") setMessage("Account created. You can continue to sign in.");
     else window.location.assign("/");
   };
 

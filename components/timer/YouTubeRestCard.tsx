@@ -18,13 +18,14 @@ const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknow
 interface YouTubeRestCardProps {
   totalTodaySec: number;
   onBreakStart?: () => void | boolean | Promise<void | boolean>;
+  onProgress?: (seconds: number) => void;
   onDone: (sec: number) => void;
   onStop: (sec: number) => void;
 }
 
 type YTStatus = "Idle" | "Playing" | "Paused" | "Ended" | "Error";
 
-export function YouTubeRestCard({ totalTodaySec, onBreakStart, onDone, onStop }: YouTubeRestCardProps) {
+export function YouTubeRestCard({ totalTodaySec, onBreakStart, onProgress, onDone, onStop }: YouTubeRestCardProps) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<YTStatus>("Idle");
   
@@ -60,6 +61,7 @@ export function YouTubeRestCard({ totalTodaySec, onBreakStart, onDone, onStop }:
 
     if (d > 0) setDurationSec(Math.floor(d));
     if (d > 0) setRemainingSec(Math.max(0, Math.floor(d - t)));
+    onProgress?.(Math.max(0, Math.floor(t)));
   }
 
   function startTick() {
@@ -113,6 +115,7 @@ export function YouTubeRestCard({ totalTodaySec, onBreakStart, onDone, onStop }:
     clearTick();
     p.stopVideo?.();
     setStatus("Idle");
+    breakStartedRef.current = false;
     setVideoId(null);
     setDurationSec(0);
     setRemainingSec(0);

@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMMSS } from "@/lib/time";
+import { formatDuration } from "@/lib/duration";
 
 export function StatsChart({ values, labels }: { values: number[]; labels?: string[] }) {
   const safe = values.length ? values : [0];
@@ -12,7 +12,7 @@ export function StatsChart({ values, labels }: { values: number[]; labels?: stri
   }).join(" ");
   const area = `0,100 ${points} 100,100`;
   return (
-    <div className="stats-chart" aria-label={`Focus chart, peak ${formatMMSS(max)}`}>
+    <div className="stats-chart" aria-label={`Focus chart, peak ${formatDuration(max)}`}>
       <svg viewBox="0 0 100 100" role="img" preserveAspectRatio="none">
         <defs><linearGradient id="stats-fill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="var(--workspace-purple)" stopOpacity=".38" /><stop offset="1" stopColor="var(--workspace-purple)" stopOpacity="0" /></linearGradient></defs>
         <polyline points={area} fill="url(#stats-fill)" stroke="none" />

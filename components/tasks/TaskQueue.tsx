@@ -18,16 +18,16 @@ interface TaskQueueProps {
   activeTaskId: string | null;
   currentTopic: string;
   onSelectTask: (task: TaskItem) => void;
-  onAddTask: (text: string, estimatedMinutes: number) => void;
-  onToggleTask: (id: string) => boolean;
-  onDeleteTask: (id: string) => void;
-  onReorderTasks: (movedId: string, targetId: string) => void;
-  onMoveTask: (id: string, offset: -1 | 1) => void;
+  onAddTask: (text: string, estimatedMinutes: number) => void | Promise<unknown>;
+  onToggleTask: (id: string) => boolean | Promise<boolean>;
+  onDeleteTask: (id: string) => void | Promise<unknown>;
+  onReorderTasks: (movedId: string, targetId: string) => void | Promise<unknown>;
+  onMoveTask: (id: string, offset: -1 | 1) => void | Promise<unknown>;
   onUpdateTask: (
     id: string,
     patch: Partial<Pick<TaskItem, "text" | "emoji" | "color" | "estimatedMinutes" | "focusedSeconds">>
-  ) => void;
-  onResetTasks: () => void;
+  ) => void | Promise<unknown>;
+  onResetTasks: () => void | Promise<unknown>;
 }
 
 const plannedLabel = (minutes: number) => minutes >= 60

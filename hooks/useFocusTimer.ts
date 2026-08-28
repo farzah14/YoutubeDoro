@@ -18,12 +18,18 @@ import type { FocusPreferences, TimerMode, TimerPhase } from "@/types/focus";
 import { useLocalStorage } from "./useLocalStorage";
 import { notifyTimerComplete, playTimerAlert, primeTimerAlertAudio, requestScreenWakeLock, type WakeLockHandle } from "@/lib/browserFeatures";
 
-type StartBoundary = () => void | boolean | Promise<void | boolean>;
+export interface TimerStartContext {
+  mode: TimerMode;
+  phase: TimerPhase;
+  plannedSeconds: number | null;
+}
+
+type StartBoundary = (context: TimerStartContext) => void | boolean | Promise<void | boolean>;
 
 interface UseFocusTimerOptions {
   onFocusStart?: StartBoundary;
   onBreakStart?: StartBoundary;
-  onFocusDone?: (seconds: number) => void;
+  onFocusDone?: (seconds: number, followedByBreak: boolean) => void;
   onFocusStop?: (seconds: number) => void;
   onBreakDone?: (seconds: number) => void;
   onBreakStop?: (seconds: number) => void;
@@ -81,10 +87,10 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     if (completed) {
       if (preferences.notificationEnabled) notifyTimerComplete(previous.phase === "focus" ? "Your focus interval is complete." : "Your break is complete.");
       void playTimerAlert(preferences.alertSound, preferences.alertVolume);
-      if (previous.phase === "focus") callbacks.current.onFocusDone?.(previous.targetSeconds);
+      if (previous.phase === "focus") callbacks.current.onFocusDone?.(previous.targetSeconds, state.phase === "break");
       else callbacks.current.onBreakDone?.(previous.targetSeconds);
       if (previous.phase === "focus" && state.phase === "break" && state.status === "running") {
-        callbacks.current.onBreakStart?.();
+        callbacks.current.onBreakStart?.({ mode: state.mode, phase: "break", plannedSeconds: state.targetSeconds });
       }
     }
     previousState.current = state;
@@ -98,7 +104,11 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     void primeTimerAlertAudio();
     try {
       const boundary = current.phase === "focus" ? callbacks.current.onFocusStart : callbacks.current.onBreakStart;
-      const allowed = await boundary?.();
+      const allowed = await boundary?.({
+        mode: current.mode,
+        phase: current.phase,
+        plannedSeconds: current.targetSeconds > 0 ? current.targetSeconds : null,
+      });
       if (allowed === false) return;
       setState((latest) => latest.status === "running" || latest.status === "paused" ? latest : startTimer(latest, Date.now()));
     } finally {
@@ -110,7 +120,7 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
   const reset = useCallback(() => {
     setState((current) => {
       const stopped = current.status === "running" ? pauseTimer(current, Date.now()) : current;
-      if (stopped.elapsedSeconds > 0) {
+      if (current.status === "running" || current.status === "paused") {
         if (stopped.phase === "focus") callbacks.current.onFocusStop?.(stopped.elapsedSeconds);
         else callbacks.current.onBreakStop?.(stopped.elapsedSeconds);
       }
@@ -118,7 +128,14 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     });
   }, [preferences]);
   const selectPhase = useCallback(
-    (phase: TimerPhase) => setState((current) => selectTimerPhase(current, preferences, phase)),
+    (phase: TimerPhase) => setState((current) => {
+      if (current.status === "running" || current.status === "paused") {
+        const elapsed = current.status === "paused" ? current.elapsedSeconds : current.elapsedSeconds;
+        if (current.phase === "focus") callbacks.current.onFocusStop?.(elapsed);
+        else callbacks.current.onBreakStop?.(elapsed);
+      }
+      return selectTimerPhase(current, preferences, phase);
+    }),
     [preferences]
   );
   const setMode = useCallback((mode: TimerMode) => {

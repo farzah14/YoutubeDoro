@@ -35,5 +35,5 @@ npm run build
 
 Tracker data is stored in Supabase after sign-in. Themes, music, and other
 presentation preferences remain local to this browser. The first signed-in
-visit can optionally migrate browser tracker data; it never reads Notion data
-and keeps the original browser copy as a backup.
+visit can optionally migrate browser tracker data and keeps the original
+browser copy as a backup.

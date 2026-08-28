@@ -23,6 +23,7 @@ export interface TrackerTask {
   order: number;
   focusedSeconds: number;
   completedSessions: number;
+  linkedSessionCount: number;
   subtasks: TrackerSubtask[];
   createdAt: string;
   updatedAt: string;

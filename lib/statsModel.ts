@@ -49,3 +49,19 @@ export function percentChange(current: number, previous: number): number {
   if (previous === 0) return current === 0 ? 0 : 100;
   return Math.round(((current - previous) / previous) * 100);
 }
+
+export function historyFromSessions(sessions: LearningSession[]): Record<string, DailyHistory> {
+  const history: Record<string, DailyHistory> = {};
+  for (const session of sessions) {
+    const date = new Date(session.startedAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const current = history[day] ?? { ...emptyDay };
+    current.focusSeconds += Math.max(0, session.learningSeconds);
+    current.breakSeconds += Math.max(0, session.breakSeconds);
+    if (session.status === "completed") current.sessions += 1;
+    history[day] = current;
+  }
+  return history;
+}
+import type { LearningSession } from "../types/tracker";

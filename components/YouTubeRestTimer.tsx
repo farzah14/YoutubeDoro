@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { dayKey } from "@/lib/time";
-import { readNumber, writeNumber, readString, writeString } from "@/lib/storage";
+import { formatDuration } from "@/lib/duration";
 import { KEYS } from "@/lib/constants";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useDailyNotes } from "@/hooks/useDailyNotes";
-import { useNotionSync } from "@/hooks/useNotionSync";
-import { useTasks } from "@/hooks/useTasks";
+import { useCloudTasks } from "@/hooks/useCloudTasks";
+import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { useSessionRecorder } from "@/hooks/useSessionRecorder";
+import type { SessionMeasurements } from "@/hooks/useSessionRecorder";
+import type { TimerStartContext } from "@/hooks/useFocusTimer";
 import { CozyAnimeTheme } from "@/types/theme";
 import type { ThemeSlot, WorkspaceMode, WorkspacePanel } from "@/types/workspace";
+import type { LearningSession } from "@/types/tracker";
 import { COZY_THEMES, DEFAULT_THEME, THEME_ORDER } from "@/lib/themeConfig";
 import { AmbientBackground } from "./anime/AmbientBackground";
 import { Header } from "./layout/Header";
@@ -22,21 +25,16 @@ import { TaskQueue } from "./tasks/TaskQueue";
 import { SubtaskPanel } from "./tasks/SubtaskPanel";
 import { RestCardContainer } from "./timer/RestCardContainer";
 import { Modal } from "./ui/Modal";
-import { NotesPanel } from "./notes/NotesPanel";
-import { MarkdownScratchpad } from "./notes/MarkdownScratchpad";
-import { NotionSettingsModal } from "./notion/NotionSettingsModal";
+import { SessionNoteEditor } from "./session/SessionNoteEditor";
+import { HistoryPanel } from "./history/HistoryPanel";
+import { MigrationPrompt, isMigrationSuppressed } from "./migration/MigrationPrompt";
+import { exportBrowserTrackerData, type BrowserMigrationExport } from "@/lib/browserMigration";
 import { LoFiPlayer, MusicEngine } from "./audio/LoFiPlayer";
 import { getQuoteForDate } from "@/lib/quotes";
 import { SettingsPanel } from "./settings/SettingsPanel";
 
-export default function YouTubeRestTimer() {
+export default function YouTubeRestTimer({ accountEmail, accountProvider }: { accountEmail?: string; accountProvider?: string } = {}) {
   const [today] = useState<string>(() => dayKey());
-  const [topicToday, setTopicToday] = useState<string>("");
-  const [totalLearnSec, setTotalLearnSec] = useState<number>(0);
-  const [totalRestSec, setTotalRestSec] = useState<number>(0);
-  const [topicLearnSec, setTopicLearnSec] = useState<number>(0);
-  const [topicRestSec, setTopicRestSec] = useState<number>(0);
-  const [pomodoroRounds, setPomodoroRounds] = useState<number>(0);
 
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("home");
   const [activeThemeSlot, setActiveThemeSlot] = useState<ThemeSlot>("home");
@@ -68,22 +66,6 @@ export default function YouTubeRestTimer() {
     setWorkspaceMode(mode);
     setActiveThemeSlot(mode);
   }, []);
-
-  // Browser storage is hydrated after the server/client markup has matched.
-  useEffect(() => {
-    const activeTopic = readString(KEYS.topicByDay(today)) || "";
-
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setTopicToday(activeTopic);
-    setTotalLearnSec(readNumber(KEYS.learnByDay(today)) || 0);
-    setTotalRestSec(
-      readNumber(KEYS.restByDay(today)) || readNumber(KEYS.legacyBreakByDay(today)) || 0
-    );
-    setTopicLearnSec(readNumber(KEYS.learnByDayAndTopic(today, activeTopic)) || 0);
-    setTopicRestSec(readNumber(KEYS.restByDayAndTopic(today, activeTopic)) || 0);
-    setPomodoroRounds(readNumber(KEYS.pomodoroRoundsByDay(today)) || 0);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [today]);
 
   // ── Cozy Anime Theme System (Default: Night Study) ──
   const [legacyTheme, setLegacyTheme] = useLocalStorage<CozyAnimeTheme>(
@@ -135,7 +117,6 @@ export default function YouTubeRestTimer() {
     },
     [setCustomThemeIds, setFocusTheme, setHomeTheme, setLegacyTheme]
   );
-  const { upsertTitleNote, getNotes } = useDailyNotes(today);
   const {
     tasks,
     activeTaskId,
@@ -144,7 +125,6 @@ export default function YouTubeRestTimer() {
     addTask,
     toggleTask,
     deleteTask,
-    recordTaskFocus,
     reorderTasks,
     moveTask,
     updateTask,
@@ -152,178 +132,122 @@ export default function YouTubeRestTimer() {
     toggleSubtask,
     deleteSubtask,
     resetTasks,
-  } = useTasks(today);
+    reload: reloadTasks,
+    loading: tasksLoading,
+    error: taskError,
+  } = useCloudTasks();
+  const recorder = useSessionRecorder();
+  const history = useSessionHistory({ limit: 100 });
+  const [statsRevision, setStatsRevision] = useState(0);
+  const [interruptedSessions, setInterruptedSessions] = useState<LearningSession[]>([]);
+  const [showInterruptedNotice, setShowInterruptedNotice] = useState(true);
+  const [migrationData, setMigrationData] = useState<BrowserMigrationExport | null>(null);
+  const sessionNoteRef = useRef("");
+  const topicToday = activeTask?.text ?? "";
 
-  // ── Notion Integration ──
-  const {
-    syncState,
-    settingsOpen,
-    setSettingsOpen,
-    validate,
-    disconnect,
-    syncDebounced,
-    pullFromNotion,
-  } = useNotionSync();
+  useEffect(() => {
+    let cancelled = false;
+    void recorder.recover().then((sessions) => {
+      if (cancelled || sessions.length === 0) return;
+      setInterruptedSessions(sessions);
+      void history.reload();
+    });
+    return () => { cancelled = true; };
+  }, [history.reload, recorder.recover]);
 
-  // Helper to build sync payload from current state
-  const buildSyncPayload = useCallback(() => {
-    const scratchpad =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem("ytdoro:scratchpad") || ""
-        : "";
-    return {
-      day: today,
-      topic: topicToday,
-      learnSec: topicLearnSec,
-      restSec: topicRestSec,
-      notes: getNotes(),
-      scratchpad,
-    };
-  }, [today, topicToday, topicLearnSec, topicRestSec, getNotes]);
+  useEffect(() => {
+    const exported = exportBrowserTrackerData(window.localStorage);
+    const hasTrackerData = exported.summary.tasks + exported.summary.subtasks + exported.summary.sessions + exported.summary.notes > 0;
+    if (hasTrackerData && !isMigrationSuppressed(exported.migrationKey)) setMigrationData(exported);
+  }, []);
 
-  // Auto-sync trigger
-  const triggerNotionSync = useCallback(() => {
-    if (!syncState.connected || !today) return;
-    setTimeout(() => {
-      const payload = buildSyncPayload();
-      syncDebounced(payload);
-    }, 100);
-  }, [syncState.connected, today, buildSyncPayload, syncDebounced]);
-
-  // Pull handler
-  const handlePull = useCallback(async () => {
-    const result = await pullFromNotion(today, topicToday);
-    if (result?.success && result?.data) {
-      const data = result.data;
-
-      if (data.learnSec !== undefined) {
-        const localTopicKey = KEYS.learnByDayAndTopic(today, topicToday);
-        const prevTopicVal = readNumber(localTopicKey) || 0;
-        setTopicLearnSec(data.learnSec);
-        writeNumber(localTopicKey, data.learnSec);
-
-        const diff = data.learnSec - prevTopicVal;
-        if (diff !== 0) {
-          const nextDaily = Math.max(0, totalLearnSec + diff);
-          setTotalLearnSec(nextDaily);
-          writeNumber(KEYS.learnByDay(today), nextDaily);
-        }
-      }
-
-      if (data.restSec !== undefined) {
-        const localTopicKey = KEYS.restByDayAndTopic(today, topicToday);
-        const prevTopicVal = readNumber(localTopicKey) || 0;
-        setTopicRestSec(data.restSec);
-        writeNumber(localTopicKey, data.restSec);
-
-        const diff = data.restSec - prevTopicVal;
-        if (diff !== 0) {
-          const nextDaily = Math.max(0, totalRestSec + diff);
-          setTotalRestSec(nextDaily);
-          writeNumber(KEYS.restByDay(today), nextDaily);
-        }
-      }
-
-      if (data.scratchpad) {
-        try {
-          window.localStorage.setItem("ytdoro:scratchpad", data.scratchpad);
-        } catch {
-          // ignore
-        }
-      }
+  const visibleSessions = useMemo(() => {
+    void statsRevision;
+    const current = history.sessions.slice();
+    if (recorder.session && !current.some((session) => session.id === recorder.session?.id)) {
+      current.push({ ...recorder.session, ...recorder.getLastMeasurements() });
     }
-    return result;
-  }, [today, topicToday, totalLearnSec, totalRestSec, pullFromNotion]);
+    return current;
+  }, [history.sessions, recorder.getLastMeasurements, recorder.session, statsRevision]);
+  const todaySessions = useMemo(() => visibleSessions.filter((session) => {
+    const date = new Date(session.startedAt);
+    return !Number.isNaN(date.getTime()) && dayKey(date) === today;
+  }), [today, visibleSessions]);
+  const totalLearnSec = todaySessions.reduce((sum, session) => sum + session.learningSeconds, 0);
+  const totalRestSec = todaySessions.reduce((sum, session) => sum + session.breakSeconds, 0);
 
-  const handleStartWithTitle = useCallback(
-    (title: string) => {
-      const t = title.trim() || "(Untitled)";
-      writeString(KEYS.topicByDay(today), t);
-      setTopicToday(t);
+  const handleFocusStart = useCallback(async (context: TimerStartContext) => {
+    if (recorder.session?.status === "active") {
+      const closed = await recorder.finalize("completed", recorder.getLastMeasurements(), sessionNoteRef.current);
+      if (!closed) return false;
+    }
+    const task = tasks.find((item) => item.id === activeTaskId) ?? activeTask;
+    const title = task?.text.trim() || "Untitled learning session";
+    const created = await recorder.start({
+      taskId: task?.id ?? null,
+      taskTitleSnapshot: title,
+      title,
+      timerMode: context.mode,
+      plannedSeconds: context.plannedSeconds,
+    });
+    if (!created) return false;
+    sessionNoteRef.current = created.note;
+    setStatsRevision((value) => value + 1);
+    return true;
+  }, [activeTask, activeTaskId, recorder.finalize, recorder.getLastMeasurements, recorder.session?.status, recorder.start, tasks]);
 
-      const newTopicLearn = readNumber(KEYS.learnByDayAndTopic(today, t)) || 0;
-      const newTopicRest = readNumber(KEYS.restByDayAndTopic(today, t)) || 0;
-      setTopicLearnSec(newTopicLearn);
-      setTopicRestSec(newTopicRest);
+  const handleBreakStart = useCallback(async () => recorder.breakStart(), [recorder.breakStart]);
+  const handleBreakProgress = useCallback((seconds: number) => recorder.breakCheckpoint(seconds), [recorder.breakCheckpoint]);
+  const handleProgress = useCallback((phase: "focus" | "break", elapsedSeconds: number, status: "idle" | "running" | "paused" | "done") => {
+    const current: SessionMeasurements = recorder.getLastMeasurements();
+    recorder.checkpoint({
+      ...current,
+      learningSeconds: phase === "focus" ? elapsedSeconds : current.learningSeconds,
+      breakSeconds: phase === "break" ? elapsedSeconds : current.breakSeconds,
+    }, status === "paused");
+    if (status === "paused") setStatsRevision((value) => value + 1);
+  }, [recorder.checkpoint, recorder.getLastMeasurements]);
 
-      upsertTitleNote({ kind: "learn_start", title: t, addLearn: 0, addRest: 0 });
-      triggerNotionSync();
-    },
-    [today, upsertTitleNote, triggerNotionSync]
-  );
+  const refreshHistory = useCallback(() => {
+    setStatsRevision((value) => value + 1);
+    void history.reload();
+  }, [history.reload]);
 
-  const handleLearnDone = useCallback(
-    (sec: number) => {
-      const nextDaily = totalLearnSec + sec;
-      setTotalLearnSec(nextDaily);
-      writeNumber(KEYS.learnByDay(today), nextDaily);
+  const finishSession = useCallback((status: "completed" | "stopped", seconds: number) => {
+    const current = recorder.getLastMeasurements();
+    void recorder.finalize(status, { ...current, learningSeconds: Math.max(0, Math.floor(seconds)) }, sessionNoteRef.current).then((saved) => {
+      if (saved) refreshHistory();
+    });
+  }, [recorder.finalize, recorder.getLastMeasurements, refreshHistory]);
 
-      const nextTopic = topicLearnSec + sec;
-      setTopicLearnSec(nextTopic);
-      writeNumber(KEYS.learnByDayAndTopic(today, topicToday), nextTopic);
+  const handleLearnDone = useCallback((seconds: number, followedByBreak: boolean) => {
+    const current = recorder.getLastMeasurements();
+    recorder.checkpoint({ ...current, learningSeconds: seconds }, true);
+    if (!followedByBreak) finishSession("completed", seconds);
+  }, [finishSession, recorder.checkpoint, recorder.getLastMeasurements]);
+  const handleLearnStop = useCallback((seconds: number) => finishSession("stopped", seconds), [finishSession]);
+  const handleBreakDone = useCallback((seconds: number) => {
+    recorder.breakEnd(seconds);
+    finishSession("completed", recorder.getLastMeasurements().learningSeconds);
+  }, [finishSession, recorder.breakEnd, recorder.getLastMeasurements]);
+  const handleBreakStop = useCallback((seconds: number) => {
+    recorder.breakEnd(seconds);
+    finishSession("stopped", recorder.getLastMeasurements().learningSeconds);
+  }, [finishSession, recorder.breakEnd, recorder.getLastMeasurements]);
+  const handleRestDone = useCallback((seconds: number) => recorder.breakEnd(seconds), [recorder.breakEnd]);
+  const handleRestStop = useCallback((seconds: number) => recorder.breakEnd(seconds), [recorder.breakEnd]);
 
-      const nextRounds = pomodoroRounds + 1;
-      setPomodoroRounds(nextRounds);
-      writeNumber(KEYS.pomodoroRoundsByDay(today), nextRounds);
-
-      recordTaskFocus(activeTaskId || topicToday, sec, true);
-
-      upsertTitleNote({ kind: "learn_done", title: topicToday, addLearn: sec, addRest: 0 });
-      triggerNotionSync();
-    },
-    [
-      today,
-      topicToday,
-      totalLearnSec,
-      topicLearnSec,
-      pomodoroRounds,
-      activeTaskId,
-      recordTaskFocus,
-      upsertTitleNote,
-      triggerNotionSync,
-    ]
-  );
-
-  const handleLearnStop = useCallback(
-    (sec: number) => {
-      const nextDaily = totalLearnSec + sec;
-      setTotalLearnSec(nextDaily);
-      writeNumber(KEYS.learnByDay(today), nextDaily);
-
-      const nextTopic = topicLearnSec + sec;
-      setTopicLearnSec(nextTopic);
-      writeNumber(KEYS.learnByDayAndTopic(today, topicToday), nextTopic);
-
-      recordTaskFocus(activeTaskId || topicToday, sec);
-
-      upsertTitleNote({ kind: "learn_stop", title: topicToday, addLearn: sec, addRest: 0 });
-      triggerNotionSync();
-    },
-    [activeTaskId, recordTaskFocus, today, topicToday, totalLearnSec, topicLearnSec, upsertTitleNote, triggerNotionSync]
-  );
-
-  const logBreak = useCallback((sec: number, kind: "rest_done" | "rest_stop" | "yt_rest_done" | "yt_rest_stop") => {
-    const nextDaily = totalRestSec + sec;
-    const nextTopic = topicRestSec + sec;
-    setTotalRestSec(nextDaily);
-    setTopicRestSec(nextTopic);
-    writeNumber(KEYS.restByDay(today), nextDaily);
-    writeNumber(KEYS.restByDayAndTopic(today, topicToday), nextTopic);
-    upsertTitleNote({ kind, title: topicToday, addLearn: 0, addRest: sec });
-    triggerNotionSync();
-  }, [today, topicToday, topicRestSec, totalRestSec, triggerNotionSync, upsertTitleNote]);
-
-  const handleBreakDone = useCallback((sec: number) => logBreak(sec, "rest_done"), [logBreak]);
-  const handleBreakStop = useCallback((sec: number) => logBreak(sec, "rest_stop"), [logBreak]);
-
-  const handleYouTubeRest = useCallback((sec: number, kind: "yt_rest_done" | "yt_rest_stop") => logBreak(sec, kind), [logBreak]);
+  const saveSessionNote = useCallback((note: string) => {
+    sessionNoteRef.current = note;
+    return recorder.updateMetadata({ note });
+  }, [recorder.updateMetadata]);
+  const saveSessionTitle = useCallback((title: string) => recorder.updateMetadata({ title }), [recorder.updateMetadata]);
 
   const handleTaskSelected = useCallback(
     (task: { id: string; text: string }) => {
       setActiveTaskId(task.id);
-      handleStartWithTitle(task.text);
     },
-    [setActiveTaskId, handleStartWithTitle]
+    [setActiveTaskId]
   );
 
   // Global keyboard shortcuts
@@ -334,7 +258,7 @@ export default function YouTubeRestTimer() {
       }
 
       if (e.key.toLowerCase() === "n") {
-        toggleWorkspacePanel("notes");
+        toggleWorkspacePanel("history");
       }
       if (e.key.toLowerCase() === "f") {
         handleModeChange(workspaceMode === "focus" ? "home" : "focus");
@@ -344,15 +268,13 @@ export default function YouTubeRestTimer() {
           closeWorkspacePanel();
         } else if (workspaceMode !== "home") {
           handleModeChange("home");
-        } else {
-          setSettingsOpen(false);
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [closeWorkspacePanel, handleModeChange, openPanel, setSettingsOpen, toggleWorkspacePanel, workspaceMode]);
+  }, [closeWorkspacePanel, handleModeChange, openPanel, toggleWorkspacePanel, workspaceMode]);
 
   const handleFullscreen = useCallback(() => {
     if (document.fullscreenElement) {
@@ -373,7 +295,7 @@ export default function YouTubeRestTimer() {
       <div
         className="workspace-scene relative z-10 flex min-h-0 flex-1 flex-col px-5 py-5 sm:px-8 sm:py-7"
       >
-        <Header quote={getQuoteForDate(today)} showQuote={showQuote} />
+        <Header quote={getQuoteForDate(today)} showQuote={showQuote} accountEmail={accountEmail} accountProvider={accountProvider} />
 
         <HomeHero
           hidden={!isHomeMode}
@@ -383,8 +305,20 @@ export default function YouTubeRestTimer() {
           greetingStyle={greetingStyle}
         />
 
+        {(taskError || recorder.error) && <aside className="session-recovery-notice session-recovery-notice--error" role="alert"><div><strong>Tracker save problem.</strong><p>{taskError || recorder.error}</p></div><button type="button" onClick={() => { void reloadTasks(); void history.reload(); }}>Retry</button></aside>}
+        {tasksLoading && <p className="tracker-loading" role="status">Loading your account tracker…</p>}
+
         {!isHomeMode && (
         <div className="workspace-stage no-scrollbar space-y-5">
+          {showInterruptedNotice && interruptedSessions.length > 0 && (
+            <aside className="session-recovery-notice" role="status">
+              <div>
+                <strong>Previous session stopped safely.</strong>
+                <p>{interruptedSessions.length} session{interruptedSessions.length === 1 ? "" : "s"} recovered at the last saved point ({formatDuration(interruptedSessions.reduce((total, session) => total + session.learningSeconds, 0))} of learning).</p>
+              </div>
+              <button type="button" onClick={() => setShowInterruptedNotice(false)} aria-label="Dismiss recovery notice">Dismiss</button>
+            </aside>
+          )}
           <main
             id="focus"
             aria-label="Focus workspace"
@@ -392,17 +326,29 @@ export default function YouTubeRestTimer() {
           >
             <LearningCard
               topicToday={topicToday}
-              totalTodaySec={topicLearnSec}
+              totalTodaySec={totalLearnSec}
               pipBackgroundUrl={COZY_THEMES[activeTheme].backgroundUrl}
               onRunningChange={setFocusRunning}
               tasks={tasks}
               activeTaskId={activeTaskId}
               onOpenTasks={() => toggleWorkspacePanel("tasks")}
-              onStartWithTitle={handleStartWithTitle}
+              onFocusStart={handleFocusStart}
+              onBreakStart={handleBreakStart}
+              onProgress={handleProgress}
               onLearnDone={handleLearnDone}
               onLearnStop={handleLearnStop}
               onBreakDone={handleBreakDone}
               onBreakStop={handleBreakStop}
+            />
+            <SessionNoteEditor
+              sessionId={recorder.sessionId}
+              initialValue={recorder.session?.note ?? ""}
+              title={recorder.session?.title ?? ""}
+              learningSeconds={recorder.getLastMeasurements().learningSeconds}
+              status={recorder.session?.status ?? "idle"}
+              onSave={saveSessionNote}
+              onTitleSave={saveSessionTitle}
+              onValueChange={(note) => { sessionNoteRef.current = note; }}
             />
           </main>
         </div>
@@ -420,15 +366,12 @@ export default function YouTubeRestTimer() {
       <MusicEngine />
 
       {/* ── Modals & Drawers ── */}
-      <Modal open={openPanel === "notes"} onClose={closeWorkspacePanel} title="Priority Notebook" className="notes-modal">
-        <div className="notes-workspace">
-          <NotesPanel initialDay={today} tasks={tasks} activeTaskId={activeTaskId} />
-          <MarkdownScratchpad />
-        </div>
+      <Modal open={openPanel === "history"} onClose={closeWorkspacePanel} title="Session history" className="history-modal">
+        <HistoryPanel tasks={tasks} />
       </Modal>
 
-      <Modal open={openPanel === "rest"} onClose={closeWorkspacePanel} title="YouTube Rest">
-        <RestCardContainer totalTodaySec={totalRestSec} onRestDone={handleBreakDone} onRestStop={handleBreakStop} onYTDone={(sec) => handleYouTubeRest(sec, "yt_rest_done")} onYTStop={(sec) => handleYouTubeRest(sec, "yt_rest_stop")} />
+      <Modal open={openPanel === "rest"} onClose={closeWorkspacePanel} title="Break tools">
+        <RestCardContainer totalTodaySec={totalRestSec} onBreakStart={handleBreakStart} onBreakProgress={handleBreakProgress} onRestDone={handleRestDone} onRestStop={handleRestStop} onYTDone={handleRestDone} onYTStop={handleRestStop} />
       </Modal>
 
       <Modal open={openPanel === "tasks"} onClose={closeWorkspacePanel} title="Focus Priorities" className="priorities-modal">
@@ -464,12 +407,10 @@ export default function YouTubeRestTimer() {
       <Modal open={openPanel === "stats"} onClose={closeWorkspacePanel} title="Focus stats">
         <div className="space-y-4">
           <DailyStats
-            totalLearnSec={totalLearnSec}
-            totalRestSec={totalRestSec}
-            pomodoroRounds={pomodoroRounds}
+            sessions={visibleSessions}
             today={today}
           />
-          <WeeklyHeatmap />
+          <WeeklyHeatmap sessions={visibleSessions} />
         </div>
       </Modal>
 
@@ -490,17 +431,11 @@ export default function YouTubeRestTimer() {
         onShowSecondsChange={setShowSeconds}
         showQuote={showQuote}
         onShowQuoteChange={setShowQuote}
-        totalLearnSec={totalLearnSec}
-        totalRestSec={totalRestSec}
-        pomodoroRounds={pomodoroRounds}
+        sessions={visibleSessions}
         today={today}
-        onOpenNotion={() => {
+        onOpenHistory={() => {
           closeWorkspacePanel();
-          setSettingsOpen(true);
-        }}
-        onOpenNotes={() => {
-          closeWorkspacePanel();
-          setOpenPanel("notes");
+          setOpenPanel("history");
         }}
         onOpenRest={() => {
           closeWorkspacePanel();
@@ -508,14 +443,7 @@ export default function YouTubeRestTimer() {
         }}
       />
 
-      <NotionSettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        syncState={syncState}
-        onValidate={validate}
-        onDisconnect={disconnect}
-        onPull={handlePull}
-      />
+      {migrationData && <MigrationPrompt data={migrationData} onCancel={() => setMigrationData(null)} onImported={() => { setMigrationData(null); void reloadTasks(); refreshHistory(); }} />}
     </div>
   );
 }

@@ -71,6 +71,10 @@ function localTimestamp(day: string, end = false) {
   return new Date(`${day}T${time}`).toISOString();
 }
 
+function localDayKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function sourcePart(value: string) {
   return encodeURIComponent(value).slice(0, 300);
 }
@@ -222,7 +226,7 @@ export function exportBrowserTrackerData(storage: BrowserStorageLike, migrationK
 
   const scratchpad = readString(storage, "ytdoro:scratchpad");
   if (scratchpad) {
-    const day = new Date().toISOString().slice(0, 10);
+    const day = localDayKey();
     if (appendNote(ensureSession(day, "Legacy note", "scratchpad"), scratchpad)) notes += 1;
   }
 

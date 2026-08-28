@@ -56,13 +56,13 @@ export function WorkspaceDock({
         </button>
         <button
           type="button"
-          className={dockButtonClass(openPanel === "notes")}
-          aria-pressed={openPanel === "notes"}
-          onClick={() => onPanelToggle("notes")}
-          title="Notes"
+          className={dockButtonClass(openPanel === "history")}
+          aria-pressed={openPanel === "history"}
+          onClick={() => onPanelToggle("history")}
+          title="History"
         >
           <BookIcon className="h-5 w-5" aria-hidden="true" />
-          <span className="sr-only">Notes</span>
+          <span className="sr-only">History</span>
         </button>
       </div>
 

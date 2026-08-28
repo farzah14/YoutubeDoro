@@ -2,6 +2,7 @@
 
 import { formatMMSS } from "@/lib/time";
 import { useFocusTimer } from "@/hooks/useFocusTimer";
+import type { TimerStartContext } from "@/hooks/useFocusTimer";
 import { supportsDocumentPictureInPicture } from "@/lib/browserFeatures";
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import type { TaskItem } from "@/types";
@@ -16,10 +17,10 @@ interface LearningCardProps {
   tasks: TaskItem[];
   activeTaskId: string | null;
   onOpenTasks: () => void;
-  onStartWithTitle: (title: string) => void;
-  onFocusStart?: () => void | Promise<boolean | void>;
-  onBreakStart?: () => void | Promise<boolean | void>;
-  onLearnDone: (seconds: number) => void;
+  onFocusStart?: (context: TimerStartContext) => void | Promise<boolean | void>;
+  onBreakStart?: (context: TimerStartContext) => void | Promise<boolean | void>;
+  onProgress?: (phase: TimerPhase, elapsedSeconds: number, status: "idle" | "running" | "paused" | "done") => void;
+  onLearnDone: (seconds: number, followedByBreak: boolean) => void;
   onLearnStop: (seconds: number) => void;
   onBreakDone: (seconds: number) => void;
   onBreakStop: (seconds: number) => void;
@@ -60,9 +61,9 @@ export function LearningCard({
   tasks,
   activeTaskId,
   onOpenTasks,
-  onStartWithTitle,
   onFocusStart,
   onBreakStart,
+  onProgress,
   onLearnDone,
   onLearnStop,
   onBreakDone,
@@ -87,6 +88,10 @@ export function LearningCard({
   const isRunning = timer.state.status === "running";
   const isPaused = timer.state.status === "paused";
   const visiblePhase = timer.state.phase === "focus" ? "focus" : "break";
+
+  useEffect(() => {
+    onProgress?.(timer.state.phase, timer.state.elapsedSeconds, timer.state.status);
+  }, [onProgress, timer.state.elapsedSeconds, timer.state.phase, timer.state.status]);
 
   const pipWindowRef = useRef<Window | null>(null);
   const pipNodesRef = useRef<PipNodes | null>(null);
@@ -217,7 +222,6 @@ export function LearningCard({
     if (isRunning) timer.pause();
     else if (isPaused) timer.resume();
     else {
-      if (taskLabel !== "What do you want to focus on?") onStartWithTitle(taskLabel);
       void timer.start();
     }
   };

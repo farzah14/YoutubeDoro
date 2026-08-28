@@ -11,6 +11,7 @@ interface PlainRestCardProps {
   totalTodaySec: number;
   initialBreakMin?: number;
   onBreakStart?: () => void | boolean | Promise<void | boolean>;
+  onProgress?: (seconds: number) => void;
   onDone: (sec: number) => void;
   onStop: (sec: number) => void;
 }
@@ -19,12 +20,14 @@ export function PlainRestCard({
   totalTodaySec,
   initialBreakMin = PRESETS.rest[0],
   onBreakStart,
+  onProgress,
   onDone,
   onStop,
 }: PlainRestCardProps) {
   const timer = useTimer({
     initialMinutes: initialBreakMin,
     onStart: onBreakStart,
+    onTick: (elapsed) => onProgress?.(elapsed),
     onDone,
     onStop,
     tabTitleLabel: "Rest",
@@ -92,7 +95,7 @@ export function PlainRestCard({
       </div>
 
       <div className="pt-2 text-xs text-text-muted text-center border-t border-border-subtle">
-        Total rest today: <strong className="text-foreground">{formatMMSS(totalTodaySec)}</strong>
+        Total break time today: <strong className="text-foreground">{formatMMSS(totalTodaySec)}</strong>
       </div>
     </div>
   );

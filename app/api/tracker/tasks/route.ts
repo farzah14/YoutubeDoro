@@ -30,7 +30,7 @@ export async function GET() {
   const rows = taskRows ?? [];
   const ids = rows.map((row) => row.id as string);
   const subtasksByTask = new Map<string, ReturnType<typeof mapSubtaskRow>[]>();
-  const focusByTask = new Map<string, { seconds: number; completed: number }>();
+  const focusByTask = new Map<string, { seconds: number; completed: number; linked: number }>();
 
   if (ids.length) {
     const { data: subtaskRows, error: subtaskError } = await supabase
@@ -52,17 +52,18 @@ export async function GET() {
     if (sessionError) return errorResponse(sessionError.message, 500);
     for (const row of sessionRows ?? []) {
       const taskId = row.task_id as string;
-      const current = focusByTask.get(taskId) ?? { seconds: 0, completed: 0 };
+      const current = focusByTask.get(taskId) ?? { seconds: 0, completed: 0, linked: 0 };
       current.seconds += Number(row.learning_seconds) || 0;
       if (row.status === "completed") current.completed += 1;
+      current.linked += 1;
       focusByTask.set(taskId, current);
     }
   }
 
   return NextResponse.json({
     tasks: rows.map((row) => {
-      const progress = focusByTask.get(row.id as string) ?? { seconds: 0, completed: 0 };
-      return mapTaskRow(row, subtasksByTask.get(row.id as string) ?? [], progress.seconds, progress.completed);
+      const progress = focusByTask.get(row.id as string) ?? { seconds: 0, completed: 0, linked: 0 };
+      return mapTaskRow(row, subtasksByTask.get(row.id as string) ?? [], progress.seconds, progress.completed, progress.linked);
     }),
   });
 }

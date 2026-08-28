@@ -50,6 +50,7 @@ export function mapTaskRow(
   subtasks: TrackerSubtask[] = [],
   focusedSeconds = 0,
   completedSessions = 0,
+  linkedSessionCount = 0,
 ): TrackerTask {
   const createdAt = safeText(row.created_at, "");
   const color = safeText(row.color, "");
@@ -64,6 +65,7 @@ export function mapTaskRow(
     order: safeInteger(row.task_order),
     focusedSeconds: safeInteger(focusedSeconds),
     completedSessions: safeInteger(completedSessions),
+    linkedSessionCount: safeInteger(linkedSessionCount),
     subtasks: subtasks.slice().sort((a, b) => a.order - b.order),
     createdAt,
     updatedAt: safeText(row.updated_at, createdAt),

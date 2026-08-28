@@ -9,6 +9,7 @@ import { removeCustomTheme, saveCustomTheme, type CustomThemeMetadata } from "@/
 import { getNotificationState, playTimerAlert, requestNotificationPermission, type NotificationState } from "@/lib/browserFeatures";
 import type { CozyAnimeTheme, ThemeGroup } from "@/types/theme";
 import type { ThemeSlot } from "@/types/workspace";
+import type { LearningSession } from "@/types/tracker";
 import { Button } from "../ui/Button";
 import { OverlayPanel } from "../ui/OverlayPanel";
 import { DailyStats } from "../stats/DailyStats";
@@ -16,7 +17,7 @@ import { WeeklyHeatmap } from "../stats/WeeklyHeatmap";
 
 type SettingsSection =
   | "themes"
-  | "focus-timer" | "stats" | "clock" | "quotes" | "music" | "extras" | "notion" | "about";
+  | "focus-timer" | "stats" | "clock" | "quotes" | "music" | "extras" | "about";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -35,18 +36,15 @@ interface SettingsPanelProps {
   onShowSecondsChange: (value: boolean) => void;
   showQuote: boolean;
   onShowQuoteChange: (value: boolean) => void;
-  totalLearnSec: number;
-  totalRestSec: number;
-  pomodoroRounds: number;
+  sessions: LearningSession[];
   today: string;
-  onOpenNotion: () => void;
-  onOpenNotes: () => void;
+  onOpenHistory: () => void;
   onOpenRest: () => void;
 }
 
 const sections: Array<[SettingsSection, string]> = [
   ["themes", "Themes"],
-  ["focus-timer", "Focus Timer"], ["stats", "Stats"], ["clock", "Clock"], ["quotes", "Quotes"], ["music", "Music"], ["extras", "Extras"], ["notion", "Notion"], ["about", "About"],
+  ["focus-timer", "Focus Timer"], ["stats", "Stats"], ["clock", "Clock"], ["quotes", "Quotes"], ["music", "Music"], ["extras", "Extras"], ["about", "About"],
 ];
 
 const timerDurations = [
@@ -76,12 +74,9 @@ export function SettingsPanel({
   onShowSecondsChange,
   showQuote,
   onShowQuoteChange,
-  totalLearnSec,
-  totalRestSec,
-  pomodoroRounds,
+  sessions,
   today,
-  onOpenNotion,
-  onOpenNotes,
+  onOpenHistory,
   onOpenRest,
 }: SettingsPanelProps) {
   const [section, setSection] = useState<SettingsSection>("themes");
@@ -222,11 +217,10 @@ export function SettingsPanel({
     );
     if (section === "clock") return <div className="settings-content"><p className="eyebrow">Home clock</p><h3>Let the time stay quiet.</h3><div className="settings-toggle-list"><label className="settings-toggle"><span><strong>24-hour clock</strong><small>Use 18:30 instead of 6:30 PM.</small></span><input type="checkbox" checked={use24Hour} onChange={(event) => onUse24HourChange(event.target.checked)} /></label><label className="settings-toggle"><span><strong>Show seconds</strong><small>Show the precise second on Home.</small></span><input type="checkbox" checked={showSeconds} onChange={(event) => onShowSecondsChange(event.target.checked)} /></label></div></div>;
     if (section === "quotes") return <div className="settings-content"><p className="eyebrow">Home presentation</p><h3>Keep the greeting personal.</h3><label className="settings-field">Dashboard name<input value={dashboardName} onChange={(event) => setDashboardName(event.target.value)} placeholder="Your name" /></label><label className="settings-field">Greeting<select value={greetingStyle} onChange={(event) => setGreetingStyle(event.target.value as typeof greetingStyle)}><option value="dynamic">Dynamic</option><option value="generic">Generic</option><option value="hidden">Hidden</option></select></label><label className="settings-toggle"><span><strong>Show quote</strong><small>Keep the daily line in the top-right corner.</small></span><input type="checkbox" checked={showQuote} onChange={(event) => onShowQuoteChange(event.target.checked)} /></label></div>;
-    if (section === "stats") return <div className="settings-content space-y-4"><DailyStats totalLearnSec={totalLearnSec} totalRestSec={totalRestSec} pomodoroRounds={pomodoroRounds} today={today} /><WeeklyHeatmap /></div>;
+    if (section === "stats") return <div className="settings-content space-y-4"><DailyStats sessions={sessions} today={today} /><WeeklyHeatmap sessions={sessions} /></div>;
     if (section === "music") return <div className="settings-content"><p className="eyebrow">Music sources</p><h3>Keep your soundtrack close.</h3><p className="settings-copy">Built-in stations and allowlisted HTTPS provider links live in Music. Providers may block embeds by region or account.</p></div>;
-    if (section === "notion") return <div className="settings-content"><p className="eyebrow">Optional connection</p><h3>Keep your notes portable.</h3><p className="settings-copy">Notion remains an optional YoutubeDoro extra.</p><Button type="button" variant="secondary" className="mt-6" onClick={onOpenNotion}>Open Notion settings</Button></div>;
-    if (section === "about") return <div className="settings-content"><p className="eyebrow">YoutubeDoro</p><h3>A quiet anime focus room.</h3><p className="settings-copy">Local-first timer, original scenery, layered procedural sound, and your own focus history.</p></div>;
-    return <div className="settings-content"><p className="eyebrow">Extras</p><h3>Keep the useful edges.</h3><label className="settings-toggle"><span><strong>Clear mode</strong><small>Hide the brand and helper text while keeping the timer and dock available.</small></span><input type="checkbox" checked={clearMode} onChange={(event) => setClearMode(event.target.checked)} /></label><div className="settings-info-card"><strong>Keyboard</strong><p>F toggles Focus · N opens Notes · Escape closes the topmost surface.</p></div><div className="settings-extras-actions"><Button type="button" variant="secondary" onClick={onOpenNotes}>Open Notes &amp; Scratchpad</Button><Button type="button" variant="secondary" onClick={onOpenRest}>Open YouTube Rest</Button></div></div>;
+    if (section === "about") return <div className="settings-content"><p className="eyebrow">YoutubeDoro</p><h3>A quiet anime focus room.</h3><p className="settings-copy">Account-backed sessions, original scenery, layered procedural sound, and your own focus history.</p></div>;
+    return <div className="settings-content"><p className="eyebrow">Extras</p><h3>Keep the useful edges.</h3><label className="settings-toggle"><span><strong>Clear mode</strong><small>Hide the brand and helper text while keeping the timer and dock available.</small></span><input type="checkbox" checked={clearMode} onChange={(event) => setClearMode(event.target.checked)} /></label><div className="settings-info-card"><strong>Keyboard</strong><p>F toggles Focus · N opens History · Escape closes the topmost surface.</p></div><div className="settings-extras-actions"><Button type="button" variant="secondary" onClick={onOpenHistory}>Open History</Button><Button type="button" variant="secondary" onClick={onOpenRest}>Open Break tools</Button></div></div>;
   };
 
   return <OverlayPanel open={open} onClose={onClose} title="Settings" description="Personalize each focus mode." className="settings-panel"><div className="settings-layout"><nav className="settings-nav" aria-label="Settings sections">{sections.map(([id, label]) => <button key={id} type="button" className={section === id ? "settings-nav__item settings-nav__item--active" : "settings-nav__item"} aria-current={section === id ? "page" : undefined} onClick={() => selectSection(id)}>{label}</button>)}</nav><select className="settings-select" value={section} onChange={(event) => selectSection(event.target.value as SettingsSection)} aria-label="Settings section">{sections.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><main className="settings-main">{renderContent()}</main></div></OverlayPanel>;

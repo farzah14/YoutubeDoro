@@ -11,7 +11,7 @@ const settingsSource = readWorkspaceFile("components/settings/SettingsPanel.tsx"
 const musicSource = readWorkspaceFile("components/audio/LoFiPlayer.tsx");
 const subtasksSource = readWorkspaceFile("components/tasks/SubtaskPanel.tsx");
 const prioritiesSource = readWorkspaceFile("components/tasks/TaskQueue.tsx");
-const notesSource = readWorkspaceFile("components/notes/NotesPanel.tsx");
+const historySource = readWorkspaceFile("components/history/HistoryPanel.tsx");
 const timerSource = readWorkspaceFile("components/YouTubeRestTimer.tsx");
 
 test("overlay surfaces use the shared atelier contract", () => {
@@ -79,11 +79,10 @@ test("timer recipe exposes one shared break length", () => {
   assert.doesNotMatch(prioritiesSource, /shortBreakMinutes|longBreakMinutes/);
 });
 
-test("Notes are organized around Priority Tasks", () => {
-  assert.match(notesSource, /tasks: TaskItem\[\]/);
-  assert.match(notesSource, /KEYS\.taskNotesByDay/);
-  assert.match(notesSource, /priority-notes__task-list/);
-  assert.match(notesSource, /priority-notes__editor/);
-  assert.match(notesSource, /Note for/);
-  assert.match(timerSource, /<NotesPanel[\s\S]*tasks=\{tasks\}[\s\S]*activeTaskId=\{activeTaskId\}/);
+test("History is organized around account sessions", () => {
+  assert.match(historySource, /useSessionHistory/);
+  assert.match(historySource, /formatDuration/);
+  assert.match(historySource, /window\.confirm/);
+  assert.match(historySource, /Session note/);
+  assert.match(timerSource, /<HistoryPanel[\s\S]*tasks=\{tasks\}/);
 });
