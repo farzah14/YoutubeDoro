@@ -11,6 +11,7 @@ const routeFiles = [
   "app/api/tracker/sessions/route.ts",
   "app/api/tracker/sessions/[id]/route.ts",
   "app/api/tracker/sessions/recover/route.ts",
+  "app/api/tracker/migration/route.ts",
 ].map((file) => join(process.cwd(), file));
 
 test("tracker routes enforce auth, validation, and safe ownership", () => {

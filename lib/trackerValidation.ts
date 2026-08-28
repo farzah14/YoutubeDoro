@@ -71,6 +71,43 @@ export const sessionFilterSchema = z.object({
 
 export const migrationKeySchema = z.string().trim().min(10).max(200);
 
+const migrationSubtaskSchema = z.object({
+  sourceKey: z.string().trim().min(1).max(500),
+  text: titleSchema,
+  completed: z.boolean(),
+  order: z.number().int().min(0).max(100_000),
+}).strict();
+
+const migrationTaskSchema = z.object({
+  sourceKey: z.string().trim().min(1).max(500),
+  title: titleSchema,
+  estimatedMinutes: z.number().int().min(5).max(480),
+  completed: z.boolean(),
+  emoji: z.string().trim().min(1).max(8),
+  color: z.string().regex(/^#[0-9a-f]{6}$/i),
+  order: z.number().int().min(0).max(100_000),
+  subtasks: z.array(migrationSubtaskSchema).max(500),
+}).strict();
+
+const migrationSessionSchema = z.object({
+  sourceKey: z.string().trim().min(1).max(500),
+  title: titleSchema,
+  taskTitleSnapshot: titleSchema,
+  timerMode: timerModeSchema,
+  learningSeconds: secondsSchema,
+  breakSeconds: secondsSchema,
+  breakCount: z.number().int().min(0).max(10_000).nullable(),
+  note: noteSchema,
+  startedAt: z.string().datetime({ offset: true }),
+  endedAt: z.string().datetime({ offset: true }),
+}).strict();
+
+export const browserMigrationSchema = z.object({
+  migrationKey: migrationKeySchema,
+  tasks: z.array(migrationTaskSchema).max(1_000),
+  sessions: z.array(migrationSessionSchema).max(5_000),
+}).strict();
+
 export function parseSessionFilters(searchParams: URLSearchParams) {
   return sessionFilterSchema.safeParse({
     from: searchParams.get("from") || undefined,

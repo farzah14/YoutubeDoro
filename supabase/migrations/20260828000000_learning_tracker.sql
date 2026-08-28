@@ -22,7 +22,9 @@ create table public.subtasks (
   completed boolean not null default false,
   subtask_order integer not null default 0 check (subtask_order >= 0),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  source_key text,
+  unique (task_id, source_key)
 );
 
 create table public.learning_sessions (
