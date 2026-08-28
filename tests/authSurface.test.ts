@@ -13,6 +13,7 @@ const files = [
   "app/auth/reset-password/page.tsx",
   "app/page.tsx",
 ].map((file) => join(process.cwd(), file));
+const stylesFile = join(process.cwd(), "app/globals.css");
 
 test("auth surface has SSR clients, password flows, and OAuth callback", () => {
   for (const file of files) assert.equal(existsSync(file), true, `missing ${file}`);
@@ -32,4 +33,18 @@ test("auth surface has SSR clients, password flows, and OAuth callback", () => {
   }
   assert.equal(source.includes("verifyOtp"), false);
   assert.equal(source.toLowerCase().includes("verify your email before"), false);
+
+  const styles = readFileSync(stylesFile, "utf8");
+  for (const selector of [
+    ".auth-screen",
+    ".auth-card",
+    ".auth-google",
+    ".auth-form",
+    ".auth-submit",
+    ".auth-links",
+    ".auth-message",
+  ]) {
+    assert.match(styles, new RegExp(`\\${selector}\\s*\\{`), `missing ${selector} styles`);
+  }
+  assert.match(styles, /@media \(max-width: 34rem\)[\s\S]*\.auth-card/);
 });
