@@ -23,13 +23,6 @@ export function SessionNoteEditor({ sessionId, initialValue = "", title = "", le
   const valueRef = useRef(initialValue);
   const titleRef = useRef(title);
 
-  useEffect(() => {
-    valueRef.current = initialValue;
-    setNote(initialValue);
-    titleRef.current = title;
-    setSessionTitle(title);
-  }, [initialValue, sessionId, title]);
-
   useEffect(() => () => {
     if (timer.current !== null) window.clearTimeout(timer.current);
   }, []);

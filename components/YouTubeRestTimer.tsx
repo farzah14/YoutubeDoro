@@ -28,7 +28,7 @@ import { Modal } from "./ui/Modal";
 import { SessionNoteEditor } from "./session/SessionNoteEditor";
 import { HistoryPanel } from "./history/HistoryPanel";
 import { MigrationPrompt, isMigrationSuppressed } from "./migration/MigrationPrompt";
-import { exportBrowserTrackerData, type BrowserMigrationExport } from "@/lib/browserMigration";
+import { BROWSER_MIGRATION_KEY, exportBrowserTrackerData, getBrowserMigrationKey, type BrowserMigrationExport } from "@/lib/browserMigration";
 import { LoFiPlayer, MusicEngine } from "./audio/LoFiPlayer";
 import { getQuoteForDate } from "@/lib/quotes";
 import { SettingsPanel } from "./settings/SettingsPanel";
@@ -136,39 +136,60 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
     loading: tasksLoading,
     error: taskError,
   } = useCloudTasks();
-  const recorder = useSessionRecorder();
-  const history = useSessionHistory({ limit: 100 });
+  const {
+    session: recorderSession,
+    sessionId: recorderSessionId,
+    error: recorderError,
+    start: startSession,
+    checkpoint: checkpointSession,
+    breakStart: startBreak,
+    breakCheckpoint: checkpointBreak,
+    breakEnd: endBreak,
+    finalize: finalizeSession,
+    updateMetadata: updateSessionMetadata,
+    recover: recoverSessions,
+    getLastMeasurements,
+  } = useSessionRecorder();
+  const { sessions: historySessions, reload: reloadHistory } = useSessionHistory({ limit: 100 });
   const [statsRevision, setStatsRevision] = useState(0);
   const [interruptedSessions, setInterruptedSessions] = useState<LearningSession[]>([]);
   const [showInterruptedNotice, setShowInterruptedNotice] = useState(true);
-  const [migrationData, setMigrationData] = useState<BrowserMigrationExport | null>(null);
+  const [migrationKey] = useLocalStorage(BROWSER_MIGRATION_KEY, "");
+  const [migrationHidden, setMigrationHidden] = useState(false);
   const sessionNoteRef = useRef("");
   const topicToday = activeTask?.text ?? "";
 
   useEffect(() => {
     let cancelled = false;
-    void recorder.recover().then((sessions) => {
+    void recoverSessions().then((sessions) => {
       if (cancelled || sessions.length === 0) return;
       setInterruptedSessions(sessions);
-      void history.reload();
+      void reloadHistory();
     });
     return () => { cancelled = true; };
-  }, [history.reload, recorder.recover]);
+  }, [reloadHistory, recoverSessions]);
 
   useEffect(() => {
-    const exported = exportBrowserTrackerData(window.localStorage);
+    if (migrationKey || typeof window === "undefined") return;
+    getBrowserMigrationKey(window.localStorage);
+    window.dispatchEvent(new Event("local-storage"));
+  }, [migrationKey]);
+
+  const migrationData = useMemo<BrowserMigrationExport | null>(() => {
+    if (!migrationKey || migrationHidden || typeof window === "undefined") return null;
+    const exported = exportBrowserTrackerData(window.localStorage, migrationKey);
     const hasTrackerData = exported.summary.tasks + exported.summary.subtasks + exported.summary.sessions + exported.summary.notes > 0;
-    if (hasTrackerData && !isMigrationSuppressed(exported.migrationKey)) setMigrationData(exported);
-  }, []);
+    return hasTrackerData && !isMigrationSuppressed(exported.migrationKey) ? exported : null;
+  }, [migrationHidden, migrationKey]);
 
   const visibleSessions = useMemo(() => {
     void statsRevision;
-    const current = history.sessions.slice();
-    if (recorder.session && !current.some((session) => session.id === recorder.session?.id)) {
-      current.push({ ...recorder.session, ...recorder.getLastMeasurements() });
+    const current = historySessions.slice();
+    if (recorderSession && !current.some((session) => session.id === recorderSession.id)) {
+      current.push({ ...recorderSession, ...getLastMeasurements() });
     }
     return current;
-  }, [history.sessions, recorder.getLastMeasurements, recorder.session, statsRevision]);
+  }, [getLastMeasurements, historySessions, recorderSession, statsRevision]);
   const todaySessions = useMemo(() => visibleSessions.filter((session) => {
     const date = new Date(session.startedAt);
     return !Number.isNaN(date.getTime()) && dayKey(date) === today;
@@ -177,13 +198,13 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
   const totalRestSec = todaySessions.reduce((sum, session) => sum + session.breakSeconds, 0);
 
   const handleFocusStart = useCallback(async (context: TimerStartContext) => {
-    if (recorder.session?.status === "active") {
-      const closed = await recorder.finalize("completed", recorder.getLastMeasurements(), sessionNoteRef.current);
+    if (recorderSession?.status === "active") {
+      const closed = await finalizeSession("completed", getLastMeasurements(), sessionNoteRef.current);
       if (!closed) return false;
     }
     const task = tasks.find((item) => item.id === activeTaskId) ?? activeTask;
     const title = task?.text.trim() || "Untitled learning session";
-    const created = await recorder.start({
+    const created = await startSession({
       taskId: task?.id ?? null,
       taskTitleSnapshot: title,
       title,
@@ -194,54 +215,54 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
     sessionNoteRef.current = created.note;
     setStatsRevision((value) => value + 1);
     return true;
-  }, [activeTask, activeTaskId, recorder.finalize, recorder.getLastMeasurements, recorder.session?.status, recorder.start, tasks]);
+  }, [activeTask, activeTaskId, finalizeSession, getLastMeasurements, recorderSession?.status, startSession, tasks]);
 
-  const handleBreakStart = useCallback(async () => recorder.breakStart(), [recorder.breakStart]);
-  const handleBreakProgress = useCallback((seconds: number) => recorder.breakCheckpoint(seconds), [recorder.breakCheckpoint]);
+  const handleBreakStart = useCallback(async () => startBreak(), [startBreak]);
+  const handleBreakProgress = useCallback((seconds: number) => checkpointBreak(seconds), [checkpointBreak]);
   const handleProgress = useCallback((phase: "focus" | "break", elapsedSeconds: number, status: "idle" | "running" | "paused" | "done") => {
-    const current: SessionMeasurements = recorder.getLastMeasurements();
-    recorder.checkpoint({
+    const current: SessionMeasurements = getLastMeasurements();
+    checkpointSession({
       ...current,
       learningSeconds: phase === "focus" ? elapsedSeconds : current.learningSeconds,
       breakSeconds: phase === "break" ? elapsedSeconds : current.breakSeconds,
     }, status === "paused");
     if (status === "paused") setStatsRevision((value) => value + 1);
-  }, [recorder.checkpoint, recorder.getLastMeasurements]);
+  }, [checkpointSession, getLastMeasurements]);
 
   const refreshHistory = useCallback(() => {
     setStatsRevision((value) => value + 1);
-    void history.reload();
-  }, [history.reload]);
+    void reloadHistory();
+  }, [reloadHistory]);
 
   const finishSession = useCallback((status: "completed" | "stopped", seconds: number) => {
-    const current = recorder.getLastMeasurements();
-    void recorder.finalize(status, { ...current, learningSeconds: Math.max(0, Math.floor(seconds)) }, sessionNoteRef.current).then((saved) => {
+    const current = getLastMeasurements();
+    void finalizeSession(status, { ...current, learningSeconds: Math.max(0, Math.floor(seconds)) }, sessionNoteRef.current).then((saved) => {
       if (saved) refreshHistory();
     });
-  }, [recorder.finalize, recorder.getLastMeasurements, refreshHistory]);
+  }, [finalizeSession, getLastMeasurements, refreshHistory]);
 
   const handleLearnDone = useCallback((seconds: number, followedByBreak: boolean) => {
-    const current = recorder.getLastMeasurements();
-    recorder.checkpoint({ ...current, learningSeconds: seconds }, true);
+    const current = getLastMeasurements();
+    checkpointSession({ ...current, learningSeconds: seconds }, true);
     if (!followedByBreak) finishSession("completed", seconds);
-  }, [finishSession, recorder.checkpoint, recorder.getLastMeasurements]);
+  }, [checkpointSession, finishSession, getLastMeasurements]);
   const handleLearnStop = useCallback((seconds: number) => finishSession("stopped", seconds), [finishSession]);
   const handleBreakDone = useCallback((seconds: number) => {
-    recorder.breakEnd(seconds);
-    finishSession("completed", recorder.getLastMeasurements().learningSeconds);
-  }, [finishSession, recorder.breakEnd, recorder.getLastMeasurements]);
+    endBreak(seconds);
+    finishSession("completed", getLastMeasurements().learningSeconds);
+  }, [endBreak, finishSession, getLastMeasurements]);
   const handleBreakStop = useCallback((seconds: number) => {
-    recorder.breakEnd(seconds);
-    finishSession("stopped", recorder.getLastMeasurements().learningSeconds);
-  }, [finishSession, recorder.breakEnd, recorder.getLastMeasurements]);
-  const handleRestDone = useCallback((seconds: number) => recorder.breakEnd(seconds), [recorder.breakEnd]);
-  const handleRestStop = useCallback((seconds: number) => recorder.breakEnd(seconds), [recorder.breakEnd]);
+    endBreak(seconds);
+    finishSession("stopped", getLastMeasurements().learningSeconds);
+  }, [endBreak, finishSession, getLastMeasurements]);
+  const handleRestDone = useCallback((seconds: number) => endBreak(seconds), [endBreak]);
+  const handleRestStop = useCallback((seconds: number) => endBreak(seconds), [endBreak]);
 
   const saveSessionNote = useCallback((note: string) => {
     sessionNoteRef.current = note;
-    return recorder.updateMetadata({ note });
-  }, [recorder.updateMetadata]);
-  const saveSessionTitle = useCallback((title: string) => recorder.updateMetadata({ title }), [recorder.updateMetadata]);
+    return updateSessionMetadata({ note });
+  }, [updateSessionMetadata]);
+  const saveSessionTitle = useCallback((title: string) => updateSessionMetadata({ title }), [updateSessionMetadata]);
 
   const handleTaskSelected = useCallback(
     (task: { id: string; text: string }) => {
@@ -305,7 +326,7 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
           greetingStyle={greetingStyle}
         />
 
-        {(taskError || recorder.error) && <aside className="session-recovery-notice session-recovery-notice--error" role="alert"><div><strong>Tracker save problem.</strong><p>{taskError || recorder.error}</p></div><button type="button" onClick={() => { void reloadTasks(); void history.reload(); }}>Retry</button></aside>}
+        {(taskError || recorderError) && <aside className="session-recovery-notice session-recovery-notice--error" role="alert"><div><strong>Tracker save problem.</strong><p>{taskError || recorderError}</p></div><button type="button" onClick={() => { void reloadTasks(); void reloadHistory(); }}>Retry</button></aside>}
         {tasksLoading && <p className="tracker-loading" role="status">Loading your account tracker…</p>}
 
         {!isHomeMode && (
@@ -341,11 +362,12 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
               onBreakStop={handleBreakStop}
             />
             <SessionNoteEditor
-              sessionId={recorder.sessionId}
-              initialValue={recorder.session?.note ?? ""}
-              title={recorder.session?.title ?? ""}
-              learningSeconds={recorder.getLastMeasurements().learningSeconds}
-              status={recorder.session?.status ?? "idle"}
+              key={recorderSessionId ?? "idle"}
+              sessionId={recorderSessionId}
+              initialValue={recorderSession?.note ?? ""}
+              title={recorderSession?.title ?? ""}
+              learningSeconds={getLastMeasurements().learningSeconds}
+              status={recorderSession?.status ?? "idle"}
               onSave={saveSessionNote}
               onTitleSave={saveSessionTitle}
               onValueChange={(note) => { sessionNoteRef.current = note; }}
@@ -443,7 +465,7 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
         }}
       />
 
-      {migrationData && <MigrationPrompt data={migrationData} onCancel={() => setMigrationData(null)} onImported={() => { setMigrationData(null); void reloadTasks(); refreshHistory(); }} />}
+      {migrationData && <MigrationPrompt data={migrationData} onCancel={() => setMigrationHidden(true)} onImported={() => { setMigrationHidden(true); void reloadTasks(); refreshHistory(); }} />}
     </div>
   );
 }
