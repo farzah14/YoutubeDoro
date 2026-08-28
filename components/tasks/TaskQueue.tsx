@@ -145,7 +145,7 @@ export function TaskQueue({
       <footer className="priorities-options">
         <label>
           Break duration
-          <select value={preferences.shortBreakMinutes} onChange={(event) => { const breakMinutes = Number(event.target.value); setStoredPreferences({ ...preferences, shortBreakMinutes: breakMinutes, longBreakMinutes: breakMinutes }); }}>
+          <select value={preferences.breakMinutes} onChange={(event) => { const breakMinutes = Number(event.target.value); setStoredPreferences({ ...preferences, breakMinutes }); }}>
             {[5, 10, 15, 20, 30].map((minutes) => <option key={minutes} value={minutes}>{minutes} min</option>)}
           </select>
         </label>

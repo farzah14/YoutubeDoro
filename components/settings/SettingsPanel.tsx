@@ -51,7 +51,7 @@ const sections: Array<[SettingsSection, string]> = [
 
 const timerDurations = [
   { key: "focusMinutes", label: "Focus", max: 120 },
-  { key: "shortBreakMinutes", label: "Break", max: 120 },
+  { key: "breakMinutes", label: "Break", max: 120 },
 ] as const;
 
 const slots: Record<ThemeSlot, { label: string }> = {
@@ -172,12 +172,7 @@ export function SettingsPanel({
                   value={preferences[key]}
                   onChange={(event) => {
                     const value = Number(event.target.value);
-                    if (key === "shortBreakMinutes") {
-                      const breakMinutes = value;
-                      setStoredPreferences({ ...preferences, shortBreakMinutes: breakMinutes, longBreakMinutes: breakMinutes });
-                    } else {
-                      setStoredPreferences({ ...preferences, [key]: value });
-                    }
+                    setStoredPreferences({ ...preferences, [key]: value });
                   }}
                   aria-label={label + " minutes"}
                 />

@@ -17,13 +17,14 @@ const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknow
 
 interface YouTubeRestCardProps {
   totalTodaySec: number;
+  onBreakStart?: () => void | boolean | Promise<void | boolean>;
   onDone: (sec: number) => void;
   onStop: (sec: number) => void;
 }
 
 type YTStatus = "Idle" | "Playing" | "Paused" | "Ended" | "Error";
 
-export function YouTubeRestCard({ totalTodaySec, onDone, onStop }: YouTubeRestCardProps) {
+export function YouTubeRestCard({ totalTodaySec, onBreakStart, onDone, onStop }: YouTubeRestCardProps) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<YTStatus>("Idle");
   
@@ -41,6 +42,7 @@ export function YouTubeRestCard({ totalTodaySec, onDone, onStop }: YouTubeRestCa
   const playerRef = useRef<PlayerLike | null>(null);
   const tickRef = useRef<number | null>(null);
   const countedRef = useRef<boolean>(false);
+  const breakStartedRef = useRef(false);
 
   function clearTick() {
     if (tickRef.current !== null) {
@@ -65,7 +67,15 @@ export function YouTubeRestCard({ totalTodaySec, onDone, onStop }: YouTubeRestCa
     tickRef.current = window.setInterval(tickOnce, 250);
   }
 
-  function loadVideo(id: string, title?: string) {
+  async function loadVideo(id: string, title?: string) {
+    if (!breakStartedRef.current) {
+      const allowed = await onBreakStart?.();
+      if (allowed === false) {
+        setErrorMsg("Start a focus session before starting a break.");
+        return;
+      }
+      breakStartedRef.current = true;
+    }
     setErrorMsg("");
     clearTick();
     countedRef.current = false;
@@ -87,7 +97,7 @@ export function YouTubeRestCard({ totalTodaySec, onDone, onStop }: YouTubeRestCa
       return;
     }
 
-    loadVideo(id, "Custom Video");
+    void loadVideo(id, "Custom Video");
   }
 
   function handleStop() {
@@ -130,6 +140,7 @@ export function YouTubeRestCard({ totalTodaySec, onDone, onStop }: YouTubeRestCa
   function handleEndedCount() {
     if (countedRef.current) return;
     countedRef.current = true;
+    breakStartedRef.current = false;
 
     const p = playerRef.current;
     const d = durationSec || Math.floor(p?.getDuration?.() ?? 0);

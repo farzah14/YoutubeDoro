@@ -1,12 +1,11 @@
 export type TimerMode = "pomodoro" | "countdown" | "stopwatch" | "animedoro" | "52-17";
 
-export type TimerPhase = "focus" | "short-break" | "long-break";
+export type TimerPhase = "focus" | "break";
 
 export interface FocusPreferences {
   mode: TimerMode;
   focusMinutes: number;
-  shortBreakMinutes: number;
-  longBreakMinutes: number;
+  breakMinutes: number;
   countdownMinutes: number;
   autoStartBreaks: boolean;
   notificationEnabled: boolean;

@@ -17,6 +17,8 @@ interface LearningCardProps {
   activeTaskId: string | null;
   onOpenTasks: () => void;
   onStartWithTitle: (title: string) => void;
+  onFocusStart?: () => void | Promise<boolean | void>;
+  onBreakStart?: () => void | Promise<boolean | void>;
   onLearnDone: (seconds: number) => void;
   onLearnStop: (seconds: number) => void;
   onBreakDone: (seconds: number) => void;
@@ -59,12 +61,16 @@ export function LearningCard({
   activeTaskId,
   onOpenTasks,
   onStartWithTitle,
+  onFocusStart,
+  onBreakStart,
   onLearnDone,
   onLearnStop,
   onBreakDone,
   onBreakStop,
 }: LearningCardProps) {
   const timer = useFocusTimer({
+    onFocusStart,
+    onBreakStart,
     onFocusDone: onLearnDone,
     onFocusStop: onLearnStop,
     onBreakDone,
@@ -212,7 +218,7 @@ export function LearningCard({
     else if (isPaused) timer.resume();
     else {
       if (taskLabel !== "What do you want to focus on?") onStartWithTitle(taskLabel);
-      timer.start();
+      void timer.start();
     }
   };
 
@@ -245,7 +251,7 @@ export function LearningCard({
               type="button"
               className={visiblePhase === phase ? "is-active" : ""}
               aria-pressed={visiblePhase === phase}
-              onClick={() => timer.selectPhase(phase === "break" ? "short-break" : "focus")}
+              onClick={() => timer.selectPhase(phase)}
               disabled={isRunning}
             >
               {label}

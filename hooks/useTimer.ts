@@ -6,6 +6,7 @@ import { useBeep } from "./useBeep";
 
 interface UseTimerProps {
   initialMinutes: number;
+  onStart?: () => void | boolean | Promise<void | boolean>;
   onDone?: (seconds: number) => void;
   onStop?: (seconds: number) => void;
   onTick?: (elapsed: number, remaining: number) => void;
@@ -16,6 +17,7 @@ interface UseTimerProps {
 
 export function useTimer({
   initialMinutes,
+  onStart,
   onDone,
   onStop,
   onTick,
@@ -95,8 +97,21 @@ export function useTimer({
     timerRef.current = window.setInterval(tickOnce, 250);
   }, [clear, tickOnce]);
 
-  const start = useCallback(() => {
+  const startingRef = useRef(false);
+
+  const start = useCallback(async () => {
+    if (startingRef.current) return;
     primeAudio();
+
+    if (statusRef.current === "Idle" || statusRef.current === "Done") {
+      startingRef.current = true;
+      try {
+        const allowed = await onStart?.();
+        if (allowed === false) return;
+      } finally {
+        startingRef.current = false;
+      }
+    }
 
     if (statusRef.current === "Paused" || statusRef.current === "Running") {
       const used = statusRef.current === "Running" ? computeElapsedNow() : elapsedBeforeRef.current;
@@ -120,7 +135,7 @@ export function useTimer({
 
     tickOnce();
     startInterval();
-  }, [minutes, primeAudio, computeElapsedNow, onStop, tickOnce, startInterval]);
+  }, [minutes, primeAudio, computeElapsedNow, onStart, onStop, tickOnce, startInterval]);
 
   const pause = useCallback(() => {
     if (statusRef.current !== "Running") return;

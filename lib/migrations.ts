@@ -6,8 +6,7 @@ const DEFAULT_TASK_COLOR = "#7c3aed";
 export const DEFAULT_FOCUS_PREFERENCES: FocusPreferences = {
   mode: "pomodoro",
   focusMinutes: 25,
-  shortBreakMinutes: 5,
-  longBreakMinutes: 20,
+  breakMinutes: 5,
   countdownMinutes: 25,
   autoStartBreaks: false,
   notificationEnabled: false,
@@ -133,11 +132,19 @@ export function migrateFocusPreferences(value: unknown): FocusPreferences {
     ? source.alertSound
     : DEFAULT_FOCUS_PREFERENCES.alertSound;
 
+  const validBreak = (candidate: unknown, max: number) =>
+    typeof candidate === "number" && Number.isFinite(candidate) && candidate >= 1
+      ? Math.min(max, Math.round(candidate))
+      : null;
+  const breakMinutes = validBreak(source.breakMinutes, 120)
+    ?? validBreak(source.shortBreakMinutes, 120)
+    ?? validBreak(source.longBreakMinutes, 120)
+    ?? DEFAULT_FOCUS_PREFERENCES.breakMinutes;
+
   return {
     mode,
     focusMinutes: duration(source.focusMinutes, DEFAULT_FOCUS_PREFERENCES.focusMinutes, 120),
-    shortBreakMinutes: duration(source.shortBreakMinutes, DEFAULT_FOCUS_PREFERENCES.shortBreakMinutes, 120),
-    longBreakMinutes: duration(source.longBreakMinutes, DEFAULT_FOCUS_PREFERENCES.longBreakMinutes, 240),
+    breakMinutes,
     countdownMinutes: duration(source.countdownMinutes, DEFAULT_FOCUS_PREFERENCES.countdownMinutes, 480),
     autoStartBreaks: source.autoStartBreaks === true,
     notificationEnabled: source.notificationEnabled === true,

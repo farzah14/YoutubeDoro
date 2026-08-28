@@ -124,8 +124,7 @@ test("sanitizes focus preferences into supported ranges", () => {
     {
       mode: "pomodoro",
       focusMinutes: 25,
-      shortBreakMinutes: 120,
-      longBreakMinutes: 20,
+      breakMinutes: 120,
       countdownMinutes: 42,
       autoStartBreaks: false,
       notificationEnabled: true,

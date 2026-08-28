@@ -17,8 +17,7 @@ import type { FocusPreferences } from "../types/focus.ts";
 const preferences: FocusPreferences = {
   mode: "pomodoro",
   focusMinutes: 25,
-  shortBreakMinutes: 5,
-  longBreakMinutes: 20,
+  breakMinutes: 5,
   countdownMinutes: 40,
   autoStartBreaks: false,
   notificationEnabled: false,
@@ -27,31 +26,31 @@ const preferences: FocusPreferences = {
   showTaskInPip: false,
 };
 
-test("pomodoro advances focus to a short break", () => {
+test("pomodoro advances focus to a generic break", () => {
   const running = startTimer(createTimerState(preferences), 1_000);
   const next = syncTimer(running, preferences, 1_000 + 25 * 60 * 1_000);
 
-  assert.equal(next.phase, "short-break");
+  assert.equal(next.phase, "break");
   assert.equal(next.targetSeconds, 5 * 60);
   assert.equal(next.completedFocusSessions, 1);
   assert.equal(next.status, "idle");
 });
 
-test("the fourth pomodoro advances to a long break", () => {
+test("the fourth pomodoro still advances to the generic break", () => {
   const state = { ...createTimerState(preferences), completedFocusSessions: 3 };
   const next = advanceTimer(state, preferences);
 
-  assert.equal(next.phase, "long-break");
+  assert.equal(next.phase, "break");
   assert.equal(next.targetSeconds, 5 * 60);
   assert.equal(next.completedFocusSessions, 4);
 });
 
 test("both Pomodoro break phases use the single configured break length", () => {
-  const configured = { ...preferences, shortBreakMinutes: 7, longBreakMinutes: 31 };
+  const configured = { ...preferences, breakMinutes: 7 };
   const state = { ...createTimerState(configured), completedFocusSessions: 3 };
   const next = advanceTimer(state, configured);
 
-  assert.equal(next.phase, "long-break");
+  assert.equal(next.phase, "break");
   assert.equal(next.targetSeconds, 7 * 60);
 });
 
@@ -61,15 +60,15 @@ test("52/17 uses fixed focus and break lengths", () => {
   const next = advanceTimer(state, configured);
 
   assert.equal(state.targetSeconds, 52 * 60);
-  assert.equal(next.phase, "short-break");
+  assert.equal(next.phase, "break");
   assert.equal(next.targetSeconds, 17 * 60);
 });
 
 test("animedoro uses the shared break length as watch time", () => {
-  const configured = { ...preferences, mode: "animedoro" as const, shortBreakMinutes: 11, longBreakMinutes: 35 };
+  const configured = { ...preferences, mode: "animedoro" as const, breakMinutes: 11 };
   const next = advanceTimer(createTimerState(configured), configured);
 
-  assert.equal(next.phase, "long-break");
+  assert.equal(next.phase, "break");
   assert.equal(next.targetSeconds, 11 * 60);
 });
 
@@ -115,7 +114,7 @@ test("frequent sub-second syncs do not discard elapsed time", () => {
 test("reset restores the configured opening phase", () => {
   const changed = {
     ...createTimerState(preferences),
-    phase: "long-break" as const,
+    phase: "break" as const,
     elapsedSeconds: 99,
     completedFocusSessions: 3,
     status: "paused" as const,
@@ -130,9 +129,9 @@ test("reset restores the configured opening phase", () => {
 
 test("manual phase selection resets only the active interval", () => {
   const state = { ...createTimerState(preferences), completedFocusSessions: 2 };
-  const selected = selectTimerPhase(state, preferences, "long-break");
+  const selected = selectTimerPhase(state, preferences, "break");
 
-  assert.equal(selected.phase, "long-break");
+  assert.equal(selected.phase, "break");
   assert.equal(selected.targetSeconds, 5 * 60);
   assert.equal(selected.completedFocusSessions, 2);
   assert.equal(selected.elapsedSeconds, 0);
@@ -142,7 +141,7 @@ test("manual phase selection resets only the active interval", () => {
 test("auto-start breaks does not auto-start the next focus session", () => {
   const autoPreferences = { ...preferences, autoStartBreaks: true };
   const focusDone = syncTimer(startTimer(createTimerState(autoPreferences), 0), autoPreferences, 25 * 60_000);
-  assert.equal(focusDone.phase, "short-break");
+  assert.equal(focusDone.phase, "break");
   assert.equal(focusDone.status, "running");
 
   const breakDone = syncTimer(focusDone, autoPreferences, 30 * 60_000);

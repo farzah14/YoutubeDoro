@@ -74,8 +74,9 @@ test("Focus Priorities actions use the atelier palette", () => {
 test("timer recipe exposes one shared break length", () => {
   assert.match(settingsSource, /label: "Break"/);
   assert.doesNotMatch(settingsSource, /Short break|Long break/);
-  assert.match(settingsSource, /longBreakMinutes: breakMinutes/);
-  assert.match(prioritiesSource, /longBreakMinutes: breakMinutes/);
+  assert.match(settingsSource, /key: "breakMinutes"/);
+  assert.match(prioritiesSource, /breakMinutes/);
+  assert.doesNotMatch(prioritiesSource, /shortBreakMinutes|longBreakMinutes/);
 });
 
 test("Notes are organized around Priority Tasks", () => {

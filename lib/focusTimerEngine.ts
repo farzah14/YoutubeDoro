@@ -18,8 +18,7 @@ function phaseSeconds(mode: TimerMode, phase: TimerPhase, preferences: FocusPref
     if (mode === "52-17") return 52 * 60;
     return preferences.focusMinutes * 60;
   }
-  if (phase === "short-break") return (mode === "52-17" ? 17 : preferences.shortBreakMinutes) * 60;
-  return preferences.shortBreakMinutes * 60;
+  return (mode === "52-17" ? 17 : preferences.breakMinutes) * 60;
 }
 
 export function createTimerState(preferences: FocusPreferences): FocusTimerState {
@@ -44,11 +43,7 @@ export function advanceTimer(state: FocusTimerState, preferences: FocusPreferenc
   let completedFocusSessions = state.completedFocusSessions;
   if (state.phase === "focus") {
     completedFocusSessions += 1;
-    phase = state.mode === "animedoro"
-      ? "long-break"
-      : state.mode === "pomodoro" && completedFocusSessions % 4 === 0
-        ? "long-break"
-        : "short-break";
+    phase = "break";
   }
 
   return {

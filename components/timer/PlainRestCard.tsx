@@ -10,6 +10,7 @@ import { Badge } from "../ui/Badge";
 interface PlainRestCardProps {
   totalTodaySec: number;
   initialBreakMin?: number;
+  onBreakStart?: () => void | boolean | Promise<void | boolean>;
   onDone: (sec: number) => void;
   onStop: (sec: number) => void;
 }
@@ -17,11 +18,13 @@ interface PlainRestCardProps {
 export function PlainRestCard({
   totalTodaySec,
   initialBreakMin = PRESETS.rest[0],
+  onBreakStart,
   onDone,
   onStop,
 }: PlainRestCardProps) {
   const timer = useTimer({
     initialMinutes: initialBreakMin,
+    onStart: onBreakStart,
     onDone,
     onStop,
     tabTitleLabel: "Rest",

@@ -9,6 +9,7 @@ import { YouTubeRestCard } from "./YouTubeRestCard";
 interface RestCardContainerProps {
   totalTodaySec: number;
   initialBreakMin?: number;
+  onBreakStart?: () => void | boolean | Promise<void | boolean>;
   onRestDone: (sec: number) => void;
   onRestStop: (sec: number) => void;
   onYTDone: (sec: number) => void;
@@ -18,6 +19,7 @@ interface RestCardContainerProps {
 export function RestCardContainer({
   totalTodaySec,
   initialBreakMin,
+  onBreakStart,
   onRestDone,
   onRestStop,
   onYTDone,
@@ -50,12 +52,14 @@ export function RestCardContainer({
           <PlainRestCard 
             totalTodaySec={totalTodaySec} 
             initialBreakMin={initialBreakMin}
+            onBreakStart={onBreakStart}
             onDone={onRestDone} 
             onStop={onRestStop} 
           />
         ) : (
           <YouTubeRestCard 
             totalTodaySec={totalTodaySec} 
+            onBreakStart={onBreakStart}
             onDone={onYTDone} 
             onStop={onYTStop} 
           />
