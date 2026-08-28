@@ -48,6 +48,7 @@ export function NoteEntry({ entry, onRemove }: NoteEntryProps) {
             onClick={() => onRemove(entry.id)}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-danger/10 hover:text-danger transition-colors focus:outline-none focus:ring-2 focus:ring-danger"
             title="Delete Note"
+            aria-label={`Delete note ${titleText}`}
           >
             <TrashIcon className="h-4 w-4" />
           </button>

@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
       restSec,
       notes,
       scratchpad,
-      existingPageId,
     } = body as {
       token?: string;
       databaseId?: string;

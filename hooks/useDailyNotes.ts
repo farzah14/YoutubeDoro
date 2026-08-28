@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback } from "react";
 import { readJSON, writeJSON } from "@/lib/storage";
 import { KEYS } from "@/lib/constants";
 import { NoteKind, DailyNoteEntry } from "@/types";
@@ -11,6 +11,8 @@ export function useDailyNotes(day: string) {
 
   const getNotes = useCallback(() => {
     if (!day) return [];
+    // Access notesBump to re-evaluate when notesBump changes
+    void notesBump;
     const raw = readJSON<unknown>(KEYS.notesByDay(day), []);
     return sanitizeNotes(raw);
   }, [day, notesBump]);

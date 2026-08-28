@@ -1,85 +1,173 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useRef, useEffect, ComponentType } from "react";
+import { ComponentType, FormEvent, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { KEYS } from "@/lib/constants";
-import { MusicIcon } from "../icons";
-import { Button } from "../ui/Button";
-import { YouTubeComponentProps } from "@/types";
+import { DEFAULT_LOFI_VOLUME, DEFAULT_STATION_ID, RADIO_STATIONS } from "@/lib/audioStreams";
+import { parseMusicProviderUrl, type MusicEmbed } from "@/lib/musicProviders";
+import type { YouTubeComponentProps } from "@/types";
+import { MusicIcon, TrashIcon, Volume2Icon, VolumeXIcon } from "../icons";
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
 
-const LOFI_GIRL_VIDEO_ID = "lTRiuFIWV54"; // Stable 1 A.M. Study Session lofi compilation (highly reliable & embeddable)
+interface MinimalYTPlayer {
+  playVideo: () => void;
+  pauseVideo: () => void;
+  setVolume: (volume: number) => void;
+}
 
-export function LoFiPlayer() {
-  const [isEnabled, setIsEnabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const playerRef = useRef<any>(null);
+export function MusicEngine() {
+  const [enabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
+  const [stationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
+  const [volume] = useLocalStorage(KEYS.lofiVolume, DEFAULT_LOFI_VOLUME);
+  const [muted] = useLocalStorage(KEYS.lofiMuted, false);
+  const [activeEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
+  const playerRef = useRef<MinimalYTPlayer | null>(null);
+  const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
 
   useEffect(() => {
-    if (!isEnabled && playerRef.current) {
-      playerRef.current.pauseVideo();
-    } else if (isEnabled && playerRef.current) {
-      playerRef.current.playVideo();
-    }
-  }, [isEnabled]);
-
-  const toggleLoFi = () => {
-    setIsEnabled(!isEnabled);
-  };
+    const player = playerRef.current;
+    if (!player) return;
+    player.setVolume(muted ? 0 : volume);
+    if (enabled && !activeEmbed) player.playVideo();
+    else player.pauseVideo();
+  }, [activeEmbed, enabled, muted, stationId, volume]);
 
   return (
     <>
-      <Button 
-        variant={isEnabled ? "primary" : "ghost"} 
-        size="icon" 
-        onClick={toggleLoFi} 
-        title={isEnabled ? "Lo-Fi: ON" : "Lo-Fi: OFF"}
-        className="relative"
-      >
-        <MusicIcon className="h-4 w-4" />
-        {isEnabled && isPlaying && (
-          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
-          </span>
-        )}
-      </Button>
-
-      {/* Invisible YouTube Player */}
-      <div className="absolute opacity-0 pointer-events-none w-[1px] h-[1px] overflow-hidden">
+      <div className="music-engine" aria-hidden="true">
         <YouTube
-          videoId={LOFI_GIRL_VIDEO_ID}
-          opts={{
-            height: '1',
-            width: '1',
-            playerVars: {
-              autoplay: 0, // Don't autoplay initially
-              controls: 0,
-              disablekb: 1,
-              fs: 0,
-              modestbranding: 1,
-              playsinline: 1,
-            },
+          key={station.videoId}
+          videoId={station.videoId}
+          opts={{ height: "1", width: "1", playerVars: { autoplay: enabled && !activeEmbed ? 1 : 0, controls: 0, disablekb: 1, fs: 0, playsinline: 1 } }}
+          onReady={(event) => {
+            playerRef.current = event.target;
+            event.target.setVolume(muted ? 0 : volume);
+            if (enabled && !activeEmbed) event.target.playVideo();
           }}
-          onReady={(e) => {
-            playerRef.current = e.target;
-            e.target.setVolume(30);
-            if (isEnabled) {
-              e.target.playVideo();
-            }
-          }}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onEnd={() => setIsPlaying(false)}
-          onError={(e: any) => {
-            const errorCode = e?.data || "unknown";
-            console.error("LoFi player error (YouTube error code):", errorCode);
-            setIsPlaying(false);
-          }}
+          onEnd={() => enabled && !activeEmbed && playerRef.current?.playVideo()}
         />
       </div>
+      {activeEmbed && (
+        <aside className="music-provider-player" aria-label={`${activeEmbed.provider} player`}>
+          <iframe
+            src={activeEmbed.embedUrl}
+            title={`${activeEmbed.provider} music player`}
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            loading="eager"
+          />
+        </aside>
+      )}
     </>
+  );
+}
+
+type MusicTab = "stations" | "my-music" | "library";
+
+export function LoFiPlayer() {
+  const [enabled, setEnabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
+  const [stationId, setStationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
+  const [volume, setVolume] = useLocalStorage(KEYS.lofiVolume, DEFAULT_LOFI_VOLUME);
+  const [muted, setMuted] = useLocalStorage(KEYS.lofiMuted, false);
+  const [savedEmbeds, setSavedEmbeds] = useLocalStorage<MusicEmbed[]>(KEYS.savedMusicEmbeds, []);
+  const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
+  const [tab, setTab] = useState<MusicTab>("stations");
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
+  const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
+
+  const saveProvider = (event: FormEvent) => {
+    event.preventDefault();
+    const parsed = parseMusicProviderUrl(url);
+    if (!parsed) {
+      setError("Use a valid HTTPS Spotify, Apple Music, YouTube, SoundCloud, or Amazon Music URL.");
+      return;
+    }
+    setSavedEmbeds((items) => items.some((item) => item.sourceUrl === parsed.sourceUrl) ? items : [...items, parsed]);
+    setActiveEmbed(parsed);
+    setEnabled(false);
+    setUrl("");
+    setError("");
+  };
+
+  const selectStation = (id: string) => {
+    setStationId(id);
+    setActiveEmbed(null);
+    setEnabled(true);
+  };
+
+  return (
+    <div className="audio-panel music-panel music-shelf">
+      <header className="music-shelf__header">
+        <div>
+          <p className="eyebrow">Sound shelf</p>
+          <h3>{activeEmbed ? activeEmbed.provider : station.name}</h3>
+        </div>
+        <span className="music-shelf__state">{activeEmbed ? "Provider" : enabled ? "Playing" : "Paused"}</span>
+      </header>
+
+      <div className="music-shelf__tabs" role="tablist" aria-label="Music sources">
+        {([["stations", "Stations"], ["my-music", "My Music"], ["library", "Playlist Library"]] as const).map(([value, label]) => (
+          <button key={value} type="button" role="tab" aria-selected={tab === value} className={tab === value ? "music-shelf__tab is-active" : "music-shelf__tab"} onClick={() => setTab(value)}>{label}</button>
+        ))}
+      </div>
+
+      {tab === "stations" && (
+        <div className="music-shelf__body">
+          <div className="music-shelf__controls">
+            <button type="button" className="music-shelf__primary" onClick={() => { setActiveEmbed(null); setEnabled(!enabled); }}><MusicIcon />{enabled && !activeEmbed ? "Pause music" : "Play music"}</button>
+            <button type="button" className="music-shelf__mute" onClick={() => setMuted(!muted)} aria-label={muted ? "Unmute music" : "Mute music"}>{muted ? <VolumeXIcon /> : <Volume2Icon />}</button>
+          </div>
+          <label className="music-shelf__volume"><span>Volume <output>{muted ? 0 : volume}%</output></span><input type="range" min="0" max="100" value={muted ? 0 : volume} onChange={(event) => { setVolume(Number(event.target.value)); setMuted(false); }} /></label>
+          <div className="music-shelf__list" aria-label="Built-in stations">
+            {RADIO_STATIONS.map((item) => (
+              <button key={item.id} type="button" className={item.id === stationId && !activeEmbed ? "music-shelf__track is-active" : "music-shelf__track"} onClick={() => selectStation(item.id)}>
+                <span className="music-shelf__marker" aria-hidden="true" />
+                <span className="music-shelf__track-copy"><strong>{item.name}</strong><small>{item.genre}</small></span>
+                <span className="music-shelf__track-state">{item.id === stationId && !activeEmbed ? "Selected" : "Choose"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "my-music" && (
+        <div className="music-provider-list music-shelf__provider">
+          <form onSubmit={saveProvider}>
+            <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste a provider URL" aria-label="Music provider URL" />
+            <button type="submit">Save</button>
+          </form>
+          {error && <p className="audio-panel__error" role="alert">{error}</p>}
+          <p className="audio-panel__hint">Provider controls stay in the persistent player. Some providers may block embeds by region or account.</p>
+          {savedEmbeds.map((item) => (
+            <div key={item.sourceUrl} className="music-provider-row">
+              <button type="button" onClick={() => { setActiveEmbed(item); setEnabled(false); }}><strong>{item.provider}</strong><small>{item.sourceUrl}</small></button>
+              <button type="button" onClick={() => { setSavedEmbeds((items) => items.filter((saved) => saved.sourceUrl !== item.sourceUrl)); if (activeEmbed?.sourceUrl === item.sourceUrl) setActiveEmbed(null); }} aria-label={`Remove ${item.provider} link`}><TrashIcon /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "library" && (
+        <div className="audio-library music-shelf__provider">
+          {Array.from(new Set(RADIO_STATIONS.map((item) => item.genre))).map((genre) => (
+            <section key={genre}>
+              <h4>{genre}</h4>
+              <div className="music-shelf__list">
+                {RADIO_STATIONS.filter((item) => item.genre === genre).map((item) => (
+                  <button key={item.id} type="button" className="music-shelf__track" onClick={() => { selectStation(item.id); setTab("stations"); }}>
+                    <span className="music-shelf__marker" aria-hidden="true" />
+                    <span className="music-shelf__track-copy"><strong>{item.name}</strong><small>{item.genre}</small></span>
+                    <span className="music-shelf__track-state">Choose</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

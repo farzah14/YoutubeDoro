@@ -6,8 +6,37 @@ export const KEYS = {
   legacyBreakByDay: (day: string) => `ytdoro:${day}:breakSec`,
   topicByDay: (day: string) => `ytdoro:${day}:topic`,
   notesByDay: (day: string) => `ytdoro:${day}:notes`,
+  taskNotesByDay: (day: string) => `ytdoro:${day}:taskNotes`,
+  tasksByDay: (day: string) => `ytdoro:${day}:tasks`,
+  pomodoroRoundsByDay: (day: string) => `ytdoro:${day}:pomodoroRounds`,
+  taskCompletionsByDay: (day: string) => `ytdoro:${day}:tasksCompleted`,
   sessionGoal: "ytdoro:sessionGoal",
+  dailyGoalSec: "ytdoro:dailyGoalSec",
   isLoFiEnabled: "ytdoro:isLoFiEnabled",
+  lofiStation: "ytdoro:lofi:station",
+  lofiVolume: "ytdoro:lofi:volume",
+  lofiMuted: "ytdoro:lofi:muted",
+  savedMusicEmbeds: "ytdoro:parity:v1:saved-music-embeds",
+  activeMusicEmbed: "ytdoro:parity:v1:active-music-embed",
+  soundscapeMix: "ytdoro:parity:v1:soundscape-mix",
+  soundscapePaused: "ytdoro:parity:v1:soundscape-paused",
+  savedBreakVideos: "ytdoro:savedBreakVideos",
+  theme: "ytdoro:theme",
+  themeBySlot: (slot: "home" | "focus") => `ytdoro:theme:${slot}`,
+  clock24Hour: "ytdoro:clock:24hour",
+  clockShowSeconds: "ytdoro:clock:seconds",
+  showQuote: "ytdoro:home:quote",
+  dashboardName: "ytdoro:home:name",
+  greetingStyle: "ytdoro:home:greeting-style",
+  focusPreferences: "ytdoro:parity:v1:focus-preferences",
+  showTaskProgress: "ytdoro:parity:v1:task-progress",
+  clearMode: "ytdoro:parity:v1:clear-mode",
+  themeSlots: "ytdoro:parity:v1:theme-slots",
+  customThemeMeta: "ytdoro:parity:v1:custom-theme-meta",
+  customThemeBySlot: (slot: "home" | "focus") => `ytdoro:parity:v1:custom-theme:${slot}`,
+  themeOverlayBySlot: (slot: "home" | "focus") => `ytdoro:parity:v1:theme-overlay:${slot}`,
+  animeScenery: "ytdoro:animeScenery",
+  particlesEnabled: "ytdoro:particlesEnabled",
 
   // Notion Integration
   notionConnected: "ytdoro:notion:connected",
@@ -18,8 +47,10 @@ export const KEYS = {
 };
 
 export const PRESETS = {
-  learning: [25, 50],
+  learning: [25, 45, 50],
   rest: [5, 10, 15],
+  longRest: [15, 20, 30],
+  defaultGoalHours: 2,
 };
 
 export const NOTION_SYNC_DEBOUNCE_MS = 3000;

@@ -22,7 +22,7 @@ export function TimerControls({
   showReset = true,
 }: TimerControlsProps) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2.5">
+    <div className="timer-controls flex flex-wrap items-center justify-center gap-2.5">
       {status === "Idle" || status === "Done" ? (
         <Button
           onClick={onStart}

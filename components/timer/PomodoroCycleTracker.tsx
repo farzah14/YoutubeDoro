@@ -34,7 +34,7 @@ export function PomodoroCycleTracker({
 
   return (
     <div
-      className="border-y border-border-subtle py-3"
+      className="focus-session-strip border-y border-border-subtle py-3"
       role="group"
       aria-label="Focus session cycle"
     >

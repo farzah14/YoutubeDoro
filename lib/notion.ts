@@ -132,11 +132,7 @@ export function buildPageProperties(payload: {
     (n) => n.kind === "learn_done" || n.kind === "learn_stop"
   ).length;
 
-  const notesText = formatNotesForNotion(payload.notes);
-
   // Notion rich_text max is 2000 chars
-  const truncatedNotes =
-    notesText.length > 2000 ? notesText.slice(0, 1997) + "..." : notesText;
   const truncatedScratchpad =
     (payload.scratchpad || "").length > 2000
       ? (payload.scratchpad || "").slice(0, 1997) + "..."

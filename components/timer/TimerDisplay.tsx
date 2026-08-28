@@ -6,6 +6,7 @@ interface TimerDisplayProps {
   totalSec: number;
   label?: string;
   variant?: "focus" | "rest";
+  size?: number;
 }
 
 export function TimerDisplay({
@@ -13,6 +14,7 @@ export function TimerDisplay({
   totalSec,
   label,
   variant = "focus",
+  size = 320,
 }: TimerDisplayProps) {
   const progress = totalSec > 0 ? remainingSec / totalSec : 0;
   const percentage = Math.round(progress * 100);
@@ -20,7 +22,7 @@ export function TimerDisplay({
 
   return (
     <div
-      className="flex w-full justify-center py-1 sm:py-2"
+      className={`timer-display flex w-full justify-center py-1 sm:py-2 ${variant === "rest" ? "timer-display--rest" : ""}`}
       role="timer"
       aria-live="off"
       aria-atomic="true"
@@ -28,12 +30,13 @@ export function TimerDisplay({
     >
       <ProgressRing
         progress={progress}
-        size={320}
+        size={size}
         strokeWidth={7}
         variant={variant}
+        className="timer-ring"
       >
         <div className="flex flex-col items-center">
-          <span className="font-mono text-[3.25rem] font-bold tracking-[-0.06em] text-foreground select-none sm:text-7xl">
+          <span className="timer-display__time numeric-time font-mono text-[3.25rem] font-bold text-foreground select-none sm:text-7xl">
             {formatMMSS(remainingSec)}
           </span>
           <span className="mt-3 flex items-center gap-1.5 text-xs font-medium text-text-secondary">

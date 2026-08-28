@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     if (day) {
       // ── Pull specific day + topic ──
-      const filterConditions: any[] = [
+      const filterConditions: Record<string, unknown>[] = [
         {
           property: "Date",
           title: { equals: day },
@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
 
       const query = await client.dataSources.query({
         data_source_id: targetDatabaseId,
-        filter: filterConditions.length > 1
+        filter: (filterConditions.length > 1
           ? { and: filterConditions }
-          : filterConditions[0],
+          : filterConditions[0]) as Parameters<typeof client.dataSources.query>[0]["filter"],
         page_size: 1,
       });
 

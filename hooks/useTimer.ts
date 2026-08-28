@@ -11,6 +11,7 @@ interface UseTimerProps {
   onTick?: (elapsed: number, remaining: number) => void;
   autoNotificationTitle?: string;
   autoNotificationBody?: string;
+  tabTitleLabel?: string;
 }
 
 export function useTimer({
@@ -20,6 +21,7 @@ export function useTimer({
   onTick,
   autoNotificationTitle = "Timer Finished",
   autoNotificationBody = "Time is up!",
+  tabTitleLabel = "Focus",
 }: UseTimerProps) {
   const [minutes, setMinutes] = useState(initialMinutes);
   const [status, setStatus] = useState<TimerStatus>("Idle");
@@ -175,12 +177,13 @@ export function useTimer({
         const s = remainingSec % 60;
         const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
         const prefix = status === "Paused" ? "⏸ " : "";
-        document.title = `${prefix}${timeStr} - YoutubeDoro`;
+        const icon = tabTitleLabel.startsWith("Focus") ? "🎯 " : "☕ ";
+        document.title = `${prefix}${icon}(${timeStr}) ${tabTitleLabel} | YoutubeDoro`;
       } else {
         document.title = "YoutubeDoro";
       }
     }
-  }, [remainingSec, status]);
+  }, [remainingSec, status, tabTitleLabel]);
 
   return {
     minutes,

@@ -2,20 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const themeBootstrap = [
-  "(function () {",
-  "  try {",
-  "    var saved = window.localStorage.getItem('ytdoro:theme');",
-  "    var allowed = ['night-study', 'rainy-evening', 'sunset-study'];",
-  "    var theme = saved;",
-  "    try { theme = saved ? JSON.parse(saved) : 'night-study'; } catch (_) {}",
-  "    document.documentElement.dataset.theme = allowed.indexOf(theme) >= 0 ? theme : 'night-study';",
-  "  } catch (_) {",
-  "    document.documentElement.dataset.theme = 'night-study';",
-  "  }",
-  "})();",
-].join("\n");
-
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -58,9 +44,6 @@ export default function RootLayout({
       data-theme="night-study"
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
-      </head>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
       >

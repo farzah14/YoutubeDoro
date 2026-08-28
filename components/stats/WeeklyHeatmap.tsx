@@ -68,7 +68,7 @@ export function WeeklyHeatmap() {
   const hasActivity = days.some((day) => day.learnSec > 0);
 
   return (
-    <Card className="activity-summary p-4 sm:p-5">
+    <Card className="stats-card activity-summary p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">Focus timeline · 28日間</p>
@@ -83,7 +83,7 @@ export function WeeklyHeatmap() {
       </div>
 
       {!hasActivity && (
-        <p className="mt-4 border border-dashed border-border-subtle px-3 py-2.5 text-xs text-text-muted">
+        <p className="stats-empty-state mt-4 border border-dashed border-border-subtle px-3 py-2.5 text-xs text-text-muted">
           No focus logged yet — your first session will light up this row.
         </p>
       )}

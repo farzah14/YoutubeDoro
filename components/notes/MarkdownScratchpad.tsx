@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useId, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Segmented } from "../ui/Segmented";
 
 function parseBasicMarkdown(text: string) {
   if (!text) return "";
   
-  let html = text
+  const html = text
     // Escaping HTML tags to prevent XSS (basic)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -48,12 +48,26 @@ function parseBasicMarkdown(text: string) {
 export function MarkdownScratchpad() {
   const [content, setContent] = useLocalStorage("ytdoro:scratchpad", "");
   const [tab, setTab] = useState<"write" | "preview">("write");
+  const editorId = useId();
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const characterCount = content.length;
 
   return (
-    <div className="flex flex-col h-full space-y-4">
-      <div className="flex justify-between items-center pb-2 border-b border-border-subtle">
-        <h3 className="text-sm font-semibold text-foreground">Markdown Scratchpad</h3>
+    <div className="scratchpad flex h-full flex-col space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
+        <div>
+          <p className="eyebrow">Notepad</p>
+          <h3 className="mt-1 text-sm font-semibold text-foreground">Markdown scratchpad</h3>
+        </div>
+        <div className="flex items-center gap-3 font-mono text-[10px] text-text-muted" aria-label={`${wordCount} words and ${characterCount} characters`}>
+          <span>{wordCount} words</span>
+          <span>{characterCount} chars</span>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-text-muted">Write quickly, review when ready.</span>
         <Segmented
+          aria-label="Scratchpad view"
           value={tab}
           onChange={(v) => setTab(v as "write" | "preview")}
           options={[
@@ -66,20 +80,23 @@ export function MarkdownScratchpad() {
       <div className="flex-1 min-h-[300px]">
         {tab === "write" ? (
           <textarea
+            id={editorId}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Write your notes here using Markdown...\n\n# Heading 1\n## Heading 2\n**Bold text**\n*Italic text*\n\n- List item 1\n- List item 2\n\n```js\nconsole.log('Code blocks!');\n```"
-            className="w-full h-full min-h-[300px] resize-y rounded-md border border-border-subtle bg-surface p-4 text-sm text-foreground focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus font-mono leading-relaxed"
+            aria-label="Markdown scratchpad"
+            className="w-full h-full min-h-[300px] resize-y rounded-lg border border-border-subtle bg-surface p-4 text-sm leading-relaxed text-foreground focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus font-mono"
           />
         ) : (
           <div 
-            className="w-full h-full min-h-[300px] rounded-md border border-dashed border-border-subtle bg-surface/30 p-4 text-sm text-foreground overflow-y-auto"
+            aria-label="Markdown preview"
+            className="w-full h-full min-h-[300px] overflow-y-auto rounded-lg border border-dashed border-border-subtle bg-surface-secondary/30 p-4 text-sm text-foreground"
             dangerouslySetInnerHTML={{ __html: parseBasicMarkdown(content) || '<span class="text-text-muted italic">Nothing to preview.</span>' }}
           />
         )}
       </div>
-      <div className="text-xs text-text-muted text-right">
-        Auto-saved locally.
+      <div className="border-t border-border-subtle pt-3 text-right text-xs text-text-muted">
+        Auto-saved locally · {tab === "write" ? "editing" : "previewing"}
       </div>
     </div>
   );

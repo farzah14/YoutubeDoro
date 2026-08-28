@@ -1,114 +1,59 @@
 "use client";
 
-import { useMemo } from "react";
-import { formatMMSS } from "@/lib/time";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { KEYS, PRESETS } from "@/lib/constants";
-import { calculateStreak } from "@/lib/streak";
+import { readNumber } from "@/lib/storage";
+import { formatMMSS } from "@/lib/time";
+import { aggregateStats, dateKeys, percentChange, type DailyHistory } from "@/lib/statsModel";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Card } from "../ui/Card";
-import { Badge } from "../ui/Badge";
-import { FlameIcon } from "../icons";
+import { StatsChart } from "./StatsChart";
 
-interface DailyStatsProps {
-  totalLearnSec: number;
-  totalRestSec: number;
-  pomodoroRounds?: number;
-  today?: string;
+type StatsRange = 1 | 7 | 28;
+
+function subscribe(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", callback);
+  window.addEventListener("local-storage", callback);
+  return () => { window.removeEventListener("storage", callback); window.removeEventListener("local-storage", callback); };
 }
 
-export function DailyStats({
-  totalLearnSec,
-  totalRestSec,
-  pomodoroRounds = 0,
-  today,
-}: DailyStatsProps) {
+function readHistory(today: string): Record<string, DailyHistory> {
+  return Object.fromEntries(dateKeys(today, 56).map((day) => [day, {
+    focusSeconds: readNumber(KEYS.learnByDay(day)),
+    breakSeconds: readNumber(KEYS.restByDay(day)),
+    tasksCompleted: readNumber(KEYS.taskCompletionsByDay(day)),
+    sessions: readNumber(KEYS.pomodoroRoundsByDay(day)),
+  }]));
+}
+
+export function DailyStats({ totalLearnSec, totalRestSec, pomodoroRounds = 0, today = "" }: { totalLearnSec: number; totalRestSec: number; pomodoroRounds?: number; today?: string }) {
+  const [range, setRange] = useState<StatsRange>(1);
   const defaultGoalSec = PRESETS.defaultGoalHours * 60 * 60;
   const [goalSec, setGoalSec] = useLocalStorage(KEYS.dailyGoalSec, defaultGoalSec);
-
-  const streakData = useMemo(() => {
-    return calculateStreak(today);
-  }, [today]);
-
-  const progress = goalSec > 0 ? Math.min(totalLearnSec / goalSec, 1) : 0;
-  const isGoalReached = totalLearnSec >= goalSec && goalSec > 0;
-  const currentGoalHours = Math.round((goalSec / 3600) * 10) / 10;
-
-  const handleGoalChange = (hours: number) => {
-    setGoalSec(hours * 60 * 60);
-  };
+  const getSnapshot = useCallback(() => today ? JSON.stringify(readHistory(today)) : "{}", [today]);
+  const historySnapshot = useSyncExternalStore(subscribe, getSnapshot, () => "{}");
+  const history = useMemo<Record<string, DailyHistory>>(() => { try { return JSON.parse(historySnapshot); } catch { return {}; } }, [historySnapshot]);
+  const stats = useMemo(() => aggregateStats(history, today, range), [history, range, today]);
+  const previousEnd = dateKeys(today, 56).at(-range - 1);
+  const previous = previousEnd ? aggregateStats(history, previousEnd, range) : aggregateStats({}, today, range);
+  const change = percentChange(stats.focusSeconds, previous.focusSeconds);
+  const todayProgress = goalSec > 0 ? Math.min(totalLearnSec / goalSec, 1) : 0;
+  const rangeLabels = range === 1 ? ["Today", "Today"] : [stats.days[0], stats.days.at(-1) ?? ""];
+  const metrics = [
+    ["Focus", formatMMSS(range === 1 ? totalLearnSec : stats.focusSeconds), `${change >= 0 ? "+" : ""}${change}% vs prior`],
+    ["Breaks", formatMMSS(range === 1 ? totalRestSec : stats.breakSeconds), "recovery time"],
+    ["Sessions", range === 1 ? pomodoroRounds : String(stats.sessions), "completed focus blocks"],
+    ["Tasks done", String(stats.tasksCompleted), "completed transitions"],
+    ["Streak", `${stats.currentStreak}d`, `best ${stats.longestStreak}d`],
+  ];
 
   return (
-    <Card className="daily-summary p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="eyebrow">Today&apos;s desk · 今日の進捗</p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="font-mono text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              {formatMMSS(totalLearnSec)}
-            </span>
-            <span className="text-xs text-text-muted">focused</span>
-          </div>
-          <p className="mt-1 text-xs text-text-muted">of {formatMMSS(goalSec)} daily goal</p>
-        </div>
-
-        <div className="flex min-w-0 flex-col items-start gap-2 sm:items-end">
-          <label htmlFor="daily-goal" className="eyebrow">Daily goal</label>
-          <select
-            id="daily-goal"
-            value={currentGoalHours}
-            onChange={(event) => handleGoalChange(Number(event.target.value))}
-            aria-label="Change daily focus goal"
-            className="h-10 max-w-full border border-border bg-surface-secondary px-3 text-xs font-mono text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-          >
-            {[0.5, 1, 1.5, 2, 3, 4, 5, 6, 8].map((hours) => (
-              <option key={hours} value={hours} className="bg-surface text-foreground">
-                {hours}h goal ({formatMMSS(hours * 3600)})
-              </option>
-            ))}
-          </select>
-          {isGoalReached && (
-            <Badge variant="success" className="text-[0.68rem]">Goal reached</Badge>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-6 space-y-2">
-        <div className="flex items-center justify-between gap-3 text-xs">
-          <span className="text-text-muted">Goal completion</span>
-          <span className="font-mono font-semibold text-accent">{Math.round(progress * 100)}%</span>
-        </div>
-        <div
-          className="h-2 w-full overflow-hidden rounded-sm border border-border-subtle bg-surface-secondary"
-          role="progressbar"
-          aria-label="Daily focus goal completion"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(progress * 100)}
-        >
-          <div
-            className={`h-full transition-[width] duration-500 ease-out ${isGoalReached ? "bg-success" : "bg-accent"}`}
-            style={{ width: `${progress * 100}%` }}
-          />
-        </div>
-      </div>
-
-      <dl className="mt-6 grid grid-cols-3 divide-x divide-border-subtle border-t border-border-subtle pt-4">
-        <div className="min-w-0 pr-3">
-          <dt className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-text-muted">Sessions</dt>
-          <dd className="mt-1 font-mono text-lg font-bold text-foreground">{pomodoroRounds}</dd>
-        </div>
-        <div className="min-w-0 px-3">
-          <dt className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-text-muted">Rest</dt>
-          <dd className="mt-1 font-mono text-lg font-semibold text-text-secondary">{formatMMSS(totalRestSec)}</dd>
-        </div>
-        <div className="min-w-0 pl-3">
-          <dt className="flex items-center gap-1 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-text-muted">
-            <FlameIcon className="h-3 w-3 text-accent" aria-hidden="true" />
-            Streak
-          </dt>
-          <dd className="mt-1 font-mono text-lg font-bold text-accent">{streakData.currentStreak}d</dd>
-        </div>
-      </dl>
+    <Card className="stats-card stats-dashboard p-5 sm:p-6">
+      <header className="stats-dashboard__header"><div><p className="eyebrow">Focus record</p><h2>Stats</h2><p>Measure the return, not the performance.</p></div><div className="stats-range-tabs" role="tablist" aria-label="Stats range">{([[1, "Today"], [7, "1 Week"], [28, "4 Weeks"]] as const).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={range === value} onClick={() => setRange(value)}>{label}</button>)}</div></header>
+      <div className="stats-metric-grid">{metrics.map(([label, value, detail]) => <div key={label} className="stats-metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>)}</div>
+      <div className="stats-chart-card"><div className="stats-chart-card__heading"><span>Recent productivity</span><span>{rangeLabels[0]} → {rangeLabels[1]}</span></div><StatsChart values={stats.days.map((day) => history[day]?.focusSeconds ?? 0)} labels={rangeLabels} /></div>
+      {range === 1 && <div className="stats-goal"><div><span>Daily goal</span><strong>{formatMMSS(totalLearnSec)} / {formatMMSS(goalSec)}</strong></div><label htmlFor="daily-goal">Goal hours<select id="daily-goal" value={goalSec / 3600} onChange={(event) => setGoalSec(Number(event.target.value) * 3600)} aria-label="Change daily focus goal">{[0.5, 1, 1.5, 2, 3, 4, 6, 8].map((hours) => <option key={hours} value={hours}>{hours}h</option>)}</select></label><div className="stats-goal__bar" role="progressbar" aria-valuenow={Math.round(todayProgress * 100)}><i style={{ width: `${todayProgress * 100}%` }} /></div></div>}
     </Card>
   );
 }

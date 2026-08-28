@@ -206,7 +206,7 @@ export function NotionSettingsModal({
                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               />
               <p className="text-xs text-text-muted">
-                A new database "YoutubeDoro — Study Tracker" will be created under this page.
+                A new database &quot;YoutubeDoro — Study Tracker&quot; will be created under this page.
               </p>
             </div>
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { readString, writeString, readJSON, writeJSON } from "@/lib/storage";
+import { readString, writeString } from "@/lib/storage";
 import { KEYS, NOTION_SYNC_DEBOUNCE_MS } from "@/lib/constants";
-import type { NotionSyncState, SyncPayload, DailyNoteEntry } from "@/types";
+import type { NotionSyncState, SyncPayload } from "@/types";
 
 export function useNotionSync() {
   const [syncState, setSyncState] = useState<NotionSyncState>({
@@ -21,6 +21,8 @@ export function useNotionSync() {
   useEffect(() => {
     const connected = readString(KEYS.notionConnected) === "true";
     const lastSync = readString(KEYS.notionLastSync) || null;
+    // Hydrate browser-only persisted state after SSR to avoid a hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSyncState((prev) => ({ ...prev, connected, lastSync }));
 
     // Auto-detect connection if server-side env variables are set

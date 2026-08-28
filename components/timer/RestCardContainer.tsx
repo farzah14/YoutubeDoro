@@ -7,8 +7,8 @@ import { PlainRestCard } from "./PlainRestCard";
 import { YouTubeRestCard } from "./YouTubeRestCard";
 
 interface RestCardContainerProps {
-  topicToday: string;
   totalTodaySec: number;
+  initialBreakMin?: number;
   onRestDone: (sec: number) => void;
   onRestStop: (sec: number) => void;
   onYTDone: (sec: number) => void;
@@ -16,8 +16,8 @@ interface RestCardContainerProps {
 }
 
 export function RestCardContainer({
-  topicToday,
   totalTodaySec,
+  initialBreakMin,
   onRestDone,
   onRestStop,
   onYTDone,
@@ -26,11 +26,15 @@ export function RestCardContainer({
   const [mode, setMode] = useState<"plain" | "youtube">("plain");
 
   return (
-    <Card className="flex flex-col">
+    <Card className="rest-card flex flex-col">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle>Rest</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>Rest</CardTitle>
+            <span className="text-xs font-mono text-text-muted">休憩</span>
+          </div>
           <Segmented
+            aria-label="Rest mode"
             value={mode}
             onChange={(v) => setMode(v as "plain" | "youtube")}
             options={[
@@ -45,6 +49,7 @@ export function RestCardContainer({
         {mode === "plain" ? (
           <PlainRestCard 
             totalTodaySec={totalTodaySec} 
+            initialBreakMin={initialBreakMin}
             onDone={onRestDone} 
             onStop={onRestStop} 
           />

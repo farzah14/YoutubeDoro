@@ -90,3 +90,54 @@ export type NotionSyncState = {
   connected: boolean;
   error: string | null;
 };
+
+// ──────────────────────────────────────────────
+// Task Queue & Productivity Types
+// ──────────────────────────────────────────────
+
+export interface SubtaskItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: number;
+  order: number;
+}
+
+export interface TaskItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  estimatedPomos: number;
+  completedPomos: number;
+  createdAt: number;
+  emoji: string;
+  color: string;
+  estimatedMinutes: number;
+  focusedSeconds: number;
+  order: number;
+  subtasks: SubtaskItem[];
+}
+
+export interface RadioStation {
+  id: string;
+  name: string;
+  genre: string;
+  videoId: string;
+  icon: string;
+}
+
+export interface BreakPreset {
+  id: string;
+  title: string;
+  category: "stretch" | "eyes" | "breathe" | "nature" | "cafe";
+  categoryLabel: string;
+  videoId: string;
+  durationLabel: string;
+}
+
+export interface SavedBreakVideo {
+  id: string;
+  title: string;
+  videoId: string;
+  addedAt: number;
+}
