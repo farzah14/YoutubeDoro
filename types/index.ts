@@ -141,3 +141,16 @@ export interface SavedBreakVideo {
   videoId: string;
   addedAt: number;
 }
+
+export type {
+  BrowserMigrationPayload,
+  LearningSession,
+  MigrationSessionInput,
+  MigrationSummary,
+  MigrationTaskInput,
+  SessionFilters,
+  SessionPatchInput,
+  SessionStatus,
+  TrackerSubtask,
+  TrackerTask,
+} from "./tracker";
