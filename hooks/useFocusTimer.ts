@@ -162,3 +162,5 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     updatePreferences,
   };
 }
+
+export type FocusTimer = ReturnType<typeof useFocusTimer>;

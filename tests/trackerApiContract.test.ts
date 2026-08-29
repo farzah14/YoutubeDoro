@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
+const trackerApiSource = readFileSync(join(process.cwd(), "lib/trackerApi.ts"), "utf8");
 const routeFiles = [
   "app/api/tracker/tasks/route.ts",
   "app/api/tracker/tasks/[id]/route.ts",
@@ -30,4 +31,10 @@ test("tracker routes enforce auth, validation, and safe ownership", () => {
   const sessions = sources.filter((source) => source.includes("learning_sessions")).join("\n");
   assert.match(sessions, /checkpoint|learningSeconds/);
   assert.match(sessions, /finaliz|ended_at|endedAt/);
+});
+
+test("tracker client explains an uninstalled Supabase schema", () => {
+  assert.match(trackerApiSource, /PGRST205/);
+  assert.match(trackerApiSource, /supabase\/migrations\/20260828000000_learning_tracker\.sql/);
+  assert.match(trackerApiSource, /Supabase SQL Editor/);
 });

@@ -9,7 +9,7 @@ import { useCloudTasks } from "@/hooks/useCloudTasks";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
 import { useSessionRecorder } from "@/hooks/useSessionRecorder";
 import type { SessionMeasurements } from "@/hooks/useSessionRecorder";
-import type { TimerStartContext } from "@/hooks/useFocusTimer";
+import { useFocusTimer, type TimerStartContext } from "@/hooks/useFocusTimer";
 import { CozyAnimeTheme } from "@/types/theme";
 import type { ThemeSlot, WorkspaceMode, WorkspacePanel } from "@/types/workspace";
 import type { LearningSession } from "@/types/tracker";
@@ -25,8 +25,6 @@ import { TaskQueue } from "./tasks/TaskQueue";
 import { SubtaskPanel } from "./tasks/SubtaskPanel";
 import { RestCardContainer } from "./timer/RestCardContainer";
 import { Modal } from "./ui/Modal";
-import { SessionNoteEditor } from "./session/SessionNoteEditor";
-import { HistoryPanel } from "./history/HistoryPanel";
 import { MigrationPrompt, isMigrationSuppressed } from "./migration/MigrationPrompt";
 import { BROWSER_MIGRATION_KEY, exportBrowserTrackerData, getBrowserMigrationKey, type BrowserMigrationExport } from "@/lib/browserMigration";
 import { LoFiPlayer, MusicEngine } from "./audio/LoFiPlayer";
@@ -138,7 +136,6 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
   } = useCloudTasks();
   const {
     session: recorderSession,
-    sessionId: recorderSessionId,
     error: recorderError,
     start: startSession,
     checkpoint: checkpointSession,
@@ -146,7 +143,6 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
     breakCheckpoint: checkpointBreak,
     breakEnd: endBreak,
     finalize: finalizeSession,
-    updateMetadata: updateSessionMetadata,
     recover: recoverSessions,
     getLastMeasurements,
   } = useSessionRecorder();
@@ -255,14 +251,16 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
     endBreak(seconds);
     finishSession("stopped", getLastMeasurements().learningSeconds);
   }, [endBreak, finishSession, getLastMeasurements]);
+  const focusTimer = useFocusTimer({
+    onFocusStart: handleFocusStart,
+    onBreakStart: handleBreakStart,
+    onFocusDone: handleLearnDone,
+    onFocusStop: handleLearnStop,
+    onBreakDone: handleBreakDone,
+    onBreakStop: handleBreakStop,
+  });
   const handleRestDone = useCallback((seconds: number) => endBreak(seconds), [endBreak]);
   const handleRestStop = useCallback((seconds: number) => endBreak(seconds), [endBreak]);
-
-  const saveSessionNote = useCallback((note: string) => {
-    sessionNoteRef.current = note;
-    return updateSessionMetadata({ note });
-  }, [updateSessionMetadata]);
-  const saveSessionTitle = useCallback((title: string) => updateSessionMetadata({ title }), [updateSessionMetadata]);
 
   const handleTaskSelected = useCallback(
     (task: { id: string; text: string }) => {
@@ -349,28 +347,12 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
               topicToday={topicToday}
               totalTodaySec={totalLearnSec}
               pipBackgroundUrl={COZY_THEMES[activeTheme].backgroundUrl}
+              timer={focusTimer}
               onRunningChange={setFocusRunning}
               tasks={tasks}
               activeTaskId={activeTaskId}
               onOpenTasks={() => toggleWorkspacePanel("tasks")}
-              onFocusStart={handleFocusStart}
-              onBreakStart={handleBreakStart}
               onProgress={handleProgress}
-              onLearnDone={handleLearnDone}
-              onLearnStop={handleLearnStop}
-              onBreakDone={handleBreakDone}
-              onBreakStop={handleBreakStop}
-            />
-            <SessionNoteEditor
-              key={recorderSessionId ?? "idle"}
-              sessionId={recorderSessionId}
-              initialValue={recorderSession?.note ?? ""}
-              title={recorderSession?.title ?? ""}
-              learningSeconds={getLastMeasurements().learningSeconds}
-              status={recorderSession?.status ?? "idle"}
-              onSave={saveSessionNote}
-              onTitleSave={saveSessionTitle}
-              onValueChange={(note) => { sessionNoteRef.current = note; }}
             />
           </main>
         </div>
@@ -383,15 +365,14 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
         onModeChange={handleModeChange}
         onPanelToggle={toggleWorkspacePanel}
         timerRunning={focusRunning}
+        timerBusy={focusTimer.state.status === "running" || focusTimer.state.status === "paused"}
+        timerMode={focusTimer.preferences.mode}
+        onTimerModeChange={focusTimer.setMode}
         onFullscreen={handleFullscreen}
       />
       <MusicEngine />
 
       {/* ── Modals & Drawers ── */}
-      <Modal open={openPanel === "history"} onClose={closeWorkspacePanel} title="Session history" className="history-modal">
-        <HistoryPanel tasks={tasks} />
-      </Modal>
-
       <Modal open={openPanel === "rest"} onClose={closeWorkspacePanel} title="Break tools">
         <RestCardContainer totalTodaySec={totalRestSec} onBreakStart={handleBreakStart} onBreakProgress={handleBreakProgress} onRestDone={handleRestDone} onRestStop={handleRestStop} onYTDone={handleRestDone} onYTStop={handleRestStop} />
       </Modal>
@@ -437,7 +418,9 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
       </Modal>
 
       <SettingsPanel
-        open={openPanel === "settings"}
+        key={openPanel === "history" ? "history" : openPanel === "settings" ? "settings" : "closed"}
+        open={openPanel === "settings" || openPanel === "history"}
+        initialSection={openPanel === "history" ? "history" : undefined}
         onClose={closeWorkspacePanel}
         activeThemeSlot={activeThemeSlot}
         onThemeSlotChange={setActiveThemeSlot}
@@ -453,12 +436,12 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
         onShowSecondsChange={setShowSeconds}
         showQuote={showQuote}
         onShowQuoteChange={setShowQuote}
+        accountEmail={accountEmail}
+        accountProvider={accountProvider}
+        tasks={tasks}
         sessions={visibleSessions}
         today={today}
-        onOpenHistory={() => {
-          closeWorkspacePanel();
-          setOpenPanel("history");
-        }}
+        onOpenHistory={() => setOpenPanel("history")}
         onOpenRest={() => {
           closeWorkspacePanel();
           setOpenPanel("rest");

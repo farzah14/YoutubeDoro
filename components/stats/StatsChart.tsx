@@ -14,9 +14,9 @@ export function StatsChart({ values, labels }: { values: number[]; labels?: stri
   return (
     <div className="stats-chart" aria-label={`Focus chart, peak ${formatDuration(max)}`}>
       <svg viewBox="0 0 100 100" role="img" preserveAspectRatio="none">
-        <defs><linearGradient id="stats-fill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="var(--workspace-purple)" stopOpacity=".38" /><stop offset="1" stopColor="var(--workspace-purple)" stopOpacity="0" /></linearGradient></defs>
+        <defs><linearGradient id="stats-fill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="var(--studio-lamplight)" stopOpacity=".38" /><stop offset="1" stopColor="var(--studio-lamplight)" stopOpacity="0" /></linearGradient></defs>
         <polyline points={area} fill="url(#stats-fill)" stroke="none" />
-        <polyline points={points} fill="none" stroke="var(--workspace-purple)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />
+        <polyline points={points} fill="none" stroke="var(--studio-lamplight)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />
       </svg>
       {labels && <div className="stats-chart__labels"><span>{labels[0]}</span><span>{labels[labels.length - 1]}</span></div>}
     </div>

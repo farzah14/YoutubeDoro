@@ -14,26 +14,46 @@ const prioritiesSource = readWorkspaceFile("components/tasks/TaskQueue.tsx");
 const historySource = readWorkspaceFile("components/history/HistoryPanel.tsx");
 const timerSource = readWorkspaceFile("components/YouTubeRestTimer.tsx");
 
-test("overlay surfaces use the shared atelier contract", () => {
+test("overlay surfaces use the Studio Window matte contract", () => {
   assert.match(
     overlaySource,
     /cx\("overlay-panel__surface",\s*"atelier-surface",\s*className\)/,
   );
-  assert.match(stylesSource, /--atelier-ink:\s*#0b1a2a/i);
-  assert.match(stylesSource, /--atelier-lantern:\s*#e4a854/i);
+  for (const token of ["#101820", "#19293a", "#f1ede4", "#aab5ba", "#e2a44f", "#78a6b5"]) {
+    assert.match(stylesSource.toLowerCase(), new RegExp(token));
+  }
+  assert.doesNotMatch(stylesSource, /--workspace-purple/i);
+  assert.doesNotMatch(stylesSource, /backdrop-filter:\s*blur/i);
   assert.match(stylesSource, /\.atelier-surface\s*\{/);
   assert.match(
     stylesSource,
-    /\.atelier-surface[\s\S]*background:\s*var\(--atelier-room\)/,
+    /\.atelier-surface[\s\S]*background:\s*var\(--studio-night\)/,
   );
   assert.match(
     stylesSource,
-    /\.atelier-surface \.overlay-panel__header\s*\{[\s\S]*border-bottom-color:\s*var\(--atelier-line\)/,
+    /\.atelier-surface \.overlay-panel__header\s*\{[\s\S]*border-bottom-color:\s*var\(--studio-line\)/,
   );
   assert.match(
     stylesSource,
-    /\.atelier-surface \.overlay-panel__close\s*\{[\s\S]*border-color:\s*var\(--atelier-line\)/,
+    /\.atelier-surface \.overlay-panel__close\s*\{[\s\S]*border-color:\s*var\(--studio-line\)/,
   );
+  assert.match(stylesSource, /\.overlay-panel__surface\s*\{[\s\S]*animation:\s*studio-panel-in\s+160ms/);
+  assert.match(stylesSource, /@media \(prefers-reduced-motion:\s*reduce\)/);
+});
+
+test("focus workspace exposes the functional desk rail", () => {
+  assert.match(readWorkspaceFile("components/timer/LearningCard.tsx"), /focus-dashboard__desk-rail/);
+  assert.match(readWorkspaceFile("components/timer/LearningCard.tsx"), /focus-dashboard__priority-action/);
+  assert.match(stylesSource, /\.focus-dashboard__context\s*\{/);
+  assert.doesNotMatch(readWorkspaceFile("components/timer/LearningCard.tsx"), /focus-dashboard__tally/);
+  assert.doesNotMatch(stylesSource, /font-size:\s*clamp\(7rem,\s*18vw,\s*15rem\)/);
+});
+
+test("tool surfaces become edge panels and mobile bottom sheets", () => {
+  assert.match(stylesSource, /\.overlay-panel:has\(\.audio-overlay\)/);
+  assert.match(stylesSource, /width:\s*min\(100%,\s*27\.5rem\)/);
+  assert.match(stylesSource, /@media \(max-width:\s*720px\)/);
+  assert.match(stylesSource, /@media \(max-height:\s*700px\)/);
 });
 
 test("Focus Timer settings use one recipe editor instead of nested cards", () => {
@@ -84,5 +104,7 @@ test("History is organized around account sessions", () => {
   assert.match(historySource, /formatDuration/);
   assert.match(historySource, /window\.confirm/);
   assert.match(historySource, /Session note/);
-  assert.match(timerSource, /<HistoryPanel[\s\S]*tasks=\{tasks\}/);
+  assert.match(settingsSource, /<HistoryPanel[\s\S]*tasks=\{tasks\}/);
+  assert.doesNotMatch(timerSource, /<Modal open=\{openPanel === "history"\}/);
+  assert.match(timerSource, /initialSection=\{openPanel === "history" \? "history" : undefined\}/);
 });

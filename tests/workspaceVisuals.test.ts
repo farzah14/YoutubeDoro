@@ -66,14 +66,35 @@ test("PIP mirrors the active scene and the latest timer snapshot", () => {
   assert.match(timerShellSource, /pipBackgroundUrl=\{COZY_THEMES\[activeTheme\]\.backgroundUrl\}/);
 });
 
-test("focus controls expose one Break phase and a designed method select", () => {
+test("focus controls expose one Break phase and a single learning-method disclosure", () => {
   assert.match(learningCardSource, /\["break", "Break"\]/);
   assert.doesNotMatch(learningCardSource, /Short Break|Long Break/);
-  assert.match(learningCardSource, /focus-dashboard__mode-control/);
-  assert.match(learningCardSource, /ChevronDownIcon/);
-  assert.match(learningCardSource, /aria-label="Timer type"/);
-  assert.doesNotMatch(learningCardSource, />Method</);
-  assert.match(stylesSource, /\.focus-dashboard__mode-control\s*\{/);
+  assert.doesNotMatch(learningCardSource, /focus-method-dock/);
+  assert.match(dockSource, /workspace-dock__method-picker/);
+  assert.match(dockSource, /workspace-dock__method-trigger/);
+  assert.match(dockSource, /PomodoroIcon/);
+  assert.match(dockSource, /MonitorIcon/);
+  assert.match(dockSource, /WaveformIcon/);
+  assert.match(dockSource, /role="listbox"/);
+  assert.match(dockSource, /role="option"/);
+  assert.doesNotMatch(learningCardSource, /aria-label="Timer type"/);
+  assert.doesNotMatch(stylesSource, /\.focus-dashboard__mode-control/);
+  assert.doesNotMatch(stylesSource, /\.focus-method-dock/);
+  assert.match(stylesSource, /\.workspace-dock__method-menu\s*\{[\s\S]*bottom:\s*calc\(100%/);
+});
+
+test("focus priority is first and utility actions keep their edge dock positions", () => {
+  assert.match(learningCardSource, /focus-dashboard__context/);
+  assert.match(learningCardSource, /focus-dashboard__priority-action/);
+  assert.match(learningCardSource, /<PhasePicker/);
+  assert.match(dockSource, /workspace-dock__label/);
+  assert.match(dockSource, /className="sr-only"/);
+  assert.match(dockSource, /workspace-dock__center/);
+  assert.match(dockSource, /title="Home"/);
+  assert.match(dockSource, /title="Focus mode"/);
+  assert.match(stylesSource, /\.workspace-dock\s*\{[^}]*inset:\s*auto 1\.5rem 1\.25rem[^}]*justify-content:\s*space-between/);
+  assert.match(stylesSource, /\.workspace-dock__label\s*\{[\s\S]*display:\s*none/);
+  assert.doesNotMatch(learningCardSource, /focus-dashboard__tally/);
 });
 
 test("focus surface removes the helper copy and hides the running dock", () => {
@@ -82,11 +103,28 @@ test("focus surface removes the helper copy and hides the running dock", () => {
   assert.match(timerShellSource, /onRunningChange=\{setFocusRunning\}/);
   assert.match(dockSource, /timerRunning/);
   assert.match(dockSource, /workspace-dock--hidden/);
-  assert.match(stylesSource, /\.workspace-dock--hidden\s*\{[\s\S]*transform:\s*translateY/);
+  assert.match(stylesSource, /\.workspace-dock--hidden\s*\{[^}]*transform:\s*translateY/);
 });
 
-test("History sits beside the Sub-tasks dock action", () => {
-  assert.match(dockSource, /BookIcon/);
+test("focus timer typography gives the method and clock a readable scale", () => {
+  assert.match(stylesSource, /\.focus-dashboard__phase-option\s*\{[\s\S]*font-size:\s*0\.7rem/);
+  assert.match(stylesSource, /\.focus-dashboard__time\s*\{[\s\S]*font-family:\s*var\(--font-mono\)[\s\S]*font-size:\s*clamp\(5\.25rem/);
+});
+
+test("History uses a notepad icon beside the Sub-tasks dock action", () => {
+  assert.match(dockSource, /NotepadIcon/);
+  assert.doesNotMatch(dockSource, /BookIcon/);
   assert.match(dockSource, /onPanelToggle\("history"\)/);
   assert.match(dockSource, /title="History"/);
+});
+
+test("focus centers the timer controls and keeps notes in Settings History", () => {
+  assert.match(timerShellSource, /<LearningCard/);
+  assert.doesNotMatch(timerShellSource, /SessionNoteEditor/);
+  assert.doesNotMatch(timerShellSource, /focus-session-layout/);
+  assert.match(stylesSource, /\.focus-dashboard\s*\{[\s\S]*justify-items:\s*center/);
+  assert.doesNotMatch(stylesSource, /\.focus-session-layout/);
+  assert.doesNotMatch(timerShellSource, /<Modal open=\{openPanel === "history"\}/);
+  assert.match(timerShellSource, /<SettingsPanel[\s\S]*open=\{openPanel === "settings" \|\| openPanel === "history"\}/);
+  assert.match(timerShellSource, /initialSection=\{openPanel === "history" \? "history" : undefined\}/);
 });

@@ -43,11 +43,11 @@ export function XIcon(props: ComponentProps<"svg">) {
   );
 }
 
-export function BookIcon(props: ComponentProps<"svg">) {
+export function NotepadIcon(props: ComponentProps<"svg">) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M9 2v3M15 2v3M8 10h8M8 14h8M8 18h5" />
     </svg>
   );
 }
@@ -151,6 +151,15 @@ export function PlusIcon(props: ComponentProps<"svg">) {
   );
 }
 
+export function PencilIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="m4 16 10.5-10.5a2.8 2.8 0 1 1 4 4L8 20l-5 1 1-5Z" />
+      <path d="m13.5 6.5 4 4" />
+    </svg>
+  );
+}
+
 export function FlameIcon(props: ComponentProps<"svg">) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -199,6 +208,27 @@ export function ChevronUpIcon(props: ComponentProps<"svg">) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  );
+}
+
+export function ClockIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+export function PomodoroIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M9 3h6" />
+      <path d="M12 3v2" />
+      <path d="m17.5 6.5 1.5-1.5" />
+      <circle cx="12" cy="13" r="7" />
+      <path d="M12 9v4l2.5 1.5" />
     </svg>
   );
 }

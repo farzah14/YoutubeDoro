@@ -102,10 +102,11 @@ export function LoFiPlayer() {
     <div className="audio-panel music-panel music-shelf">
       <header className="music-shelf__header">
         <div>
-          <p className="eyebrow">Sound shelf</p>
+          <p className="eyebrow">Broadcast desk</p>
           <h3>{activeEmbed ? activeEmbed.provider : station.name}</h3>
+          <p className="music-shelf__now-playing">{activeEmbed ? "External provider" : station.genre}</p>
         </div>
-        <span className="music-shelf__state">{activeEmbed ? "Provider" : enabled ? "Playing" : "Paused"}</span>
+        <span className="music-shelf__state">{activeEmbed ? "ON AIR / Provider" : enabled ? "ON AIR" : "Standby"}</span>
       </header>
 
       <div className="music-shelf__tabs" role="tablist" aria-label="Music sources">
@@ -122,13 +123,19 @@ export function LoFiPlayer() {
           </div>
           <label className="music-shelf__volume"><span>Volume <output>{muted ? 0 : volume}%</output></span><input type="range" min="0" max="100" value={muted ? 0 : volume} onChange={(event) => { setVolume(Number(event.target.value)); setMuted(false); }} /></label>
           <div className="music-shelf__list" aria-label="Built-in stations">
-            {RADIO_STATIONS.map((item) => (
-              <button key={item.id} type="button" className={item.id === stationId && !activeEmbed ? "music-shelf__track is-active" : "music-shelf__track"} onClick={() => selectStation(item.id)}>
-                <span className="music-shelf__marker" aria-hidden="true" />
-                <span className="music-shelf__track-copy"><strong>{item.name}</strong><small>{item.genre}</small></span>
-                <span className="music-shelf__track-state">{item.id === stationId && !activeEmbed ? "Selected" : "Choose"}</span>
-              </button>
-            ))}
+            {RADIO_STATIONS.map((item, index) => {
+              const selected = item.id === stationId && !activeEmbed;
+              const band = String.fromCharCode(65 + index);
+              return (
+                <button key={item.id} type="button" aria-pressed={selected} className={selected ? "music-shelf__track is-active" : "music-shelf__track"} onClick={() => selectStation(item.id)}>
+                  <span className="music-shelf__marker" aria-hidden="true" />
+                  <span className="music-shelf__channel">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="music-shelf__frequency">{band}</span>
+                  <span className="music-shelf__track-copy"><strong>{item.name}</strong><small>{item.genre}</small></span>
+                  <span className="music-shelf__track-state">{selected ? "Selected" : "Choose"}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

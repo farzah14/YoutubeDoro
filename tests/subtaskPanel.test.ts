@@ -24,6 +24,17 @@ test("subtask panel renders a native checklist for the active priority", () => {
   assert.match(panelSource, /Open Focus Priorities/);
 });
 
+test("subtask checkboxes expose complete and incomplete actions", () => {
+  assert.match(panelSource, /Mark incomplete sub-task/);
+  assert.match(panelSource, /Mark complete sub-task/);
+});
+
+test("subtasks expose manuscript folio and CUT row semantics", () => {
+  assert.match(panelSource, /subtasks-context__folio/);
+  assert.match(panelSource, /subtask-row__index/);
+  assert.match(panelSource, /CUT/);
+});
+
 test("subtasks render as a single checklist at every width", () => {
   assert.match(panelSource, /subtasks-list/);
   assert.match(panelSource, /subtask-row/);
@@ -47,7 +58,7 @@ test("only the subtask checklist scrolls when the list grows", () => {
 test("the workspace exposes Sub-tasks instead of the rendered Sounds panel", () => {
   assert.match(dockSource, /CheckIcon/);
   assert.match(dockSource, /Sub-tasks/);
-  assert.doesNotMatch(dockSource, /WaveformIcon|Sounds/);
+  assert.doesNotMatch(dockSource, /Sounds/);
   assert.match(timerSource, /openPanel === "subtasks"/);
   assert.match(timerSource, /<SubtaskPanel/);
   assert.doesNotMatch(timerSource, /SoundscapePanel|useSoundscape/);

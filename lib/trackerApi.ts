@@ -26,8 +26,12 @@ export async function trackerFetch<T>(input: RequestInfo | URL, init: RequestIni
     // A non-JSON response is still represented by the HTTP failure below.
   }
   if (!response.ok) {
-    const record = body && typeof body === "object" ? body as { error?: string; details?: unknown } : {};
-    throw new TrackerApiError(response.status, record.error || "Tracker request failed", record.details);
+    const record = body && typeof body === "object" ? body as { code?: string; error?: string; details?: unknown } : {};
+    const missingSchema = record.code === "PGRST205" || /Could not find the table 'public\.[^']+' in the schema cache/i.test(record.error ?? "");
+    const message = missingSchema
+      ? "Tracker database schema is not installed. Run supabase/migrations/20260828000000_learning_tracker.sql in the Supabase SQL Editor, then retry."
+      : record.error || "Tracker request failed";
+    throw new TrackerApiError(response.status, message, record.details);
   }
   return body as T;
 }

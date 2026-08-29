@@ -35,6 +35,7 @@ export function SubtaskPanel({
   return (
     <section className="subtasks-panel" aria-labelledby="subtasks-title">
       <div className="subtasks-context">
+        <p className="subtasks-context__folio">FOLIO / {activeTask ? "FOCUS PLAN" : "NO PRIORITY"}</p>
         <p className="eyebrow">Focus plan</p>
         <h3 id="subtasks-title">Sub-tasks</h3>
         <p>{activeTask ? "Focus plan / " + activeTask.text : "Choose a focus priority first."}</p>
@@ -56,10 +57,11 @@ export function SubtaskPanel({
 
           <ol className="subtasks-list no-scrollbar" aria-label={"Sub-tasks for " + activeTask.text}>
             {activeTask.subtasks.length === 0 && <li className="subtasks-empty">No sub-tasks yet. Add the next small step.</li>}
-            {activeTask.subtasks.map((subtask) => (
+            {activeTask.subtasks.map((subtask, index) => (
               <li className="subtask-row" data-complete={subtask.completed || undefined} key={subtask.id}>
+                <span className="subtask-row__index" aria-hidden="true">CUT {String(index + 1).padStart(2, "0")}</span>
                 <label>
-                  <input type="checkbox" checked={subtask.completed} onChange={() => onToggleSubtask(activeTask.id, subtask.id)} aria-label={(subtask.completed ? "Mark" : "Complete") + " sub-task " + subtask.text} />
+                  <input type="checkbox" checked={subtask.completed} onChange={() => onToggleSubtask(activeTask.id, subtask.id)} aria-label={(subtask.completed ? "Mark incomplete sub-task " : "Mark complete sub-task ") + subtask.text} />
                   <span>{subtask.text}</span>
                 </label>
                 <button

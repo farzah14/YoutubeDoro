@@ -10,17 +10,21 @@ import { getNotificationState, playTimerAlert, requestNotificationPermission, ty
 import type { CozyAnimeTheme, ThemeGroup } from "@/types/theme";
 import type { ThemeSlot } from "@/types/workspace";
 import type { LearningSession } from "@/types/tracker";
+import type { TaskItem } from "@/types";
 import { Button } from "../ui/Button";
 import { OverlayPanel } from "../ui/OverlayPanel";
 import { DailyStats } from "../stats/DailyStats";
 import { WeeklyHeatmap } from "../stats/WeeklyHeatmap";
+import { HistoryPanel } from "../history/HistoryPanel";
+import { CheckIcon } from "../icons";
 
 type SettingsSection =
-  | "themes"
+  | "themes" | "account" | "history"
   | "focus-timer" | "stats" | "clock" | "quotes" | "music" | "extras" | "about";
 
 interface SettingsPanelProps {
   open: boolean;
+  initialSection?: SettingsSection;
   onClose: () => void;
   activeThemeSlot: ThemeSlot;
   onThemeSlotChange: (slot: ThemeSlot) => void;
@@ -36,6 +40,9 @@ interface SettingsPanelProps {
   onShowSecondsChange: (value: boolean) => void;
   showQuote: boolean;
   onShowQuoteChange: (value: boolean) => void;
+  accountEmail?: string;
+  accountProvider?: string;
+  tasks: TaskItem[];
   sessions: LearningSession[];
   today: string;
   onOpenHistory: () => void;
@@ -44,6 +51,7 @@ interface SettingsPanelProps {
 
 const sections: Array<[SettingsSection, string]> = [
   ["themes", "Themes"],
+  ["account", "Account"], ["history", "History"],
   ["focus-timer", "Focus Timer"], ["stats", "Stats"], ["clock", "Clock"], ["quotes", "Quotes"], ["music", "Music"], ["extras", "Extras"], ["about", "About"],
 ];
 
@@ -59,6 +67,7 @@ const slots: Record<ThemeSlot, { label: string }> = {
 
 export function SettingsPanel({
   open,
+  initialSection,
   onClose,
   activeThemeSlot,
   onThemeSlotChange,
@@ -74,12 +83,15 @@ export function SettingsPanel({
   onShowSecondsChange,
   showQuote,
   onShowQuoteChange,
+  accountEmail,
+  accountProvider,
+  tasks,
   sessions,
   today,
   onOpenHistory,
   onOpenRest,
 }: SettingsPanelProps) {
-  const [section, setSection] = useState<SettingsSection>("themes");
+  const [section, setSection] = useState<SettingsSection>(initialSection ?? "themes");
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<ThemeGroup | "All">("All");
   const [uploadError, setUploadError] = useState("");
@@ -119,7 +131,7 @@ export function SettingsPanel({
   };
 
   const renderThemes = () => (
-    <div className="settings-content">
+    <div className="settings-content settings-themes">
       <div className="settings-content__heading"><div><p className="eyebrow">{slots[themeSlot].label} scene</p><h3>Make the room yours.</h3><p>Original local anime-inspired scenery, assigned independently to each dashboard mode.</p></div><button type="button" className="settings-randomize" onClick={() => { const id = filteredThemes[Math.floor(Math.random() * filteredThemes.length)] ?? THEME_ORDER[0]; onThemeChange(id); }}>Randomize</button></div>
       <div className="settings-slot-tabs" role="tablist" aria-label="Theme mode">
         {(Object.keys(slots) as ThemeSlot[]).map((slot) => <button key={slot} type="button" role="tab" aria-selected={themeSlot === slot} className={themeSlot === slot ? "settings-slot-tab settings-slot-tab--active" : "settings-slot-tab"} onClick={() => onThemeSlotChange(slot)}><span>{slots[slot].label}</span><small className="settings-slot-tab__theme">{COZY_THEMES[themePreferences[slot]].name}</small></button>)}
@@ -129,7 +141,7 @@ export function SettingsPanel({
         <select value={group} onChange={(event) => setGroup(event.target.value as ThemeGroup | "All")} aria-label="Filter theme group"><option>All</option><option>Anime Rooms</option><option>Ambient Worlds</option><option>Gradients &amp; Colors</option></select>
       </div>
       <div className="settings-theme-grid">
-        {filteredThemes.map((id) => { const theme = COZY_THEMES[id]; const selected = !customId && selectedTheme === id; return <button key={id} type="button" aria-pressed={selected} className={`settings-theme-card ${selected ? "settings-theme-card--active" : ""}`} onClick={() => onThemeChange(id)}><span className="settings-theme-card__preview" style={{ backgroundImage: `url(${theme.backgroundUrl})` }} /><span className="settings-theme-card__copy"><strong>{theme.name}</strong><small>{theme.description}</small></span>{selected && <span className="settings-theme-card__mark">Selected</span>}</button>; })}
+        {filteredThemes.map((id) => { const theme = COZY_THEMES[id]; const selected = !customId && selectedTheme === id; return <button key={id} type="button" aria-pressed={selected} className={`settings-theme-card ${selected ? "settings-theme-card--active" : ""}`} onClick={() => onThemeChange(id)}><span className="settings-theme-card__preview" style={{ backgroundImage: `url(${theme.backgroundUrl})` }} /><span className="settings-theme-card__copy"><strong>{theme.name}</strong><small>{theme.description}</small></span>{selected && <span className="settings-theme-card__mark"><CheckIcon aria-hidden="true" />Selected</span>}</button>; })}
       </div>
       <div className="settings-custom-theme">
         <div><p className="eyebrow">Custom scene</p><p>JPG, PNG, or WEBP · max 5MB · minimum 800px wide.</p></div>
@@ -144,6 +156,19 @@ export function SettingsPanel({
 
   const renderContent = () => {
     if (section === "themes") return renderThemes();
+    if (section === "account") return (
+      <div className="settings-content settings-account">
+        <p className="eyebrow">Signed-in account</p>
+        <h3>Your tracker, tied to you.</h3>
+        <p className="settings-copy">Tasks, subtasks, sessions, breaks, and session notes belong to this account.</p>
+        <div className="settings-info-grid">
+          <div className="settings-info-card"><p className="eyebrow">Email</p><strong className="settings-account__email">{accountEmail || "Unavailable"}</strong><p>Your authenticated account email.</p></div>
+          <div className="settings-info-card"><p className="eyebrow">Sign-in method</p><strong>{accountProvider ? accountProvider.charAt(0).toUpperCase() + accountProvider.slice(1) : "Email"}</strong><p>Authentication is handled by Supabase.</p></div>
+        </div>
+        <div className="settings-extras-actions"><Button type="button" variant="secondary" onClick={() => selectSection("history")}>Open session History</Button></div>
+      </div>
+    );
+    if (section === "history") return <div className="settings-content settings-history"><HistoryPanel tasks={tasks} /></div>;
     if (section === "focus-timer") return (
       <div className="settings-content settings-timer-recipe">
         <header className="settings-content__heading">
@@ -223,5 +248,29 @@ export function SettingsPanel({
     return <div className="settings-content"><p className="eyebrow">Extras</p><h3>Keep the useful edges.</h3><label className="settings-toggle"><span><strong>Clear mode</strong><small>Hide the brand and helper text while keeping the timer and dock available.</small></span><input type="checkbox" checked={clearMode} onChange={(event) => setClearMode(event.target.checked)} /></label><div className="settings-info-card"><strong>Keyboard</strong><p>F toggles Focus · N opens History · Escape closes the topmost surface.</p></div><div className="settings-extras-actions"><Button type="button" variant="secondary" onClick={onOpenHistory}>Open History</Button><Button type="button" variant="secondary" onClick={onOpenRest}>Open Break tools</Button></div></div>;
   };
 
-  return <OverlayPanel open={open} onClose={onClose} title="Settings" description="Personalize each focus mode." className="settings-panel"><div className="settings-layout"><nav className="settings-nav" aria-label="Settings sections">{sections.map(([id, label]) => <button key={id} type="button" className={section === id ? "settings-nav__item settings-nav__item--active" : "settings-nav__item"} aria-current={section === id ? "page" : undefined} onClick={() => selectSection(id)}>{label}</button>)}</nav><select className="settings-select" value={section} onChange={(event) => selectSection(event.target.value as SettingsSection)} aria-label="Settings section">{sections.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><main className="settings-main">{renderContent()}</main></div></OverlayPanel>;
+  return (
+    <OverlayPanel open={open} onClose={onClose} title="Settings" description="Personalize each focus mode." className="settings-panel">
+      <div className="settings-folio">
+        <div className="settings-layout">
+          <nav className="settings-nav" aria-label="Settings sections">
+            {sections.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={section === id ? "settings-nav__item settings-nav__item--active" : "settings-nav__item"}
+                aria-current={section === id ? "page" : undefined}
+                onClick={() => selectSection(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <select className="settings-select" value={section} onChange={(event) => selectSection(event.target.value as SettingsSection)} aria-label="Settings section">
+            {sections.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+          </select>
+          <main className="settings-main" data-section={section}>{renderContent()}</main>
+        </div>
+      </div>
+    </OverlayPanel>
+  );
 }

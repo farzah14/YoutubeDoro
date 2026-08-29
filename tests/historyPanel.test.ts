@@ -23,3 +23,13 @@ test("Migration prompt requires explicit import or cancellation", () => {
   assert.match(source, /trackerApi\.migrate/);
   assert.match(source, /localStorage/);
 });
+
+test("History is a grouped, collapsible study logbook", () => {
+  const source = readFileSync(join(process.cwd(), "components/history/HistoryPanel.tsx"), "utf8");
+  for (const token of ["history-day", "history-day__heading", "history-row__summary",
+    "aria-expanded", "history-row__editor", "hasFilters", "history-retry"]) {
+    assert.match(source, new RegExp(token), `missing ${token}`);
+  }
+  assert.match(source, /Completed or stopped focus sessions will appear here\./);
+  assert.match(source, /onClick=\{\(\) => \{ void reload\(\); \}\}/);
+});
