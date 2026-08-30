@@ -62,6 +62,10 @@ test("Settings does not expose a quote setting", () => {
   assert.doesNotMatch(settingsPanelSource, /showQuote|\["quotes", "Quotes"\]|section === "quotes"/);
 });
 
+test("settings does not render the obsolete registration label", () => {
+  assert.doesNotMatch(stylesSource, /content:\s*["']REG \/ 01["']/);
+});
+
 test("Themes exposes the Studio Window contact-sheet contract", () => {
   assert.match(settingsPanelSource, /settings-content settings-themes/);
   assert.match(settingsPanelSource, /settings-theme-grid/);

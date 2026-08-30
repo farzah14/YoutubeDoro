@@ -5051,16 +5051,6 @@ textarea:focus-visible,
   padding: clamp(1rem, 2vw, 1.75rem);
 }
 
-.settings-main::before {
-  position: absolute;
-  top: .55rem;
-  right: .55rem;
-  color: var(--manga-muted);
-  content: "REG / 01";
-  font: 600 .52rem/1 var(--font-mono);
-  letter-spacing: .12em;
-}
-
 .settings-content,
 .settings-content h3,
 .settings-content h4,
