@@ -20,13 +20,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "YoutubeDoro",
+  title: "StudyRythms",
   description: "Minimalist Pomodoro timer for focused learning",
   manifest: "/manifest.json",
   openGraph: {
-    title: "YoutubeDoro",
+    title: "StudyRythms",
     description: "Focus. Learn. A professional Pomodoro timer.",
-    siteName: "YoutubeDoro",
+    siteName: "StudyRythms",
     locale: "en_US",
     type: "website",
   },

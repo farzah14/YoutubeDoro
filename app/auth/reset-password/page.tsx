@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (updateError) setError(updateError.message);
-    else setMessage("Password updated. You can return to YoutubeDoro.");
+    else setMessage("Password updated. You can return to StudyRythms.");
   };
 
   return (

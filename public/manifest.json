@@ -1,6 +1,6 @@
 {
-  "name": "YoutubeDoro",
-  "short_name": "YoutubeDoro",
+  "name": "StudyRythms",
+  "short_name": "StudyRythms",
   "description": "Minimalist Pomodoro timer for focused learning",
   "start_url": "/",
   "display": "standalone",

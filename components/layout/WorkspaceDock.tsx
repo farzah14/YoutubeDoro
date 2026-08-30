@@ -147,7 +147,7 @@ export function WorkspaceDock({
   onFullscreen,
 }: WorkspaceDockProps) {
   return (
-    <nav className={`workspace-dock ${timerRunning ? "workspace-dock--hidden" : ""}`} aria-hidden={timerRunning || undefined} aria-label="YoutubeDoro workspace controls">
+    <nav className={`workspace-dock ${timerRunning ? "workspace-dock--hidden" : ""}`} aria-hidden={timerRunning || undefined} aria-label="StudyRythms workspace controls">
       <div className="workspace-dock__left" aria-label="Focus tools">
         <button
           type="button"

@@ -193,9 +193,9 @@ export function useTimer({
         const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
         const prefix = status === "Paused" ? "⏸ " : "";
         const icon = tabTitleLabel.startsWith("Focus") ? "🎯 " : "☕ ";
-        document.title = `${prefix}${icon}(${timeStr}) ${tabTitleLabel} | YoutubeDoro`;
+        document.title = `${prefix}${icon}(${timeStr}) ${tabTitleLabel} | StudyRythms`;
       } else {
-        document.title = "YoutubeDoro";
+        document.title = "StudyRythms";
       }
     }
   }, [remainingSec, status, tabTitleLabel]);

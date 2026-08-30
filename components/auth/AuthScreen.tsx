@@ -222,7 +222,7 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
               </button>
             ) : (
               <>
-                <span>{isSignUp ? "Already have an account?" : "New to YoutubeDoro?"}</span>
+                <span>{isSignUp ? "Already have an account?" : "New to StudyRythms?"}</span>
                 <button type="button" onClick={() => changeAccountMode(isSignUp ? "sign-in" : "sign-up")}>
                   {isSignUp ? "Sign in" : "Create an account"} <span aria-hidden="true">↗</span>
                 </button>
