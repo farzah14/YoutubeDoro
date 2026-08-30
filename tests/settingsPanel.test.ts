@@ -39,6 +39,12 @@ test("settings stats renders the dashboards directly", () => {
   assert.doesNotMatch(settingsPanelSource, /Open Stats|onOpenStats/);
 });
 
+test("settings stats uses editorial charcoal surfaces instead of blue fills", () => {
+  assert.match(stylesSource, /\.stats-card\s*\{[^}]*background:\s*var\(--manga-charcoal\)/);
+  assert.match(stylesSource, /\.stats-card\s+\.stats-metric,[\s\S]*background:\s*var\(--manga-ink\)/);
+  assert.match(stylesSource, /\.stats-card\s+\.stats-chart-card,[\s\S]*background:\s*var\(--manga-ink\)/);
+});
+
 test("settings exposes the signed-in account and session history", () => {
   assert.match(settingsPanelSource, /\["account", "Account"\]/);
   assert.match(settingsPanelSource, /\["history", "History"\]/);

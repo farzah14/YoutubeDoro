@@ -1908,6 +1908,22 @@ textarea:focus-visible,
   border-radius: 999px;
 }
 
+.stats-card {
+  border-color: var(--manga-rule);
+  background: var(--manga-charcoal);
+  color: var(--manga-paper);
+}
+
+.stats-card .stats-metric,
+.stats-card .stats-chart-card,
+.stats-card .stats-goal select,
+.stats-card .stats-empty-state,
+.stats-card .stats-goal__bar,
+.stats-card .heatmap-cell {
+  border-color: var(--manga-rule);
+  background: var(--manga-ink);
+}
+
 .stats-empty-state {
   background: color-mix(in srgb, var(--surface-secondary) 55%, transparent);
 }

@@ -64,7 +64,7 @@ export function MusicEngine() {
   );
 }
 
-type MusicTab = "stations" | "my-music" | "library";
+type MusicTab = "stations" | "my-music";
 
 export function LoFiPlayer() {
   const [enabled, setEnabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
@@ -110,7 +110,7 @@ export function LoFiPlayer() {
       </header>
 
       <div className="music-shelf__tabs" role="tablist" aria-label="Music sources">
-        {([["stations", "Stations"], ["my-music", "My Music"], ["library", "Playlist Library"]] as const).map(([value, label]) => (
+        {([["stations", "Stations"], ["my-music", "My Music"]] as const).map(([value, label]) => (
           <button key={value} type="button" role="tab" aria-selected={tab === value} className={tab === value ? "music-shelf__tab is-active" : "music-shelf__tab"} onClick={() => setTab(value)}>{label}</button>
         ))}
       </div>
@@ -157,24 +157,6 @@ export function LoFiPlayer() {
         </div>
       )}
 
-      {tab === "library" && (
-        <div className="audio-library music-shelf__provider">
-          {Array.from(new Set(RADIO_STATIONS.map((item) => item.genre))).map((genre) => (
-            <section key={genre}>
-              <h4>{genre}</h4>
-              <div className="music-shelf__list">
-                {RADIO_STATIONS.filter((item) => item.genre === genre).map((item) => (
-                  <button key={item.id} type="button" className="music-shelf__track" onClick={() => { selectStation(item.id); setTab("stations"); }}>
-                    <span className="music-shelf__marker" aria-hidden="true" />
-                    <span className="music-shelf__track-copy"><strong>{item.name}</strong><small>{item.genre}</small></span>
-                    <span className="music-shelf__track-state">Choose</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
