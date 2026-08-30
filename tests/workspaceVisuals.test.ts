@@ -142,8 +142,10 @@ test("mobile scenes do not render the ambient rain-line overlay", () => {
     stylesSource,
     /@media \(max-width: 767px\)[\s\S]*\.ambient-rainy-evening \.ambient-rain\s*\{[\s\S]*opacity:\s*0/,
   );
-  assert.doesNotMatch(
+  assert.match(
     stylesSource,
-    /\.ambient-clouds,\n\s*\.ambient-stars,\n\s*\.ambient-rain,\n\s*\.ambient-dust\s*\{[\s\S]*opacity:\s*0\.18/,
+    /\.ambient-rain\s*\{[\s\S]*opacity:\s*0[;\s]*animation:\s*none/,
   );
+  const reducedMotion = stylesSource.slice(stylesSource.indexOf("@media (prefers-reduced-motion: reduce)"));
+  assert.match(reducedMotion, /\.ambient-rain\s*\{[\s\S]*opacity:\s*0\s*!important/);
 });

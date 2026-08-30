@@ -86,4 +86,6 @@ test("auth surface has SSR clients, password flows, and OAuth callback", () => {
   for (const token of ["width: min(100%, 25rem)", "padding: 1rem", "min-height: 2.7rem"]) {
     assert.equal(mobileSizing.includes(token), true, `missing ${token} in mobile auth sizing`);
   }
+  assert.equal(mobileSizing.includes("overflow-y: auto"), true, "mobile auth must allow vertical scrolling");
+  assert.equal(mobileSizing.includes("overflow-x: hidden"), true, "mobile auth must avoid horizontal overflow");
 });
