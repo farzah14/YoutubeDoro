@@ -43,6 +43,7 @@ test("settings stats uses editorial charcoal surfaces instead of blue fills", ()
   assert.match(stylesSource, /\.stats-card\s*\{[^}]*background:\s*var\(--manga-charcoal\)/);
   assert.match(stylesSource, /\.stats-card\s+\.stats-metric,[\s\S]*background:\s*var\(--manga-ink\)/);
   assert.match(stylesSource, /\.stats-card\s+\.stats-chart-card,[\s\S]*background:\s*var\(--manga-ink\)/);
+  assert.match(stylesSource, /\.overlay-panel:has\(\.stats-dashboard\) \.overlay-panel__surface[\s\S]*background:\s*var\(--manga-charcoal\)/);
 });
 
 test("settings exposes the signed-in account and session history", () => {

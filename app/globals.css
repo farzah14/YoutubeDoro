@@ -1914,6 +1914,13 @@ textarea:focus-visible,
   color: var(--manga-paper);
 }
 
+.overlay-panel:has(.stats-dashboard) .overlay-panel__surface,
+.overlay-panel:has(.activity-summary) .overlay-panel__surface {
+  border-color: var(--manga-rule);
+  background: var(--manga-charcoal);
+  color: var(--manga-paper);
+}
+
 .stats-card .stats-metric,
 .stats-card .stats-chart-card,
 .stats-card .stats-goal select,
