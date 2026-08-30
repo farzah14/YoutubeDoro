@@ -32,18 +32,35 @@ interface PipNodes {
   phase: HTMLElement;
 }
 
-function drawPipCanvas(canvas: HTMLCanvasElement, snapshot: PipSnapshot) {
+function drawPipCanvas(
+  canvas: HTMLCanvasElement,
+  snapshot: PipSnapshot,
+  backgroundImage: HTMLImageElement | null,
+) {
   const context = canvas.getContext("2d");
   if (!context) return;
 
   const width = canvas.width;
   const height = canvas.height;
-  const background = context.createLinearGradient(0, 0, width, height);
-  background.addColorStop(0, "#102a47");
-  background.addColorStop(1, "#07111e");
-  context.fillStyle = background;
-  context.fillRect(0, 0, width, height);
-  context.fillStyle = "rgba(7, 17, 30, 0.4)";
+  if (backgroundImage?.complete && backgroundImage.naturalWidth > 0 && backgroundImage.naturalHeight > 0) {
+    const scale = Math.max(width / backgroundImage.naturalWidth, height / backgroundImage.naturalHeight);
+    const imageWidth = backgroundImage.naturalWidth * scale;
+    const imageHeight = backgroundImage.naturalHeight * scale;
+    context.drawImage(
+      backgroundImage,
+      (width - imageWidth) / 2,
+      (height - imageHeight) / 2,
+      imageWidth,
+      imageHeight,
+    );
+  } else {
+    const background = context.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, "#102a47");
+    background.addColorStop(1, "#07111e");
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+  }
+  context.fillStyle = "rgba(7, 17, 30, 0.56)";
   context.fillRect(0, 0, width, height);
   context.textAlign = "center";
   context.textBaseline = "middle";
@@ -188,6 +205,7 @@ export function LearningCard({
   const pipNodesRef = useRef<PipNodes | null>(null);
   const pipVideoRef = useRef<HTMLVideoElement | null>(null);
   const pipCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pipBackgroundImageRef = useRef<HTMLImageElement | null>(null);
   const pipStreamRef = useRef<MediaStream | null>(null);
   const pipSnapshotRef = useRef<PipSnapshot>({
     displaySeconds: timer.displaySeconds,
@@ -209,8 +227,34 @@ export function LearningCard({
     }
 
     const canvas = pipCanvasRef.current;
-    if (canvas) drawPipCanvas(canvas, snapshot);
+    if (canvas) drawPipCanvas(canvas, snapshot, pipBackgroundImageRef.current);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const image = new Image();
+    image.decoding = "async";
+    pipBackgroundImageRef.current = null;
+    image.onload = () => {
+      if (!active) return;
+      pipBackgroundImageRef.current = image;
+      updatePip();
+    };
+    image.onerror = () => {
+      if (!active) return;
+      if (pipBackgroundImageRef.current === image) pipBackgroundImageRef.current = null;
+      updatePip();
+    };
+    image.src = pipBackgroundUrl;
+    if (image.complete && image.naturalWidth > 0) {
+      pipBackgroundImageRef.current = image;
+      updatePip();
+    }
+    return () => {
+      active = false;
+      if (pipBackgroundImageRef.current === image) pipBackgroundImageRef.current = null;
+    };
+  }, [pipBackgroundUrl, updatePip]);
 
   const cleanupVideoPip = useCallback(() => {
     const video = pipVideoRef.current;

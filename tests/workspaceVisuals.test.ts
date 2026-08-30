@@ -78,6 +78,12 @@ test("PIP supports desktop documents and mobile video fallback", () => {
   assert.match(learningCardSource, /documentPictureInPicture/);
 });
 
+test("mobile PIP draws the active scene background", () => {
+  assert.match(learningCardSource, /pipBackgroundImageRef/);
+  assert.match(learningCardSource, /drawPipCanvas\(canvas, snapshot, pipBackgroundImageRef\.current\)/);
+  assert.match(learningCardSource, /context\.drawImage/);
+});
+
 test("focus controls expose one Break phase and a single learning-method disclosure", () => {
   assert.match(learningCardSource, /\["break", "Break"\]/);
   assert.doesNotMatch(learningCardSource, /Short Break|Long Break/);
