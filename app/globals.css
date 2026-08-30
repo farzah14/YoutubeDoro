@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Sora";
+  src: url("/fonts/Sora-ExtraBold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 800;
+}
+
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--fg);
@@ -1129,9 +1137,9 @@ textarea:focus-visible,
 .scene-brand h1 {
   margin: 0;
   color: #fff;
-  font-family: var(--font-mono);
+  font-family: "Sora";
   font-size: clamp(1.5rem, 2.2vw, 2rem);
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 0.9;
 }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
@@ -20,9 +20,12 @@ test("website-facing branding uses StudyRythms", () => {
     readWorkspaceFile("../hooks/useTimer.ts"),
   ];
   const styles = readWorkspaceFile("../app/globals.css");
+  const brandFontPath = fileURLToPath(new URL("../public/fonts/Sora-ExtraBold.ttf", import.meta.url));
+  assert.equal(existsSync(brandFontPath), true, "missing Sora brand font asset");
+  assert.match(styles, /@font-face\s*\{[^}]*font-family:\s*["']Sora["'][^}]*url\(["']\/fonts\/Sora-ExtraBold\.ttf["']\)/);
   assert.match(
     styles,
-    /\.scene-brand h1\s*\{[^}]*font-family:\s*var\(--font-mono\)[^}]*letter-spacing:\s*-0\.04em/,
+    /\.scene-brand h1\s*\{[^}]*font-family:\s*["']Sora["'][^}]*font-weight:\s*800[^}]*letter-spacing:\s*-0\.04em/,
   );
 
   for (const source of websiteSources) {
