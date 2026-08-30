@@ -41,8 +41,7 @@ test("overlay surfaces use the Studio Window matte contract", () => {
   assert.match(stylesSource, /@media \(prefers-reduced-motion:\s*reduce\)/);
 });
 
-test("focus workspace exposes the functional desk rail", () => {
-  assert.match(readWorkspaceFile("components/timer/LearningCard.tsx"), /focus-dashboard__desk-rail/);
+test("focus workspace exposes the functional priority context", () => {
   assert.match(readWorkspaceFile("components/timer/LearningCard.tsx"), /focus-dashboard__priority-action/);
   assert.match(stylesSource, /\.focus-dashboard__context\s*\{/);
   assert.doesNotMatch(readWorkspaceFile("components/timer/LearningCard.tsx"), /focus-dashboard__tally/);

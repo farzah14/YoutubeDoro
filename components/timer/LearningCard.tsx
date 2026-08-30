@@ -82,6 +82,7 @@ function PhasePicker({ phase, disabled, onChange }: PhasePickerProps) {
         ref={triggerRef}
         type="button"
         className="focus-dashboard__phase-trigger"
+        data-phase={phase}
         aria-label={`Timer phase: ${phaseLabel}`}
         aria-haspopup="listbox"
         aria-expanded={pickerOpen}
@@ -146,6 +147,7 @@ export function LearningCard({
   const isPaused = timer.state.status === "paused";
   const visiblePhase = timer.state.phase === "focus" ? "focus" : "break";
   const showPhases = timer.preferences.mode !== "countdown" && timer.preferences.mode !== "stopwatch";
+  const primaryLabel = isRunning ? "Pause" : isPaused ? "Resume" : visiblePhase === "break" ? "Break" : "Start";
 
   useEffect(() => {
     onProgress?.(timer.state.phase, timer.state.elapsedSeconds, timer.state.status);
@@ -301,7 +303,7 @@ export function LearningCard({
 
       <div className="focus-dashboard__controls">
         <button type="button" className="focus-dashboard__primary" onClick={handlePrimary}>
-          {isRunning ? "Pause" : isPaused ? "Resume" : "Start"}
+          {primaryLabel}
         </button>
         <button type="button" className="focus-dashboard__icon" onClick={timer.reset} aria-label="Reset timer">
           <RotateCcwIcon className="h-7 w-7" aria-hidden="true" />

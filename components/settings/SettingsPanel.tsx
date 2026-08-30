@@ -1,6 +1,8 @@
 "use client";
 
 import { ChangeEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "@/lib/supabase/client";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { KEYS, PRESETS } from "@/lib/constants";
 import { DEFAULT_FOCUS_PREFERENCES, migrateFocusPreferences } from "@/lib/migrations";
@@ -20,7 +22,7 @@ import { CheckIcon } from "../icons";
 
 type SettingsSection =
   | "themes" | "account" | "history"
-  | "focus-timer" | "stats" | "clock" | "quotes" | "music" | "extras" | "about";
+  | "focus-timer" | "stats" | "clock" | "home" | "music" | "extras" | "about";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -38,8 +40,6 @@ interface SettingsPanelProps {
   onUse24HourChange: (value: boolean) => void;
   showSeconds: boolean;
   onShowSecondsChange: (value: boolean) => void;
-  showQuote: boolean;
-  onShowQuoteChange: (value: boolean) => void;
   accountEmail?: string;
   accountProvider?: string;
   tasks: TaskItem[];
@@ -52,7 +52,7 @@ interface SettingsPanelProps {
 const sections: Array<[SettingsSection, string]> = [
   ["themes", "Themes"],
   ["account", "Account"], ["history", "History"],
-  ["focus-timer", "Focus Timer"], ["stats", "Stats"], ["clock", "Clock"], ["quotes", "Quotes"], ["music", "Music"], ["extras", "Extras"], ["about", "About"],
+  ["focus-timer", "Focus Timer"], ["stats", "Stats"], ["clock", "Clock"], ["home", "Home"], ["music", "Music"], ["extras", "Extras"], ["about", "About"],
 ];
 
 const timerDurations = [
@@ -81,8 +81,6 @@ export function SettingsPanel({
   onUse24HourChange,
   showSeconds,
   onShowSecondsChange,
-  showQuote,
-  onShowQuoteChange,
   accountEmail,
   accountProvider,
   tasks,
@@ -91,6 +89,9 @@ export function SettingsPanel({
   onOpenHistory,
   onOpenRest,
 }: SettingsPanelProps) {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
   const [section, setSection] = useState<SettingsSection>(initialSection ?? "themes");
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<ThemeGroup | "All">("All");
@@ -114,6 +115,19 @@ export function SettingsPanel({
 
   const selectSection = (next: SettingsSection) => {
     setSection(next);
+  };
+
+  const handleSignOut = async () => {
+    setSignOutError("");
+    setSigningOut(true);
+    const result = await signOut();
+    if (result.error) {
+      setSignOutError(result.error.message);
+      setSigningOut(false);
+      return;
+    }
+    router.replace("/");
+    router.refresh();
   };
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -165,7 +179,13 @@ export function SettingsPanel({
           <div className="settings-info-card"><p className="eyebrow">Email</p><strong className="settings-account__email">{accountEmail || "Unavailable"}</strong><p>Your authenticated account email.</p></div>
           <div className="settings-info-card"><p className="eyebrow">Sign-in method</p><strong>{accountProvider ? accountProvider.charAt(0).toUpperCase() + accountProvider.slice(1) : "Email"}</strong><p>Authentication is handled by Supabase.</p></div>
         </div>
-        <div className="settings-extras-actions"><Button type="button" variant="secondary" onClick={() => selectSection("history")}>Open session History</Button></div>
+        <div className="settings-extras-actions settings-account__actions">
+          <Button type="button" variant="secondary" onClick={() => selectSection("history")}>Open session History</Button>
+          <Button type="button" variant="secondary" onClick={() => { void handleSignOut(); }} disabled={signingOut}>
+            {signingOut ? "Signing out…" : "Sign out"}
+          </Button>
+        </div>
+        {signOutError && <p className="settings-account__error" role="alert">{signOutError}</p>}
       </div>
     );
     if (section === "history") return <div className="settings-content settings-history"><HistoryPanel tasks={tasks} /></div>;
@@ -241,7 +261,7 @@ export function SettingsPanel({
       </div>
     );
     if (section === "clock") return <div className="settings-content"><p className="eyebrow">Home clock</p><h3>Let the time stay quiet.</h3><div className="settings-toggle-list"><label className="settings-toggle"><span><strong>24-hour clock</strong><small>Use 18:30 instead of 6:30 PM.</small></span><input type="checkbox" checked={use24Hour} onChange={(event) => onUse24HourChange(event.target.checked)} /></label><label className="settings-toggle"><span><strong>Show seconds</strong><small>Show the precise second on Home.</small></span><input type="checkbox" checked={showSeconds} onChange={(event) => onShowSecondsChange(event.target.checked)} /></label></div></div>;
-    if (section === "quotes") return <div className="settings-content"><p className="eyebrow">Home presentation</p><h3>Keep the greeting personal.</h3><label className="settings-field">Dashboard name<input value={dashboardName} onChange={(event) => setDashboardName(event.target.value)} placeholder="Your name" /></label><label className="settings-field">Greeting<select value={greetingStyle} onChange={(event) => setGreetingStyle(event.target.value as typeof greetingStyle)}><option value="dynamic">Dynamic</option><option value="generic">Generic</option><option value="hidden">Hidden</option></select></label><label className="settings-toggle"><span><strong>Show quote</strong><small>Keep the daily line in the top-right corner.</small></span><input type="checkbox" checked={showQuote} onChange={(event) => onShowQuoteChange(event.target.checked)} /></label></div>;
+    if (section === "home") return <div className="settings-content"><p className="eyebrow">Home presentation</p><h3>Keep the greeting personal.</h3><label className="settings-field">Dashboard name<input value={dashboardName} onChange={(event) => setDashboardName(event.target.value)} placeholder="Your name" /></label><label className="settings-field">Greeting<select value={greetingStyle} onChange={(event) => setGreetingStyle(event.target.value as typeof greetingStyle)}><option value="dynamic">Dynamic</option><option value="generic">Generic</option><option value="hidden">Hidden</option></select></label></div>;
     if (section === "stats") return <div className="settings-content space-y-4"><DailyStats sessions={sessions} today={today} /><WeeklyHeatmap sessions={sessions} /></div>;
     if (section === "music") return <div className="settings-content"><p className="eyebrow">Music sources</p><h3>Keep your soundtrack close.</h3><p className="settings-copy">Built-in stations and allowlisted HTTPS provider links live in Music. Providers may block embeds by region or account.</p></div>;
     if (section === "about") return <div className="settings-content"><p className="eyebrow">YoutubeDoro</p><h3>A quiet anime focus room.</h3><p className="settings-copy">Account-backed sessions, original scenery, layered procedural sound, and your own focus history.</p></div>;

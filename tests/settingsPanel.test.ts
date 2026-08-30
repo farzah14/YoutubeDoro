@@ -7,6 +7,10 @@ const settingsPanelSource = readFileSync(
   fileURLToPath(new URL("../components/settings/SettingsPanel.tsx", import.meta.url)),
   "utf8"
 );
+const headerSource = readFileSync(
+  fileURLToPath(new URL("../components/layout/Header.tsx", import.meta.url)),
+  "utf8"
+);
 const stylesSource = readFileSync(
   fileURLToPath(new URL("../app/globals.css", import.meta.url)),
   "utf8"
@@ -43,6 +47,19 @@ test("settings exposes the signed-in account and session history", () => {
   assert.match(settingsPanelSource, /initialSection/);
   assert.match(settingsPanelSource, /useState<SettingsSection>\(initialSection \?\? "themes"\)/);
   assert.match(settingsPanelSource, /<HistoryPanel[\s\S]*tasks=\{tasks\}/);
+});
+
+test("Settings Account owns sign out instead of the header", () => {
+  assert.match(settingsPanelSource, /signOut/);
+  assert.match(settingsPanelSource, /settings-account__actions/);
+  assert.match(settingsPanelSource, /Sign out/);
+  assert.match(settingsPanelSource, /router\.replace\("\/"\)/);
+  assert.doesNotMatch(headerSource, /signOut|Sign out|scene-account/);
+  assert.match(stylesSource, /\.settings-account__actions\s*\{/);
+});
+
+test("Settings does not expose a quote setting", () => {
+  assert.doesNotMatch(settingsPanelSource, /showQuote|\["quotes", "Quotes"\]|section === "quotes"/);
 });
 
 test("Themes exposes the Studio Window contact-sheet contract", () => {

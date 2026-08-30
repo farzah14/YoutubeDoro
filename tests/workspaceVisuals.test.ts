@@ -43,6 +43,10 @@ test("scene brand aligns with the workspace padding", () => {
   assert.match(stylesSource, /\.scene-brand p\s*\{[\s\S]*margin-top:\s*0\.65rem/);
 });
 
+test("scene header keeps branding without quote content", () => {
+  assert.doesNotMatch(headerSource, /scene-quote|blockquote|quote/);
+});
+
 test("workspace mode selects the matching theme slot", () => {
   assert.match(
     timerShellSource,
@@ -127,4 +131,19 @@ test("focus centers the timer controls and keeps notes in Settings History", () 
   assert.doesNotMatch(timerShellSource, /<Modal open=\{openPanel === "history"\}/);
   assert.match(timerShellSource, /<SettingsPanel[\s\S]*open=\{openPanel === "settings" \|\| openPanel === "history"\}/);
   assert.match(timerShellSource, /initialSection=\{openPanel === "history" \? "history" : undefined\}/);
+});
+
+test("focus clock uses full-width Home-style centered placement", () => {
+  assert.match(stylesSource, /\.focus-dashboard__time\s*\{[\s\S]*width:\s*100%[\s\S]*text-align:\s*center/);
+});
+
+test("mobile scenes do not render the ambient rain-line overlay", () => {
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 767px\)[\s\S]*\.ambient-rainy-evening \.ambient-rain\s*\{[\s\S]*opacity:\s*0/,
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /\.ambient-clouds,\n\s*\.ambient-stars,\n\s*\.ambient-rain,\n\s*\.ambient-dust\s*\{[\s\S]*opacity:\s*0\.18/,
+  );
 });

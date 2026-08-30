@@ -13,7 +13,6 @@ export const KEYS = {
   themeBySlot: (slot: "home" | "focus") => `ytdoro:theme:${slot}`,
   clock24Hour: "ytdoro:clock:24hour",
   clockShowSeconds: "ytdoro:clock:seconds",
-  showQuote: "ytdoro:home:quote",
   dashboardName: "ytdoro:home:name",
   greetingStyle: "ytdoro:home:greeting-style",
   focusPreferences: "ytdoro:parity:v1:focus-preferences",

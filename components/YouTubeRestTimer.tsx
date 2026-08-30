@@ -28,7 +28,6 @@ import { Modal } from "./ui/Modal";
 import { MigrationPrompt, isMigrationSuppressed } from "./migration/MigrationPrompt";
 import { BROWSER_MIGRATION_KEY, exportBrowserTrackerData, getBrowserMigrationKey, type BrowserMigrationExport } from "@/lib/browserMigration";
 import { LoFiPlayer, MusicEngine } from "./audio/LoFiPlayer";
-import { getQuoteForDate } from "@/lib/quotes";
 import { SettingsPanel } from "./settings/SettingsPanel";
 
 export default function YouTubeRestTimer({ accountEmail, accountProvider }: { accountEmail?: string; accountProvider?: string } = {}) {
@@ -88,7 +87,6 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
   );
   const [use24Hour, setUse24Hour] = useLocalStorage(KEYS.clock24Hour, false);
   const [showSeconds, setShowSeconds] = useLocalStorage(KEYS.clockShowSeconds, false);
-  const [showQuote, setShowQuote] = useLocalStorage(KEYS.showQuote, true);
   const [dashboardName] = useLocalStorage(KEYS.dashboardName, "");
   const [greetingStyle] = useLocalStorage<"dynamic" | "generic" | "hidden">(
     KEYS.greetingStyle,
@@ -314,7 +312,7 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
       <div
         className="workspace-scene relative z-10 flex min-h-0 flex-1 flex-col px-5 py-5 sm:px-8 sm:py-7"
       >
-        <Header quote={getQuoteForDate(today)} showQuote={showQuote} accountEmail={accountEmail} accountProvider={accountProvider} />
+        <Header />
 
         <HomeHero
           hidden={!isHomeMode}
@@ -434,8 +432,6 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
         onUse24HourChange={setUse24Hour}
         showSeconds={showSeconds}
         onShowSecondsChange={setShowSeconds}
-        showQuote={showQuote}
-        onShowQuoteChange={setShowQuote}
         accountEmail={accountEmail}
         accountProvider={accountProvider}
         tasks={tasks}

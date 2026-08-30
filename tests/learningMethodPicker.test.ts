@@ -107,7 +107,7 @@ test("focus phases use orange Focus and green Break backgrounds", () => {
   );
 });
 
-test("focus and break use an icon-only dropdown beside timer controls", () => {
+test("focus and break use an icon-only phase chooser beside timer controls", () => {
   const controls =
     learningCardSource.match(/<div className="focus-dashboard__controls">[\s\S]*?<\/div>/)?.[0] ?? "";
 
@@ -116,7 +116,9 @@ test("focus and break use an icon-only dropdown beside timer controls", () => {
   assert.match(learningCardSource, /aria-haspopup="listbox"/);
   assert.match(learningCardSource, /LightbulbIcon/);
   assert.match(learningCardSource, /FlameIcon/);
+  assert.match(learningCardSource, /data-phase=\{phase\}/);
   assert.match(learningCardSource, /sr-only">Timer phase:/);
+  assert.doesNotMatch(learningCardSource, /focus-dashboard__phase-label/);
   assert.match(
     stylesSource,
     /\.focus-dashboard__phase-menu\s*\{[\s\S]*right:\s*0;[\s\S]*bottom:\s*calc\(100%/,
@@ -127,7 +129,7 @@ test("focus and break use an icon-only dropdown beside timer controls", () => {
   );
 });
 
-test("only the Focus and Break chooser changes color by phase", () => {
+test("selected Focus and Break states color the chooser and primary action", () => {
   assert.match(stylesSource, /--studio-break:\s*#4ade80/);
   assert.match(
     stylesSource,
@@ -140,11 +142,29 @@ test("only the Focus and Break chooser changes color by phase", () => {
   assert.match(learningCardSource, /data-phase=\{option\}/);
   assert.match(
     stylesSource,
-    /\.focus-dashboard__phase-option\[data-phase="break"\]:hover,[\s\S]*background:\s*var\(--studio-break\)/,
+    /\.focus-dashboard__phase-option\[data-phase="break"]:hover,[\s\S]*background:\s*var\(--studio-break\)/,
   );
-  assert.doesNotMatch(stylesSource, /\.focus-dashboard\[data-phase="break"\]\s+\.focus-dashboard__primary/);
+  assert.match(
+    stylesSource,
+    /\.focus-dashboard\[data-phase="break"\]\s+\.focus-dashboard__primary\s*\{[\s\S]*background:\s*var\(--studio-break\)/,
+  );
+  assert.match(learningCardSource, /visiblePhase === "break" \? "Break" : "Start"/);
   assert.doesNotMatch(stylesSource, /\.focus-dashboard\[data-phase="break"\]\s+\.focus-dashboard__icon/);
   assert.doesNotMatch(stylesSource, /\.focus-dashboard\[data-phase="break"\]\s+\.focus-dashboard__pip/);
+});
+
+test("phase trigger keeps an icon-style transparent background", () => {
+  const focusTriggerStyles =
+    stylesSource.match(/\.focus-dashboard__phase-trigger\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+  const breakTriggerStyles =
+    stylesSource.match(/\.focus-dashboard\[data-phase="break"\]\s+\.focus-dashboard__phase-trigger\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+  assert.match(focusTriggerStyles, /background:\s*transparent/);
+  assert.match(focusTriggerStyles, /border:\s*0/);
+  assert.equal(
+    !breakTriggerStyles.includes("background:") || breakTriggerStyles.includes("background: transparent"),
+    true,
+    "Break trigger must not add a filled background",
+  );
 });
 
 test("focus dashboard omits the daily focused helper line", () => {
