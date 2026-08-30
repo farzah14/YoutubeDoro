@@ -149,3 +149,8 @@ test("mobile scenes do not render the ambient rain-line overlay", () => {
   const reducedMotion = stylesSource.slice(stylesSource.indexOf("@media (prefers-reduced-motion: reduce)"));
   assert.match(reducedMotion, /\.ambient-rain\s*\{[\s\S]*opacity:\s*0\s*!important/);
 });
+
+test("workspace pages center like Home on mobile", () => {
+  const mobileStyles = stylesSource.slice(stylesSource.indexOf("@media (max-width: 640px)"));
+  assert.match(mobileStyles, /\.workspace-stage\s*\{[^}]*justify-content:\s*center/);
+});
