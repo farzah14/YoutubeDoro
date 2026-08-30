@@ -8,10 +8,20 @@ const focusTimerSource = readFileSync(
   fileURLToPath(new URL("../hooks/useFocusTimer.ts", import.meta.url)),
   "utf8"
 );
+const browserFeaturesSource = readFileSync(
+  fileURLToPath(new URL("../lib/browserFeatures.ts", import.meta.url)),
+  "utf8"
+);
 
 test("focus start primes the alert audio path for later completion", () => {
   assert.match(focusTimerSource, /primeTimerAlertAudio/);
   assert.match(focusTimerSource, /void primeTimerAlertAudio\(\)/);
+});
+
+test("picture-in-picture support covers document and mobile video paths", () => {
+  assert.match(browserFeaturesSource, /supportsVideoPictureInPicture/);
+  assert.match(browserFeaturesSource, /requestPictureInPicture/);
+  assert.match(browserFeaturesSource, /captureStream/);
 });
 
 test("timer alerts reuse the primed audio context", async () => {

@@ -63,5 +63,27 @@ export async function requestScreenWakeLock(): Promise<WakeLockHandle | null> {
 }
 
 export function supportsDocumentPictureInPicture(): boolean {
-  return typeof window !== "undefined" && "documentPictureInPicture" in window;
+  if (typeof window === "undefined") return false;
+  const documentPictureInPicture = (window as Window & {
+    documentPictureInPicture?: { requestWindow?: unknown };
+  }).documentPictureInPicture;
+  return typeof documentPictureInPicture?.requestWindow === "function";
+}
+
+export function supportsVideoPictureInPicture(): boolean {
+  if (typeof window === "undefined" || typeof document === "undefined") return false;
+  if (document.pictureInPictureEnabled !== true) return false;
+  if (typeof HTMLVideoElement === "undefined" || typeof HTMLCanvasElement === "undefined") return false;
+  const videoPrototype = HTMLVideoElement.prototype as HTMLVideoElement & {
+    requestPictureInPicture?: unknown;
+  };
+  const canvasPrototype = HTMLCanvasElement.prototype as HTMLCanvasElement & {
+    captureStream?: unknown;
+  };
+  return typeof videoPrototype.requestPictureInPicture === "function"
+    && typeof canvasPrototype.captureStream === "function";
+}
+
+export function supportsPictureInPicture(): boolean {
+  return supportsDocumentPictureInPicture() || supportsVideoPictureInPicture();
 }

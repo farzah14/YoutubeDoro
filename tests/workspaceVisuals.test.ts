@@ -70,6 +70,14 @@ test("PIP mirrors the active scene and the latest timer snapshot", () => {
   assert.match(timerShellSource, /pipBackgroundUrl=\{COZY_THEMES\[activeTheme\]\.backgroundUrl\}/);
 });
 
+test("PIP supports desktop documents and mobile video fallback", () => {
+  assert.match(learningCardSource, /supportsPictureInPicture/);
+  assert.match(learningCardSource, /requestPictureInPicture/);
+  assert.match(learningCardSource, /captureStream/);
+  assert.match(learningCardSource, /pipVideoRef/);
+  assert.match(learningCardSource, /documentPictureInPicture/);
+});
+
 test("focus controls expose one Break phase and a single learning-method disclosure", () => {
   assert.match(learningCardSource, /\["break", "Break"\]/);
   assert.doesNotMatch(learningCardSource, /Short Break|Long Break/);

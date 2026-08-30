@@ -2,7 +2,7 @@
 
 import { formatMMSS } from "@/lib/time";
 import type { FocusTimer } from "@/hooks/useFocusTimer";
-import { supportsDocumentPictureInPicture } from "@/lib/browserFeatures";
+import { supportsPictureInPicture } from "@/lib/browserFeatures";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TaskItem } from "@/types";
 import type { TimerPhase } from "@/types/focus";
@@ -30,6 +30,37 @@ interface PipSnapshot {
 interface PipNodes {
   time: HTMLElement;
   phase: HTMLElement;
+}
+
+function drawPipCanvas(canvas: HTMLCanvasElement, snapshot: PipSnapshot) {
+  const context = canvas.getContext("2d");
+  if (!context) return;
+
+  const width = canvas.width;
+  const height = canvas.height;
+  const background = context.createLinearGradient(0, 0, width, height);
+  background.addColorStop(0, "#102a47");
+  background.addColorStop(1, "#07111e");
+  context.fillStyle = background;
+  context.fillRect(0, 0, width, height);
+  context.fillStyle = "rgba(7, 17, 30, 0.4)";
+  context.fillRect(0, 0, width, height);
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillStyle = "#ffffff";
+  context.font = "800 104px ui-monospace, SFMono-Regular, Consolas, monospace";
+  context.fillText(formatMMSS(snapshot.displaySeconds), width / 2, height * 0.48);
+
+  const phaseLabel = snapshot.phase === "focus" ? "Focus" : "Break";
+  const label = snapshot.showTaskInPip ? `${phaseLabel} · ${snapshot.taskLabel}` : phaseLabel;
+  const visibleLabel = label.length > 48 ? `${label.slice(0, 47)}…` : label;
+  context.fillStyle = snapshot.phase === "focus" ? "#f6c76d" : "#7ed6af";
+  context.font = "700 24px Inter, ui-sans-serif, system-ui, sans-serif";
+  context.fillText(visibleLabel, width / 2, height * 0.82);
+}
+
+function attachPipStream(video: HTMLVideoElement, stream: MediaStream) {
+  video.srcObject = stream;
 }
 
 const phases: Array<["focus" | "break", string]> = [
@@ -137,7 +168,7 @@ export function LearningCard({
 }: LearningCardProps) {
   const pipSupported = useSyncExternalStore(
     subscribeToPipSupport,
-    supportsDocumentPictureInPicture,
+    supportsPictureInPicture,
     () => false,
   );
   const activeTask = tasks.find((task) => task.id === activeTaskId)
@@ -155,6 +186,9 @@ export function LearningCard({
 
   const pipWindowRef = useRef<Window | null>(null);
   const pipNodesRef = useRef<PipNodes | null>(null);
+  const pipVideoRef = useRef<HTMLVideoElement | null>(null);
+  const pipCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pipStreamRef = useRef<MediaStream | null>(null);
   const pipSnapshotRef = useRef<PipSnapshot>({
     displaySeconds: timer.displaySeconds,
     phase: timer.state.phase,
@@ -163,16 +197,32 @@ export function LearningCard({
   });
 
   const updatePip = useCallback(() => {
+    const snapshot = pipSnapshotRef.current;
     const nodes = pipNodesRef.current;
     const pipWindow = pipWindowRef.current;
-    if (!nodes || !pipWindow || pipWindow.closed) return;
+    if (nodes && pipWindow && !pipWindow.closed) {
+      const phaseLabel = snapshot.phase === "focus" ? "Focus" : "Break";
+      nodes.time.textContent = formatMMSS(snapshot.displaySeconds);
+      nodes.phase.textContent = snapshot.showTaskInPip
+        ? `${phaseLabel} · ${snapshot.taskLabel}`
+        : phaseLabel;
+    }
 
-    const snapshot = pipSnapshotRef.current;
-    const phaseLabel = snapshot.phase === "focus" ? "Focus" : "Break";
-    nodes.time.textContent = formatMMSS(snapshot.displaySeconds);
-    nodes.phase.textContent = snapshot.showTaskInPip
-      ? `${phaseLabel} · ${snapshot.taskLabel}`
-      : phaseLabel;
+    const canvas = pipCanvasRef.current;
+    if (canvas) drawPipCanvas(canvas, snapshot);
+  }, []);
+
+  const cleanupVideoPip = useCallback(() => {
+    const video = pipVideoRef.current;
+    video?.pause();
+    if (video) {
+      video.srcObject = null;
+      video.remove();
+    }
+    pipStreamRef.current?.getTracks().forEach((track) => track.stop());
+    pipStreamRef.current = null;
+    pipCanvasRef.current = null;
+    pipVideoRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -195,11 +245,94 @@ export function LearningCard({
     pipWindowRef.current?.close();
     pipWindowRef.current = null;
     pipNodesRef.current = null;
-  }, []);
+    cleanupVideoPip();
+  }, [cleanupVideoPip]);
+
+  const openVideoPip = async () => {
+    let canvas = pipCanvasRef.current;
+    if (!canvas) {
+      const createdCanvas = document.createElement("canvas");
+      createdCanvas.width = 640;
+      createdCanvas.height = 360;
+      pipCanvasRef.current = createdCanvas;
+      canvas = createdCanvas;
+    }
+
+    let video = pipVideoRef.current;
+    if (!video) {
+      const createdVideo = document.createElement("video");
+      createdVideo.muted = true;
+      createdVideo.defaultMuted = true;
+      createdVideo.autoplay = true;
+      createdVideo.playsInline = true;
+      createdVideo.controls = false;
+      createdVideo.setAttribute("aria-hidden", "true");
+      Object.assign(createdVideo.style, {
+        position: "fixed",
+        left: "-9999px",
+        top: "0",
+        width: "1px",
+        height: "1px",
+        opacity: "0",
+        pointerEvents: "none",
+      });
+      pipVideoRef.current = createdVideo;
+      video = createdVideo;
+      document.body.append(createdVideo);
+    }
+
+    const videoWithPip = video as HTMLVideoElement & {
+      requestPictureInPicture?: () => Promise<unknown>;
+    };
+    const canvasWithStream = canvas as HTMLCanvasElement & {
+      captureStream?: (frameRate?: number) => MediaStream;
+    };
+    const captureStream = canvasWithStream.captureStream;
+    const requestPictureInPicture = videoWithPip.requestPictureInPicture;
+    if (typeof requestPictureInPicture !== "function" || typeof captureStream !== "function") {
+      cleanupVideoPip();
+      return;
+    }
+
+    const pipDocument = document as Document & {
+      pictureInPictureElement?: Element | null;
+      exitPictureInPicture?: () => Promise<void>;
+    };
+    if (pipDocument.pictureInPictureElement === video) {
+      await pipDocument.exitPictureInPicture?.();
+      return;
+    }
+
+    let stream = pipStreamRef.current;
+    if (!stream) {
+      try {
+        stream = captureStream.call(canvas, 1);
+      } catch {
+        cleanupVideoPip();
+        return;
+      }
+      pipStreamRef.current = stream;
+    }
+    attachPipStream(video, stream);
+    updatePip();
+
+    const handleLeave = () => cleanupVideoPip();
+    video.addEventListener("leavepictureinpicture", handleLeave, { once: true });
+    try {
+      await video.play();
+      await requestPictureInPicture.call(video);
+    } catch {
+      video.removeEventListener("leavepictureinpicture", handleLeave);
+      cleanupVideoPip();
+    }
+  };
 
   const openPip = async () => {
     const pictureInPicture = (window as Window & { documentPictureInPicture?: { requestWindow: (options: { width: number; height: number }) => Promise<Window> } }).documentPictureInPicture;
-    if (!pictureInPicture) return;
+    if (!pictureInPicture) {
+      await openVideoPip();
+      return;
+    }
 
     const existingWindow = pipWindowRef.current;
     if (existingWindow && !existingWindow.closed) {
@@ -275,7 +408,9 @@ export function LearningCard({
         pipWindowRef.current = null;
         pipNodesRef.current = null;
       }, { once: true });
-    } catch { /* unsupported or closed by the browser */ }
+    } catch {
+      await openVideoPip();
+    }
   };
 
   const handlePrimary = () => {
