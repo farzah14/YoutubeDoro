@@ -19,6 +19,11 @@ test("website-facing branding uses StudyRythms", () => {
     readWorkspaceFile("../components/settings/SettingsPanel.tsx"),
     readWorkspaceFile("../hooks/useTimer.ts"),
   ];
+  const styles = readWorkspaceFile("../app/globals.css");
+  assert.match(
+    styles,
+    /\.scene-brand h1\s*\{[^}]*font-family:\s*var\(--font-mono\)[^}]*letter-spacing:\s*-0\.04em/,
+  );
 
   for (const source of websiteSources) {
     assert.match(source, /StudyRythms/);
