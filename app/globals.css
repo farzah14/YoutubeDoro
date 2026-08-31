@@ -1679,27 +1679,34 @@ textarea:focus-visible,
   gap: 0.6rem;
 }
 
-.priorities-add > input,
-.priorities-add label {
-  display: flex;
+.priorities-add > input {
+  min-width: 0;
   min-height: 2.8rem;
-  align-items: center;
   border: 1px solid var(--atelier-line);
   border-radius: 6px;
   background: transparent;
-}
-
-.priorities-add > input {
-  min-width: 0;
   padding: 0 0.9rem;
   color: var(--atelier-mist);
 }
 
 .priorities-add label {
-  padding: 0 0.55rem;
+  display: flex;
+  min-height: 2.4rem;
+  align-items: center;
+  border: 1px solid var(--atelier-line);
+  border-radius: 6px;
+  background: transparent;
+  padding: 0 0.35rem;
 }
 
-.priorities-add input[type="number"],
+.priorities-add input[type="number"] {
+  width: 2.75rem;
+  background: transparent;
+  color: var(--atelier-mist);
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
 .priority-work-row__eta input {
   width: 4rem;
   background: transparent;
@@ -1720,15 +1727,15 @@ textarea:focus-visible,
 
 .priorities-add button {
   display: inline-flex;
-  min-height: 2.8rem;
+  min-height: 3.25rem;
   align-items: center;
   gap: 0.4rem;
   border: 1px solid var(--atelier-lantern);
   border-radius: 6px;
   background: var(--atelier-lantern);
-  padding: 0 1rem;
+  padding: 0 1.25rem;
   color: var(--atelier-ink);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 800;
 }
 
@@ -5318,10 +5325,8 @@ textarea:focus-visible,
 .music-shelf__track.is-active .music-shelf__marker,
 .subtasks-progress i { background: var(--manga-vermilion); }
 .subtasks-context__folio { border-bottom: 2px solid var(--manga-paper); padding-bottom: .75rem; color: var(--manga-paper-muted); font: 700 .6rem/1.2 var(--font-mono); letter-spacing: .1em; }
-.subtask-row { grid-template-columns: 3.25rem minmax(0, 1fr) auto; }
 .subtask-row label { color: var(--manga-paper); }
 .subtask-row label input { accent-color: var(--manga-vermilion); }
-.subtask-row__index { color: var(--manga-paper-muted); font: 600 .58rem/1 var(--font-mono); }
 .subtask-row[data-complete="true"] { color: var(--manga-paper-muted); }
 .subtask-row[data-complete="true"] label span { color: var(--manga-paper-muted); }
 .subtask-row__delete { color: var(--manga-paper-deep); }
@@ -5343,7 +5348,6 @@ textarea:focus-visible,
   .music-shelf__controls, .subtasks-add { flex-wrap: wrap; }
   .music-shelf__track { grid-template-columns: .45rem 2.5rem minmax(0, 1fr) auto; }
   .music-shelf__frequency { display: none; }
-  .subtask-row { grid-template-columns: 2.9rem minmax(0, 1fr) auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

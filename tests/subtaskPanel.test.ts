@@ -29,13 +29,12 @@ test("subtask checkboxes expose complete and incomplete actions", () => {
   assert.match(panelSource, /Mark complete sub-task/);
 });
 
-test("subtasks expose priority status and CUT row semantics without folio decoration", () => {
-  assert.match(panelSource, /subtasks-context__folio/);
-  assert.doesNotMatch(panelSource, /FOLIO \/ /);
-  assert.doesNotMatch(panelSource, /FOCUS PLAN|Focus plan \//);
+test("subtasks omit decorative CUT row labels while keeping row semantics", () => {
+  assert.doesNotMatch(panelSource, /subtask-row__index|CUT/);
+  assert.doesNotMatch(panelSource, /FOLIO \/ |FOCUS PLAN|Focus plan \//);
   assert.match(panelSource, /NO PRIORITY/);
-  assert.match(panelSource, /subtask-row__index/);
-  assert.match(panelSource, /CUT/);
+  assert.match(panelSource, /subtask-row/);
+  assert.match(stylesSource, /\.subtask-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) auto/);
   assert.match(stylesSource, /\.subtasks-panel\s*\{[\s\S]*border:\s*0/);
   assert.match(stylesSource, /\.subtasks-panel\s*\{[\s\S]*background:\s*transparent/);
 });

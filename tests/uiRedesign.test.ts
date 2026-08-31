@@ -79,9 +79,12 @@ test("Sub-tasks use parent context and a progress-led checklist", () => {
   assert.doesNotMatch(subtasksSource, /subtasks-grid|subtask-card/);
 });
 
-test("Add task minute unit has clear spacing from its numeric field", () => {
+test("Add task controls keep a compact estimate and enlarged submit", () => {
   assert.match(prioritiesSource, /<small className="priorities-add__unit">min<\/small>/);
   assert.match(stylesSource, /\.priorities-add__unit\s*\{[\s\S]*margin-left:\s*0\.35rem[\s\S]*padding-left:\s*0\.35rem/);
+  assert.match(stylesSource, /\.priorities-add label\s*\{[\s\S]*min-height:\s*2\.4rem/);
+  assert.match(stylesSource, /\.priorities-add input\[type="number"\]\s*\{[\s\S]*width:\s*2\.75rem/);
+  assert.match(stylesSource, /\.priorities-add button\s*\{[\s\S]*min-height:\s*3\.25rem/);
 });
 
 test("Focus Priorities use ordered work rows without decorative task controls", () => {

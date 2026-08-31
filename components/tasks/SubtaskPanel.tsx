@@ -56,9 +56,8 @@ export function SubtaskPanel({
 
           <ol className="subtasks-list no-scrollbar" aria-label={"Sub-tasks for " + activeTask.text}>
             {activeTask.subtasks.length === 0 && <li className="subtasks-empty">No sub-tasks yet. Add the next small step.</li>}
-            {activeTask.subtasks.map((subtask, index) => (
+            {activeTask.subtasks.map((subtask) => (
               <li className="subtask-row" data-complete={subtask.completed || undefined} key={subtask.id}>
-                <span className="subtask-row__index" aria-hidden="true">CUT {String(index + 1).padStart(2, "0")}</span>
                 <label>
                   <input type="checkbox" checked={subtask.completed} onChange={() => onToggleSubtask(activeTask.id, subtask.id)} aria-label={(subtask.completed ? "Mark incomplete sub-task " : "Mark complete sub-task ") + subtask.text} />
                   <span>{subtask.text}</span>
