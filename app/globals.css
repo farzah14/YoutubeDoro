@@ -1713,6 +1713,11 @@ textarea:focus-visible,
   font-size: 0.65rem;
 }
 
+.priorities-add__unit {
+  margin-left: 0.35rem;
+  padding-left: 0.35rem;
+}
+
 .priorities-add button {
   display: inline-flex;
   min-height: 2.8rem;
@@ -5207,14 +5212,17 @@ textarea:focus-visible,
   color: var(--manga-paper);
 }
 
-.settings-account__actions .settings-account__sign-out {
+.settings-account__actions .settings-account__sign-out,
+.history-row__actions .history-row__delete-session {
   border-color: var(--manga-vermilion);
   background: var(--manga-vermilion);
   color: var(--manga-paper);
 }
 
 .settings-account__actions .settings-account__sign-out:hover:not(:disabled),
-.settings-account__actions .settings-account__sign-out:focus-visible {
+.settings-account__actions .settings-account__sign-out:focus-visible,
+.history-row__actions .history-row__delete-session:hover:not(:disabled),
+.history-row__actions .history-row__delete-session:focus-visible {
   border-color: var(--manga-vermilion);
   background: color-mix(in srgb, var(--manga-vermilion) 82%, black);
   color: var(--manga-paper);

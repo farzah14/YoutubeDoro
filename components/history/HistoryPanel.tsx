@@ -114,7 +114,7 @@ function HistoryRow({ session, tasks, reload, expanded, onToggle, editorId }: Hi
             <div>
               <Button type="button" variant="secondary" size="sm" onClick={() => { void save(); }}
                 disabled={saving || deleting || !title.trim()}>{saving ? "Saving..." : "Save details"}</Button>
-              <Button type="button" variant="danger" size="sm" onClick={() => { void remove(); }}
+              <Button type="button" variant="danger" size="sm" className="history-row__delete-session" onClick={() => { void remove(); }}
                 disabled={saving || deleting}>{deleting ? "Deleting..." : "Delete session"}</Button>
             </div>
           </footer>

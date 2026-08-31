@@ -94,7 +94,7 @@ export function TaskQueue({
         <label>
           <span className="sr-only">Estimated minutes</span>
           <input type="number" min="5" max="480" step="5" value={estimatedMinutes} onChange={(event) => setEstimatedMinutes(Number(event.target.value))} />
-          <small>min</small>
+          <small className="priorities-add__unit">min</small>
         </label>
         <button type="submit" disabled={!newText.trim()}><PlusIcon aria-hidden="true" /> Add task</button>
       </form>

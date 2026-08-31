@@ -14,6 +14,13 @@ test("History exposes filters, editable metadata, and immutable timing", () => {
   assert.match(source, /read-only|immutable/i);
 });
 
+test("Delete session uses the same vermilion action color as Sign out", () => {
+  const source = readFileSync(join(process.cwd(), "components/history/HistoryPanel.tsx"), "utf8");
+  const styles = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+  assert.match(source, /history-row__delete-session/);
+  assert.match(styles, /\.settings-account__actions \.settings-account__sign-out,\s*\.history-row__actions \.history-row__delete-session\s*\{[\s\S]*background:\s*var\(--manga-vermilion\)/);
+});
+
 test("Migration prompt requires explicit import or cancellation", () => {
   const file = join(process.cwd(), "components/migration/MigrationPrompt.tsx");
   assert.equal(existsSync(file), true);

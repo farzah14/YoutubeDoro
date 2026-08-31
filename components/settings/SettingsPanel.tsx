@@ -22,7 +22,7 @@ import { CheckIcon } from "../icons";
 
 type SettingsSection =
   | "themes" | "account" | "history"
-  | "focus-timer" | "stats" | "clock" | "home" | "music" | "extras" | "about";
+  | "focus-timer" | "stats" | "clock" | "home" | "about";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -45,14 +45,12 @@ interface SettingsPanelProps {
   tasks: TaskItem[];
   sessions: LearningSession[];
   today: string;
-  onOpenHistory: () => void;
-  onOpenRest: () => void;
 }
 
 const sections: Array<[SettingsSection, string]> = [
   ["themes", "Themes"],
   ["account", "Account"], ["history", "History"],
-  ["focus-timer", "Focus Timer"], ["stats", "Stats"], ["clock", "Clock"], ["home", "Home"], ["music", "Music"], ["extras", "Extras"], ["about", "About"],
+  ["focus-timer", "Focus Timer"], ["stats", "Stats"], ["clock", "Clock"], ["home", "Home"], ["about", "About"],
 ];
 
 const timerDurations = [
@@ -86,8 +84,6 @@ export function SettingsPanel({
   tasks,
   sessions,
   today,
-  onOpenHistory,
-  onOpenRest,
 }: SettingsPanelProps) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -101,7 +97,6 @@ export function SettingsPanel({
   const [notificationState, setNotificationState] = useState<NotificationState>(() => getNotificationState());
   const [dashboardName, setDashboardName] = useLocalStorage(KEYS.dashboardName, "");
   const [greetingStyle, setGreetingStyle] = useLocalStorage<"dynamic" | "generic" | "hidden">(KEYS.greetingStyle, "dynamic");
-  const [clearMode, setClearMode] = useLocalStorage(KEYS.clearMode, false);
   const preferences = migrateFocusPreferences(storedPreferences);
   const themeSlot = activeThemeSlot;
   const selectedTheme = themePreferences[themeSlot];
@@ -269,9 +264,8 @@ export function SettingsPanel({
     if (section === "clock") return <div className="settings-content"><p className="eyebrow">Home clock</p><h3>Let the time stay quiet.</h3><div className="settings-toggle-list"><label className="settings-toggle"><span><strong>24-hour clock</strong><small>Use 18:30 instead of 6:30 PM.</small></span><input type="checkbox" checked={use24Hour} onChange={(event) => onUse24HourChange(event.target.checked)} /></label><label className="settings-toggle"><span><strong>Show seconds</strong><small>Show the precise second on Home.</small></span><input type="checkbox" checked={showSeconds} onChange={(event) => onShowSecondsChange(event.target.checked)} /></label></div></div>;
     if (section === "home") return <div className="settings-content"><p className="eyebrow">Home presentation</p><h3>Keep the greeting personal.</h3><label className="settings-field">Dashboard name<input value={dashboardName} onChange={(event) => setDashboardName(event.target.value)} placeholder="Your name" /></label><label className="settings-field">Greeting<select value={greetingStyle} onChange={(event) => setGreetingStyle(event.target.value as typeof greetingStyle)}><option value="dynamic">Dynamic</option><option value="generic">Generic</option><option value="hidden">Hidden</option></select></label></div>;
     if (section === "stats") return <div className="settings-content space-y-4"><DailyStats sessions={sessions} today={today} /><WeeklyHeatmap sessions={sessions} /></div>;
-    if (section === "music") return <div className="settings-content"><p className="eyebrow">Music sources</p><h3>Keep your soundtrack close.</h3><p className="settings-copy">Built-in stations and allowlisted HTTPS provider links live in Music. Providers may block embeds by region or account.</p></div>;
     if (section === "about") return <div className="settings-content"><p className="eyebrow">StudyRythms</p><h3>A quiet anime focus room.</h3><p className="settings-copy">Account-backed sessions, original scenery, layered procedural sound, and your own focus history.</p></div>;
-    return <div className="settings-content"><p className="eyebrow">Extras</p><h3>Keep the useful edges.</h3><label className="settings-toggle"><span><strong>Clear mode</strong><small>Hide the brand and helper text while keeping the timer and dock available.</small></span><input type="checkbox" checked={clearMode} onChange={(event) => setClearMode(event.target.checked)} /></label><div className="settings-info-card"><strong>Keyboard</strong><p>F toggles Focus · N opens History · Escape closes the topmost surface.</p></div><div className="settings-extras-actions"><Button type="button" variant="secondary" onClick={onOpenHistory}>Open History</Button><Button type="button" variant="secondary" onClick={onOpenRest}>Open Break tools</Button></div></div>;
+    return null;
   };
 
   return (

@@ -437,11 +437,6 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
         tasks={tasks}
         sessions={visibleSessions}
         today={today}
-        onOpenHistory={() => setOpenPanel("history")}
-        onOpenRest={() => {
-          closeWorkspacePanel();
-          setOpenPanel("rest");
-        }}
       />
 
       {migrationData && <MigrationPrompt data={migrationData} onCancel={() => setMigrationHidden(true)} onImported={() => { setMigrationHidden(true); void reloadTasks(); refreshHistory(); }} />}

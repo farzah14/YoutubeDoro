@@ -46,6 +46,12 @@ test("settings stats uses editorial charcoal surfaces instead of blue fills", ()
   assert.match(stylesSource, /\.overlay-panel:has\(\.stats-dashboard\) \.overlay-panel__surface[\s\S]*background:\s*var\(--manga-charcoal\)/);
 });
 
+test("settings removes Music and Extras sections", () => {
+  const sectionDeclaration = settingsPanelSource.match(/const sections[\s\S]*?\];/)?.[0] ?? "";
+  assert.doesNotMatch(sectionDeclaration, /\["music", "Music"\]|\["extras", "Extras"\]/);
+  assert.doesNotMatch(settingsPanelSource, /section === "music"|section === "extras"/);
+});
+
 test("settings exposes the signed-in account and session history", () => {
   assert.match(settingsPanelSource, /\["account", "Account"\]/);
   assert.match(settingsPanelSource, /\["history", "History"\]/);
@@ -68,7 +74,7 @@ test("Settings Account owns sign out instead of the header", () => {
 test("Account removes provider implementation copy and makes Sign out red", () => {
   assert.doesNotMatch(settingsPanelSource, /Authentication is handled by Supabase/);
   assert.match(settingsPanelSource, /settings-account__sign-out/);
-  assert.match(stylesSource, /\.settings-account__actions \.settings-account__sign-out\s*\{[\s\S]*background:\s*var\(--manga-vermilion\)/);
+  assert.match(stylesSource, /\.settings-account__actions \.settings-account__sign-out,\s*\.history-row__actions \.history-row__delete-session\s*\{[\s\S]*background:\s*var\(--manga-vermilion\)/);
 });
 
 test("Focus Timer removes section dividers and centers duration labels", () => {
