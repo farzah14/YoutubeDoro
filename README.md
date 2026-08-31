@@ -1,8 +1,8 @@
-# YoutubeDoro
+# StudyRythms
 
 An immersive anime-themed focus workspace and learning tracker built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, and **Supabase**.
 
-YoutubeDoro combines aesthetic anime visual environments, procedural ambient soundscapes, curated Lo-Fi audio, multi-mode productivity timers (Pomodoro, Animedoro, 52/17, Countdown, Stopwatch), structured task and subtask planning, and cloud-synced learning session history with analytics.
+StudyRythms combines aesthetic anime visual environments, procedural ambient soundscapes, curated Lo-Fi audio, multi-mode productivity timers (Pomodoro, Animedoro, 52/17, Countdown, Stopwatch), structured task and subtask planning, and cloud-synced learning session history with analytics.
 
 ---
 
@@ -67,7 +67,7 @@ YoutubeDoro combines aesthetic anime visual environments, procedural ambient sou
 ## Project Structure
 
 ```text
-YoutubeDoro/
+StudyRythms/
 ├── app/                        # Next.js App Router
 │   ├── api/                    # Backend API Route Handlers
 │   │   └── tracker/            # Tasks, subtasks, sessions, migration APIs
@@ -191,5 +191,6 @@ npm run build
 ## License
 
 This project is licensed under the MIT License.
+
 
 
