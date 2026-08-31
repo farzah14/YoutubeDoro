@@ -5325,7 +5325,7 @@ textarea:focus-visible,
 .subtasks-add { color: var(--manga-paper); }
 
 .music-shelf__track {
-  grid-template-columns: .55rem 2.7rem 3.6rem minmax(0, 1fr) auto;
+  grid-template-columns: .55rem minmax(0, 1fr) auto;
   background: transparent;
 }
 
@@ -5335,18 +5335,6 @@ textarea:focus-visible,
 .music-shelf__track-copy strong { color: var(--manga-paper); }
 .music-shelf__track-copy small,
 .music-shelf__volume output { color: var(--manga-paper-muted); }
-
-.music-shelf__channel {
-  color: var(--manga-paper-muted);
-  font: 600 .62rem/1.2 var(--font-mono);
-  letter-spacing: .08em;
-}
-
-.music-shelf__frequency {
-  color: var(--manga-paper-muted);
-  font: 600 .62rem/1.2 var(--font-mono);
-  letter-spacing: .08em;
-}
 
 .music-shelf__tab,
 .music-shelf__track-state { color: var(--manga-paper-deep); }
@@ -5397,8 +5385,7 @@ textarea:focus-visible,
   .music-shelf { padding: .8rem; }
   .subtasks-panel { padding: .8rem; }
   .music-shelf__controls, .subtasks-add { flex-wrap: wrap; }
-  .music-shelf__track { grid-template-columns: .45rem 2.5rem minmax(0, 1fr) auto; }
-  .music-shelf__frequency { display: none; }
+  .music-shelf__track { grid-template-columns: .45rem minmax(0, 1fr) auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

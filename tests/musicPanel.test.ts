@@ -11,9 +11,9 @@ test("Music exposes a simplified accessible station list", () => {
   assert.doesNotMatch(source, /STATIONS \/\//);
   assert.doesNotMatch(source, />CH /);
   assert.doesNotMatch(source, />BAND /);
-  assert.match(source, /music-shelf__channel/);
-  assert.match(source, /music-shelf__frequency/);
-  assert.match(source, /const band =/);
+  assert.doesNotMatch(source, /music-shelf__channel/);
+  assert.doesNotMatch(source, /music-shelf__frequency/);
+  assert.doesNotMatch(source, /const band =/);
   assert.match(source, /ON AIR/);
   assert.doesNotMatch(source, />Broadcast desk</);
   assert.match(source, /music-shelf__now-playing/);

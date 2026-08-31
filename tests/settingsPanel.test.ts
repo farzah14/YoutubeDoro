@@ -142,7 +142,6 @@ test("Manga Editorial Desk keeps Settings opaque and readable", () => {
 
 test("Music and Sub-tasks receive the frozen editorial hooks", () => {
   for (const token of [
-    "music-shelf__channel", "music-shelf__frequency",
     "subtasks-context__folio",
   ]) {
     assert.match(stylesSource, new RegExp("\\." + token + "\\s*\\{"));
