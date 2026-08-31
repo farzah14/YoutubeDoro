@@ -1179,10 +1179,10 @@ textarea:focus-visible,
 .home-hero__clock {
   color: #fff;
   font-family: var(--font-mono);
-  font-size: clamp(6rem, 12vw, 11rem);
-  font-weight: 850;
-  letter-spacing: -0.085em;
-  line-height: 0.72;
+  font-size: clamp(5.25rem, 10vw, 8.5rem);
+  font-weight: 760;
+  letter-spacing: -0.065em;
+  line-height: 0.92;
   text-shadow: 0 8px 42px rgba(0, 0, 0, 0.45);
 }
 
@@ -2740,6 +2740,7 @@ textarea:focus-visible,
     bottom: calc(100% + 0.5rem);
   }
 
+  .home-hero__clock,
   .focus-dashboard__time {
     font-size: clamp(4rem, 24vw, 7rem);
   }
@@ -4325,7 +4326,7 @@ textarea:focus-visible,
   }
 
   .home-hero__clock {
-    font-size: clamp(4.5rem, 24vw, 6.25rem);
+    font-size: clamp(4rem, 24vw, 7rem);
   }
 
   .workspace-dock {
