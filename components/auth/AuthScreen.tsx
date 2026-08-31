@@ -137,7 +137,6 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
                 </span>
                 <span>Continue with Google</span>
               </span>
-              <span className="auth-button__arrow" aria-hidden="true">↗</span>
             </button>
           )}
           {!isReset && <div className="auth-divider"><span>or use email</span></div>}
@@ -224,7 +223,7 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
               <>
                 <span>{isSignUp ? "Already have an account?" : "New to StudyRythms?"}</span>
                 <button type="button" onClick={() => changeAccountMode(isSignUp ? "sign-in" : "sign-up")}>
-                  {isSignUp ? "Sign in" : "Create an account"} <span aria-hidden="true">↗</span>
+                  {isSignUp ? "Sign in" : "Create an account"}
                 </button>
               </>
             )}
