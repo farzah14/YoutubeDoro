@@ -1851,15 +1851,18 @@ textarea:focus-visible,
 
 .priority-work-row__moves {
   display: inline-flex;
-  gap: 0.15rem;
+  gap: 0.35rem;
+  margin-inline-start: 0.35rem;
 }
 
 .priority-work-row__moves button,
 .priority-work-row__delete {
   display: grid;
-  height: 2rem;
-  width: 2rem;
+  height: 2.25rem;
+  width: 2.25rem;
+  margin: 0.1rem 0;
   place-items: center;
+  padding: 0.55rem;
   color: var(--atelier-moon);
 }
 
@@ -5245,6 +5248,16 @@ textarea:focus-visible,
   border-color: var(--manga-vermilion);
   background: color-mix(in srgb, var(--manga-vermilion) 82%, black);
   color: var(--manga-paper);
+}
+
+.priority-work-row__delete {
+  margin-inline-start: 0.35rem;
+  color: var(--manga-vermilion);
+}
+
+.priority-work-row__delete:hover,
+.priority-work-row__delete:focus-visible {
+  color: var(--manga-vermilion);
 }
 
 .settings-quiet-action:hover,

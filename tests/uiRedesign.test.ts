@@ -94,6 +94,14 @@ test("Focus Priorities use ordered work rows without decorative task controls", 
   assert.doesNotMatch(prioritiesSource, /task-confetti|priority-task__emoji|priority-task__color|task\.emoji/);
 });
 
+test("Focus Priorities move and delete icons have spaced touch targets", () => {
+  assert.match(prioritiesSource, /priority-work-row__moves/);
+  assert.match(prioritiesSource, /priority-work-row__delete/);
+  assert.match(stylesSource, /\.priority-work-row__moves\s*\{[\s\S]*gap:\s*0\.35rem[\s\S]*margin-inline-start:\s*0\.35rem/);
+  assert.match(stylesSource, /\.priority-work-row__moves button,\s*\.priority-work-row__delete\s*\{[\s\S]*height:\s*2\.25rem[\s\S]*width:\s*2\.25rem[\s\S]*margin:\s*0\.1rem 0[\s\S]*padding:\s*0\.55rem/);
+  assert.match(stylesSource, /\.priority-work-row__delete\s*\{[\s\S]*color:\s*var\(--manga-vermilion\)/);
+});
+
 test("Focus Priorities actions use the atelier palette", () => {
   assert.match(stylesSource, /\.priorities-add button\s*\{[^}]*background:\s*var\(--atelier-lantern\)/);
   assert.match(stylesSource, /\.priorities-progress i\s*\{[^}]*background:\s*var\(--atelier-moss\)/);
