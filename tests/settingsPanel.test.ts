@@ -71,6 +71,12 @@ test("Account removes provider implementation copy and makes Sign out red", () =
   assert.match(stylesSource, /\.settings-account__actions \.settings-account__sign-out\s*\{[\s\S]*background:\s*var\(--manga-vermilion\)/);
 });
 
+test("Focus Timer removes section dividers and centers duration labels", () => {
+  assert.match(stylesSource, /\.settings-duration-list,\s*\.settings-behavior-list\s*\{[\s\S]*border-top:\s*0/);
+  assert.match(stylesSource, /\.settings-recipe-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);
+  assert.match(stylesSource, /\.settings-recipe-row > span:first-child\s*\{[\s\S]*text-align:\s*center/);
+});
+
 test("Focus Timer notification permission and Preview stay user-action driven", () => {
   assert.match(settingsPanelSource, /visibilitychange/);
   assert.match(settingsPanelSource, /preferences\.notificationEnabled && notificationState === "granted"/);

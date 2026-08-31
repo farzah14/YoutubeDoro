@@ -3787,7 +3787,11 @@ textarea:focus-visible,
 }
 
 .settings-duration-list,
-.settings-behavior-list,
+.settings-behavior-list {
+  margin-top: 1.5rem;
+  border-top: 0;
+}
+
 .settings-signal {
   margin-top: 1.5rem;
   border-top: 1px solid var(--atelier-line);
@@ -3795,13 +3799,31 @@ textarea:focus-visible,
 
 .settings-recipe-row,
 .settings-recipe-toggle {
-  display: flex;
   min-height: 3.25rem;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   border-bottom: 1px solid color-mix(in srgb, var(--atelier-line) 72%, transparent);
   color: var(--atelier-mist);
+}
+
+.settings-recipe-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.settings-recipe-row > span:first-child {
+  grid-column: 2;
+  text-align: center;
+}
+
+.settings-recipe-row > .settings-number-field {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.settings-recipe-toggle {
+  display: flex;
+  justify-content: space-between;
 }
 
 .settings-recipe-toggle {
