@@ -3501,13 +3501,14 @@ textarea:focus-visible,
   position: absolute;
   top: 0.55rem;
   right: 0.55rem;
-  border: 1px solid var(--border-focus);
-  border-radius: 999px;
-  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  padding: 0.25rem 0.45rem;
+  padding: 0;
 }
 
 .settings-info-grid {
@@ -5193,10 +5194,16 @@ textarea:focus-visible,
 }
 
 .settings-theme-card__mark {
-  border: 1px solid var(--manga-vermilion);
-  border-radius: 2px;
-  background: var(--manga-charcoal);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--manga-vermilion);
+  padding: 0;
+}
+
+.settings-theme-card__mark svg {
+  height: 1.1rem;
+  width: 1.1rem;
 }
 
 .settings-range input,

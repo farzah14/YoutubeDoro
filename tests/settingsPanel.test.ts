@@ -118,7 +118,11 @@ test("Themes exposes the Studio Window contact-sheet contract", () => {
   assert.match(settingsPanelSource, /settings-theme-card__copy/);
   assert.match(settingsPanelSource, /settings-theme-card__mark/);
   assert.match(settingsPanelSource, /<CheckIcon[^>]*aria-hidden="true"/);
-  assert.match(settingsPanelSource, />Selected</);
+  assert.doesNotMatch(settingsPanelSource, />Selected</);
+  assert.match(settingsPanelSource, /settings-theme-card__mark[^>]*aria-label="Selected theme"/);
+  assert.match(stylesSource, /\.settings-theme-card__mark\s*\{[\s\S]*display:\s*inline-flex[\s\S]*border:\s*0[\s\S]*border-radius:\s*0[\s\S]*background:\s*transparent[\s\S]*padding:\s*0/);
+  assert.match(stylesSource, /\.settings-theme-card__mark svg\s*\{[\s\S]*height:\s*1\.1rem[\s\S]*width:\s*1\.1rem/);
+  assert.doesNotMatch(stylesSource, /\.settings-theme-card__mark\s*\{[\s\S]*width:\s*2\.25rem[\s\S]*height:\s*2\.25rem/);
   assert.match(settingsPanelSource, /aria-pressed=\{selected\}/);
 });
 
