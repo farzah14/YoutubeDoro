@@ -85,7 +85,7 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     const completed = previous.status === "running" &&
       (previous.phase !== state.phase || state.status === "done");
     if (completed) {
-      if (preferences.notificationEnabled) notifyTimerComplete(previous.phase === "focus" ? "Your focus interval is complete." : "Your break is complete.");
+      if (preferences.notificationEnabled) void notifyTimerComplete(previous.phase === "focus" ? "Your focus interval is complete." : "Your break is complete.");
       void playTimerAlert(preferences.alertSound, preferences.alertVolume);
       if (previous.phase === "focus") callbacks.current.onFocusDone?.(previous.targetSeconds, state.phase === "break");
       else callbacks.current.onBreakDone?.(previous.targetSeconds);

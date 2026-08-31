@@ -5181,6 +5181,19 @@ textarea:focus-visible,
   color: var(--manga-paper);
 }
 
+.settings-account__actions .settings-account__sign-out {
+  border-color: var(--manga-vermilion);
+  background: var(--manga-vermilion);
+  color: var(--manga-paper);
+}
+
+.settings-account__actions .settings-account__sign-out:hover:not(:disabled),
+.settings-account__actions .settings-account__sign-out:focus-visible {
+  border-color: var(--manga-vermilion);
+  background: color-mix(in srgb, var(--manga-vermilion) 82%, black);
+  color: var(--manga-paper);
+}
+
 .settings-quiet-action:hover,
 .settings-quiet-action:focus-visible,
 .settings-randomize:hover,

@@ -35,10 +35,9 @@ export function SubtaskPanel({
   return (
     <section className="subtasks-panel" aria-labelledby="subtasks-title">
       <div className="subtasks-context">
-        <p className="subtasks-context__folio">{activeTask ? "FOCUS PLAN" : "NO PRIORITY"}</p>
-        <p className="eyebrow">Focus plan</p>
+        {!activeTask && <p className="subtasks-context__folio">NO PRIORITY</p>}
         <h3 id="subtasks-title">Sub-tasks</h3>
-        <p>{activeTask ? "Focus plan / " + activeTask.text : "Choose a focus priority first."}</p>
+        <p>{activeTask ? activeTask.text : "Choose a focus priority first."}</p>
       </div>
 
       {!activeTask ? (

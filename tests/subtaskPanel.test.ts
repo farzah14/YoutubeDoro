@@ -32,6 +32,8 @@ test("subtask checkboxes expose complete and incomplete actions", () => {
 test("subtasks expose priority status and CUT row semantics without folio decoration", () => {
   assert.match(panelSource, /subtasks-context__folio/);
   assert.doesNotMatch(panelSource, /FOLIO \/ /);
+  assert.doesNotMatch(panelSource, /FOCUS PLAN|Focus plan \//);
+  assert.match(panelSource, /NO PRIORITY/);
   assert.match(panelSource, /subtask-row__index/);
   assert.match(panelSource, /CUT/);
   assert.match(stylesSource, /\.subtasks-panel\s*\{[\s\S]*border:\s*0/);

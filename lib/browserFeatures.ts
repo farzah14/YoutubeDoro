@@ -1,18 +1,60 @@
 export type NotificationState = "unsupported" | "default" | "granted" | "denied";
 
+function getNotificationApi(): typeof Notification | null {
+  if (typeof window === "undefined" || !("Notification" in window)) return null;
+  return window.Notification;
+}
+
 export function getNotificationState(): NotificationState {
-  if (typeof Notification === "undefined") return "unsupported";
-  return Notification.permission;
+  return getNotificationApi()?.permission ?? "unsupported";
+}
+
+async function registerNotificationServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null;
+  try {
+    const registration = await navigator.serviceWorker.register("/notification-sw.js", { scope: "/" });
+    return await navigator.serviceWorker.ready ?? registration;
+  } catch {
+    return null;
+  }
 }
 
 export async function requestNotificationPermission(): Promise<NotificationState> {
-  if (typeof Notification === "undefined") return "unsupported";
-  return Notification.requestPermission();
+  const notificationApi = getNotificationApi();
+  if (!notificationApi?.requestPermission) return "unsupported";
+  try {
+    const permission = await notificationApi.requestPermission();
+    if (permission === "granted") await registerNotificationServiceWorker();
+    return permission;
+  } catch {
+    return getNotificationState();
+  }
 }
 
-export function notifyTimerComplete(title: string): void {
+export async function notifyTimerComplete(title: string): Promise<void> {
   if (getNotificationState() !== "granted") return;
-  try { new Notification("Focus interval complete", { body: title }); } catch { /* browser blocked construction */ }
+
+  const options: NotificationOptions = {
+    body: title,
+    tag: "studyrithms-timer",
+  };
+  const registration = await registerNotificationServiceWorker();
+  if (registration && typeof registration.showNotification === "function") {
+    try {
+      await registration.showNotification("Focus interval complete", options);
+      return;
+    } catch {
+      // Fall back to a page notification where supported.
+    }
+  }
+
+  const notificationApi = getNotificationApi();
+  if (!notificationApi) return;
+  try {
+    new notificationApi("Focus interval complete", options);
+  } catch {
+    // The browser may block page notifications even after permission changes.
+  }
 }
 
 let timerAudioContext: AudioContext | null = null;
@@ -31,25 +73,39 @@ export async function primeTimerAlertAudio(): Promise<void> {
     const context = getTimerAudioContext();
     if (!context || context.state === "closed") return;
     if (context.state !== "running") await context.resume();
-  } catch { /* autoplay or device policy can reject audio */ }
+  } catch {
+    // Autoplay or device policy can reject audio.
+  }
 }
 
-export async function playTimerAlert(kind: "soft" | "level-up" | "none", volume: number): Promise<void> {
+export function playTimerAlert(kind: "soft" | "level-up" | "none", volume: number): void {
   if (kind === "none") return;
+
   try {
     const context = getTimerAudioContext();
-    if (!context) return;
-    await primeTimerAlertAudio();
+    if (!context || context.state === "closed") return;
+    const normalizedVolume = Math.min(1, Math.max(0, volume / 100));
+    if (normalizedVolume === 0) return;
+
+    if (context.state !== "running") void context.resume().catch(() => undefined);
+
     const oscillator = context.createOscillator();
     const gain = context.createGain();
+    const startAt = context.currentTime;
+    const duration = kind === "level-up" ? 0.5 : 0.28;
+    const peak = Math.max(0.02, normalizedVolume * 0.22);
+
     oscillator.type = kind === "level-up" ? "triangle" : "sine";
     oscillator.frequency.value = kind === "level-up" ? 880 : 523.25;
-    gain.gain.setValueAtTime(Math.min(1, Math.max(0, volume / 100)) * 0.12, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + (kind === "level-up" ? 0.5 : 0.28));
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(peak, startAt + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
     oscillator.connect(gain).connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + (kind === "level-up" ? 0.5 : 0.28));
-  } catch { /* audio is an enhancement, not a timer dependency */ }
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.05);
+  } catch {
+    // Audio is an enhancement, not a timer dependency.
+  }
 }
 
 export interface WakeLockHandle {

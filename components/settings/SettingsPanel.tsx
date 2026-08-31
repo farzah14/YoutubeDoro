@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/supabase/client";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -107,6 +107,16 @@ export function SettingsPanel({
   const selectedTheme = themePreferences[themeSlot];
   const customId = customThemeIds[themeSlot];
 
+  useEffect(() => {
+    const refreshNotificationState = () => setNotificationState(getNotificationState());
+    window.addEventListener("focus", refreshNotificationState);
+    document.addEventListener("visibilitychange", refreshNotificationState);
+    return () => {
+      window.removeEventListener("focus", refreshNotificationState);
+      document.removeEventListener("visibilitychange", refreshNotificationState);
+    };
+  }, []);
+
   const filteredThemes = useMemo(() => THEME_ORDER.filter((id) => {
     const theme = COZY_THEMES[id];
     return (!query || `${theme.name} ${theme.jpName} ${theme.description}`.toLowerCase().includes(query.toLowerCase()))
@@ -177,11 +187,11 @@ export function SettingsPanel({
         <p className="settings-copy">Tasks, subtasks, sessions, breaks, and session notes belong to this account.</p>
         <div className="settings-info-grid">
           <div className="settings-info-card"><p className="eyebrow">Email</p><strong className="settings-account__email">{accountEmail || "Unavailable"}</strong><p>Your authenticated account email.</p></div>
-          <div className="settings-info-card"><p className="eyebrow">Sign-in method</p><strong>{accountProvider ? accountProvider.charAt(0).toUpperCase() + accountProvider.slice(1) : "Email"}</strong><p>Authentication is handled by Supabase.</p></div>
+          <div className="settings-info-card"><p className="eyebrow">Sign-in method</p><strong>{accountProvider ? accountProvider.charAt(0).toUpperCase() + accountProvider.slice(1) : "Email"}</strong></div>
         </div>
         <div className="settings-extras-actions settings-account__actions">
           <Button type="button" variant="secondary" onClick={() => selectSection("history")}>Open session History</Button>
-          <Button type="button" variant="secondary" onClick={() => { void handleSignOut(); }} disabled={signingOut}>
+          <Button type="button" variant="danger" className="settings-account__sign-out" onClick={() => { void handleSignOut(); }} disabled={signingOut}>
             {signingOut ? "Signing out…" : "Sign out"}
           </Button>
         </div>
@@ -242,8 +252,8 @@ export function SettingsPanel({
             <input type="checkbox" checked={preferences.autoStartBreaks} onChange={(event) => setStoredPreferences({ ...preferences, autoStartBreaks: event.target.checked })} />
           </label>
           <label className="settings-toggle settings-recipe-toggle">
-            <span><strong>Browser notifications</strong><small>{notificationState === "denied" ? "Blocked in browser settings." : notificationState === "unsupported" ? "Not supported in this browser." : "Notify when an interval completes."}</small></span>
-            <input type="checkbox" checked={preferences.notificationEnabled} disabled={notificationState === "unsupported" || notificationState === "denied"} onChange={async (event) => { const next = event.target.checked; const permission = next ? await requestNotificationPermission() : notificationState; setNotificationState(permission); setStoredPreferences({ ...preferences, notificationEnabled: next && permission === "granted" }); }} />
+            <span><strong>Browser notifications</strong><small>{notificationState === "denied" ? "Allow notifications for this site in browser settings, then return here." : notificationState === "unsupported" ? "Not supported in this browser." : "Notify when an interval completes."}</small></span>
+            <input type="checkbox" checked={preferences.notificationEnabled && notificationState === "granted"} disabled={notificationState === "unsupported" || notificationState === "denied"} onChange={async (event) => { const next = event.target.checked; const permission = next ? await requestNotificationPermission() : notificationState; setNotificationState(permission); setStoredPreferences({ ...preferences, notificationEnabled: next && permission === "granted" }); }} />
           </label>
         </section>
 
@@ -251,7 +261,7 @@ export function SettingsPanel({
           <h4 id="timer-signal-title">Signal</h4>
           <label>Alert sound<select value={preferences.alertSound} onChange={(event) => setStoredPreferences({ ...preferences, alertSound: event.target.value as typeof preferences.alertSound })}><option value="soft">Soft</option><option value="level-up">Level Up</option><option value="none">No alert</option></select></label>
           <label><span>Alert volume <output>{preferences.alertVolume}%</output></span><input type="range" min="0" max="100" value={preferences.alertVolume} onChange={(event) => setStoredPreferences({ ...preferences, alertVolume: Number(event.target.value) })} /></label>
-          <button type="button" className="settings-quiet-action" onClick={() => { void playTimerAlert(preferences.alertSound, preferences.alertVolume); }}>Preview</button>
+          <button type="button" className="settings-quiet-action" onClick={() => { playTimerAlert(preferences.alertSound, preferences.alertVolume); }}>Preview</button>
         </section>
 
         <div className="settings-recipe-note">

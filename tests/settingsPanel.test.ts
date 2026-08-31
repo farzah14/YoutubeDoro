@@ -65,6 +65,20 @@ test("Settings Account owns sign out instead of the header", () => {
   assert.match(stylesSource, /\.settings-account__actions\s*\{/);
 });
 
+test("Account removes provider implementation copy and makes Sign out red", () => {
+  assert.doesNotMatch(settingsPanelSource, /Authentication is handled by Supabase/);
+  assert.match(settingsPanelSource, /settings-account__sign-out/);
+  assert.match(stylesSource, /\.settings-account__actions \.settings-account__sign-out\s*\{[\s\S]*background:\s*var\(--manga-vermilion\)/);
+});
+
+test("Focus Timer notification permission and Preview stay user-action driven", () => {
+  assert.match(settingsPanelSource, /visibilitychange/);
+  assert.match(settingsPanelSource, /preferences\.notificationEnabled && notificationState === "granted"/);
+  assert.match(settingsPanelSource, /requestNotificationPermission/);
+  assert.match(settingsPanelSource, /playTimerAlert\(preferences\.alertSound, preferences\.alertVolume\)/);
+  assert.match(settingsPanelSource, /Allow notifications for this site in browser settings/);
+});
+
 test("Settings does not expose a quote setting", () => {
   assert.doesNotMatch(settingsPanelSource, /showQuote|\["quotes", "Quotes"\]|section === "quotes"/);
 });

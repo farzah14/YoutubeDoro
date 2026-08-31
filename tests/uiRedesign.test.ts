@@ -72,7 +72,8 @@ test("Music uses aligned sound-shelf rows instead of emoji station cards", () =>
 });
 
 test("Sub-tasks use parent context and a progress-led checklist", () => {
-  assert.match(subtasksSource, /Focus plan \/|For /);
+  assert.match(subtasksSource, /Choose a focus priority first\.|activeTask\.text/);
+  assert.doesNotMatch(subtasksSource, /FOCUS PLAN|Focus plan \//);
   assert.match(subtasksSource, /subtasks-progress/);
   assert.match(subtasksSource, /subtask-row/);
   assert.doesNotMatch(subtasksSource, /subtasks-grid|subtask-card/);
