@@ -3657,6 +3657,11 @@ textarea:focus-visible,
   line-height: 1.6;
 }
 
+.settings-about-copy {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
 .settings-content__heading {
   display: flex;
   align-items: flex-start;
