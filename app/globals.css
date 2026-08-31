@@ -5201,9 +5201,9 @@ textarea:focus-visible,
 }
 
 .subtasks-panel {
-  border: 1px solid var(--manga-rule);
-  border-radius: 8px;
-  background: var(--manga-charcoal);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--manga-paper);
   box-shadow: none;
   padding: 1rem;

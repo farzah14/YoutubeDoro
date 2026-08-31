@@ -29,10 +29,13 @@ test("subtask checkboxes expose complete and incomplete actions", () => {
   assert.match(panelSource, /Mark complete sub-task/);
 });
 
-test("subtasks expose manuscript folio and CUT row semantics", () => {
+test("subtasks expose priority status and CUT row semantics without folio decoration", () => {
   assert.match(panelSource, /subtasks-context__folio/);
+  assert.doesNotMatch(panelSource, /FOLIO \/ /);
   assert.match(panelSource, /subtask-row__index/);
   assert.match(panelSource, /CUT/);
+  assert.match(stylesSource, /\.subtasks-panel\s*\{[\s\S]*border:\s*0/);
+  assert.match(stylesSource, /\.subtasks-panel\s*\{[\s\S]*background:\s*transparent/);
 });
 
 test("subtasks render as a single checklist at every width", () => {
