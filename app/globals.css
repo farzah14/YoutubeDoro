@@ -3823,6 +3823,11 @@ textarea:focus-visible,
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.settings-recipe-row[data-duration="focusMinutes"],
+.settings-recipe-row[data-duration="breakMinutes"] {
+  border-bottom: 0;
+}
+
 .settings-recipe-row > span:first-child {
   grid-column: 1;
   text-align: left;

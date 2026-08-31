@@ -207,7 +207,7 @@ export function SettingsPanel({
         <section className="settings-duration-list" aria-labelledby="timer-durations-title">
           <h4 id="timer-durations-title">Session lengths</h4>
           {timerDurations.map(({ key, label, max }) => (
-            <label className="settings-recipe-row" key={key}>
+            <label className="settings-recipe-row" data-duration={key} key={key}>
               <span>{label}</span>
               <span className="settings-number-field">
                 <input

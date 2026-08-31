@@ -85,6 +85,11 @@ test("Focus Timer removes section dividers, keeps labels left, and centers numbe
   assert.match(stylesSource, /\.settings-number-field input\s*\{[\s\S]*text-align:\s*center/);
 });
 
+test("Focus Timer removes only Focus and Break row separators", () => {
+  assert.match(settingsPanelSource, /data-duration=\{key\}/);
+  assert.match(stylesSource, /\.settings-recipe-row\[data-duration="focusMinutes"\],\s*\.settings-recipe-row\[data-duration="breakMinutes"\]\s*\{[\s\S]*border-bottom:\s*0/);
+});
+
 test("Focus Timer notification permission and Preview stay user-action driven", () => {
   assert.match(settingsPanelSource, /visibilitychange/);
   assert.match(settingsPanelSource, /preferences\.notificationEnabled && notificationState === "granted"/);
