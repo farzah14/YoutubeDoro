@@ -88,7 +88,7 @@ test("Add task keeps the button left and compact timer right", () => {
   assert.match(stylesSource, /\.priorities-add\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) auto max-content/);
   assert.match(stylesSource, /\.priorities-add label\s*\{[\s\S]*width:\s*max-content/);
   assert.match(stylesSource, /\.priorities-add input\[type="number"\]\s*\{[\s\S]*width:\s*2\.75rem/);
-  assert.match(stylesSource, /\.priorities-add button\s*\{[\s\S]*min-height:\s*3\.25rem/);
+  assert.match(stylesSource, /\.priorities-add button\s*\{[\s\S]*width:\s*max-content[\s\S]*min-height:\s*2\.8rem[\s\S]*justify-self:\s*start/);
 });
 
 test("Focus Priorities use ordered work rows without decorative task controls", () => {
@@ -98,11 +98,10 @@ test("Focus Priorities use ordered work rows without decorative task controls", 
   assert.doesNotMatch(prioritiesSource, /task-confetti|priority-task__emoji|priority-task__color|task\.emoji/);
 });
 
-test("Focus Priorities move and delete icons have spaced touch targets", () => {
-  assert.match(prioritiesSource, /priority-work-row__moves/);
-  assert.match(prioritiesSource, /priority-work-row__delete/);
-  assert.match(stylesSource, /\.priority-work-row__moves\s*\{[\s\S]*gap:\s*0\.35rem[\s\S]*margin-inline-start:\s*0\.35rem/);
-  assert.match(stylesSource, /\.priority-work-row__moves button,\s*\.priority-work-row__delete\s*\{[\s\S]*height:\s*2\.25rem[\s\S]*width:\s*2\.25rem[\s\S]*margin:\s*0\.1rem 0[\s\S]*padding:\s*0\.55rem/);
+test("Focus Priorities keep only a spaced red trash action", () => {
+  assert.doesNotMatch(prioritiesSource, /ChevronUpIcon|ChevronDownIcon|priority-work-row__moves/);
+  assert.match(prioritiesSource, /className="priority-work-row__delete"/);
+  assert.match(stylesSource, /\.priority-work-row__delete\s*\{[\s\S]*height:\s*2\.25rem[\s\S]*width:\s*2\.25rem[\s\S]*margin:\s*0\.1rem 0[\s\S]*padding:\s*0\.55rem/);
   assert.match(stylesSource, /\.priority-work-row__delete\s*\{[\s\S]*color:\s*var\(--manga-vermilion\)/);
 });
 

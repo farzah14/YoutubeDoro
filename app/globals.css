@@ -1729,15 +1729,17 @@ textarea:focus-visible,
 
 .priorities-add button {
   display: inline-flex;
-  min-height: 3.25rem;
+  width: max-content;
+  min-height: 2.8rem;
   align-items: center;
+  justify-self: start;
   gap: 0.4rem;
   border: 1px solid var(--atelier-lantern);
   border-radius: 6px;
   background: var(--atelier-lantern);
-  padding: 0 1.25rem;
+  padding: 0 1rem;
   color: var(--atelier-ink);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 800;
 }
 
@@ -1763,7 +1765,7 @@ textarea:focus-visible,
 .priority-work-row {
   position: relative;
   display: grid;
-  grid-template-columns: 0.65rem auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 0.65rem auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.75rem;
   min-height: 4.25rem;
@@ -1806,7 +1808,6 @@ textarea:focus-visible,
 }
 
 .priority-work-row__check svg,
-.priority-work-row__moves svg,
 .priority-work-row__delete svg {
   height: 1rem;
   width: 1rem;
@@ -1851,13 +1852,6 @@ textarea:focus-visible,
   text-align: right;
 }
 
-.priority-work-row__moves {
-  display: inline-flex;
-  gap: 0.35rem;
-  margin-inline-start: 0.35rem;
-}
-
-.priority-work-row__moves button,
 .priority-work-row__delete {
   display: grid;
   height: 2.25rem;
@@ -1868,8 +1862,6 @@ textarea:focus-visible,
   color: var(--atelier-moon);
 }
 
-.priority-work-row__moves button:hover:not(:disabled),
-.priority-work-row__moves button:focus-visible,
 .priority-work-row__delete:hover,
 .priority-work-row__delete:focus-visible {
   color: var(--atelier-lantern);
@@ -4433,13 +4425,15 @@ textarea:focus-visible,
     grid-template-columns: 0.65rem auto minmax(0, 1fr) auto;
   }
 
-  .priority-work-row__moves,
-  .priority-work-row__delete {
+  .priority-work-row__eta {
+    grid-column: 3;
     grid-row: 2;
+    justify-self: start;
   }
 
-  .priority-work-row__eta {
-    grid-column: 3 / -1;
+  .priority-work-row__delete {
+    grid-column: 4;
+    grid-row: 2;
     justify-self: end;
   }
 

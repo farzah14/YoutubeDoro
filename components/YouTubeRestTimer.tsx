@@ -122,7 +122,6 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
     toggleTask,
     deleteTask,
     reorderTasks,
-    moveTask,
     updateTask,
     addSubtask,
     toggleSubtask,
@@ -385,7 +384,6 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
           onToggleTask={toggleTask}
           onDeleteTask={deleteTask}
           onReorderTasks={reorderTasks}
-          onMoveTask={moveTask}
           onUpdateTask={updateTask}
           onResetTasks={resetTasks}
         />

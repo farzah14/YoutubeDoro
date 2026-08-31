@@ -11,7 +11,7 @@ import {
 import { DEFAULT_FOCUS_PREFERENCES, migrateFocusPreferences } from "@/lib/migrations";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { TaskItem } from "@/types";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon, TrashIcon } from "../icons";
+import { CheckIcon, PlusIcon, TrashIcon } from "../icons";
 
 interface TaskQueueProps {
   tasks: TaskItem[];
@@ -22,7 +22,6 @@ interface TaskQueueProps {
   onToggleTask: (id: string) => boolean | Promise<boolean>;
   onDeleteTask: (id: string) => void | Promise<unknown>;
   onReorderTasks: (movedId: string, targetId: string) => void | Promise<unknown>;
-  onMoveTask: (id: string, offset: -1 | 1) => void | Promise<unknown>;
   onUpdateTask: (
     id: string,
     patch: Partial<Pick<TaskItem, "text" | "emoji" | "color" | "estimatedMinutes" | "focusedSeconds">>
@@ -43,7 +42,6 @@ export function TaskQueue({
   onToggleTask,
   onDeleteTask,
   onReorderTasks,
-  onMoveTask,
   onUpdateTask,
   onResetTasks,
 }: TaskQueueProps) {
@@ -101,7 +99,7 @@ export function TaskQueue({
 
       <div className="priority-workbench" aria-label="Prioritized tasks">
         {tasks.length === 0 && <p className="priorities-empty">No priorities yet. Add the smallest useful step.</p>}
-        {tasks.map((task, index) => {
+        {tasks.map((task) => {
           const taskProgress = getTaskProgress(task);
           const isActive = task.id === activeTask?.id;
           return (
@@ -131,10 +129,6 @@ export function TaskQueue({
                 <input type="number" min="5" max="480" step="5" defaultValue={task.estimatedMinutes} onBlur={(event) => onUpdateTask(task.id, { estimatedMinutes: Number(event.target.value) })} />
                 <small>min</small>
               </label>
-              <div className="priority-work-row__moves">
-                <button type="button" onClick={() => onMoveTask(task.id, -1)} disabled={index === 0} aria-label={`Move ${task.text} up`}><ChevronUpIcon /></button>
-                <button type="button" onClick={() => onMoveTask(task.id, 1)} disabled={index === tasks.length - 1} aria-label={`Move ${task.text} down`}><ChevronDownIcon /></button>
-              </div>
               <button type="button" className="priority-work-row__delete" onClick={() => onDeleteTask(task.id)} aria-label={`Delete ${task.text}`}><TrashIcon /></button>
               {showProgress && <div className="priority-work-row__progress"><i style={{ width: taskProgress + "%" }} /></div>}
             </article>
