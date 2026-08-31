@@ -77,11 +77,12 @@ test("Account removes provider implementation copy and makes Sign out red", () =
   assert.match(stylesSource, /\.settings-account__actions \.settings-account__sign-out,\s*\.history-row__actions \.history-row__delete-session\s*\{[\s\S]*background:\s*var\(--manga-vermilion\)/);
 });
 
-test("Focus Timer removes section dividers, keeps labels left, and centers duration values", () => {
+test("Focus Timer removes section dividers, keeps labels left, and centers numbers in right-side inputs", () => {
   assert.match(stylesSource, /\.settings-duration-list,\s*\.settings-behavior-list\s*\{[\s\S]*border-top:\s*0/);
-  assert.match(stylesSource, /\.settings-recipe-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);
+  assert.match(stylesSource, /\.settings-recipe-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) auto/);
   assert.match(stylesSource, /\.settings-recipe-row > span:first-child\s*\{[\s\S]*grid-column:\s*1[\s\S]*text-align:\s*left/);
-  assert.match(stylesSource, /\.settings-recipe-row > \.settings-number-field\s*\{[\s\S]*grid-column:\s*2[\s\S]*justify-self:\s*center/);
+  assert.match(stylesSource, /\.settings-recipe-row > \.settings-number-field\s*\{[\s\S]*grid-column:\s*2[\s\S]*justify-self:\s*end/);
+  assert.match(stylesSource, /\.settings-number-field input\s*\{[\s\S]*text-align:\s*center/);
 });
 
 test("Focus Timer notification permission and Preview stay user-action driven", () => {

@@ -3820,7 +3820,7 @@ textarea:focus-visible,
 
 .settings-recipe-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .settings-recipe-row > span:first-child {
@@ -3830,7 +3830,7 @@ textarea:focus-visible,
 
 .settings-recipe-row > .settings-number-field {
   grid-column: 2;
-  justify-self: center;
+  justify-self: end;
 }
 
 .settings-recipe-toggle {
@@ -3867,7 +3867,7 @@ textarea:focus-visible,
   color: var(--atelier-mist);
   font-family: var(--font-mono);
   font-size: 1rem;
-  text-align: right;
+  text-align: center;
 }
 
 .settings-number-field input::-webkit-inner-spin-button,
