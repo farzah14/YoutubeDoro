@@ -1675,7 +1675,7 @@ textarea:focus-visible,
 
 .priorities-add {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto max-content;
   gap: 0.6rem;
 }
 
@@ -1691,8 +1691,10 @@ textarea:focus-visible,
 
 .priorities-add label {
   display: flex;
+  width: max-content;
   min-height: 2.4rem;
   align-items: center;
+  justify-self: end;
   border: 1px solid var(--atelier-line);
   border-radius: 6px;
   background: transparent;

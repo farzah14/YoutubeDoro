@@ -91,12 +91,12 @@ export function TaskQueue({
 
       <form className="priorities-add" onSubmit={handleAdd}>
         <input value={newText} onChange={(event) => setNewText(event.target.value)} placeholder="Add a focus priority" aria-label="Task title" />
+        <button type="submit" disabled={!newText.trim()}><PlusIcon aria-hidden="true" /> Add task</button>
         <label>
           <span className="sr-only">Estimated minutes</span>
           <input type="number" min="5" max="480" step="5" value={estimatedMinutes} onChange={(event) => setEstimatedMinutes(Number(event.target.value))} />
           <small className="priorities-add__unit">min</small>
         </label>
-        <button type="submit" disabled={!newText.trim()}><PlusIcon aria-hidden="true" /> Add task</button>
       </form>
 
       <div className="priority-workbench" aria-label="Prioritized tasks">

@@ -79,10 +79,14 @@ test("Sub-tasks use parent context and a progress-led checklist", () => {
   assert.doesNotMatch(subtasksSource, /subtasks-grid|subtask-card/);
 });
 
-test("Add task controls keep a compact estimate and enlarged submit", () => {
+test("Add task keeps the button left and compact timer right", () => {
+  const addButtonIndex = prioritiesSource.indexOf('<button type="submit"');
+  const timerLabelIndex = prioritiesSource.indexOf('<label>', addButtonIndex);
+  assert.ok(addButtonIndex >= 0 && timerLabelIndex > addButtonIndex);
   assert.match(prioritiesSource, /<small className="priorities-add__unit">min<\/small>/);
   assert.match(stylesSource, /\.priorities-add__unit\s*\{[\s\S]*margin-left:\s*0\.35rem[\s\S]*padding-left:\s*0\.35rem/);
-  assert.match(stylesSource, /\.priorities-add label\s*\{[\s\S]*min-height:\s*2\.4rem/);
+  assert.match(stylesSource, /\.priorities-add\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) auto max-content/);
+  assert.match(stylesSource, /\.priorities-add label\s*\{[\s\S]*width:\s*max-content/);
   assert.match(stylesSource, /\.priorities-add input\[type="number"\]\s*\{[\s\S]*width:\s*2\.75rem/);
   assert.match(stylesSource, /\.priorities-add button\s*\{[\s\S]*min-height:\s*3\.25rem/);
 });
