@@ -32,3 +32,10 @@ test("Music removes the Broadcast Desk label and inner surface outline", () => {
   assert.match(stylesSource, /\.music-shelf\s*\{[\s\S]*border:\s*0/);
   assert.match(stylesSource, /\.music-shelf\s*\{[\s\S]*background:\s*transparent/);
 });
+
+test("Music uses the red underline only for source tabs", () => {
+  assert.match(stylesSource, /\.music-shelf__tab\.is-active\s*\{[\s\S]*border-bottom-color:\s*var\(--manga-vermilion\)/);
+  assert.match(stylesSource, /\.music-shelf__tab\.is-active\s*\{[\s\S]*background:\s*transparent/);
+  assert.doesNotMatch(stylesSource, /\.music-shelf__tab\.is-active,\s*\.music-shelf__track\.is-active/);
+  assert.match(stylesSource, /\.music-shelf__track\.is-active\s*\{[\s\S]*border-color:\s*var\(--manga-rule\)/);
+});

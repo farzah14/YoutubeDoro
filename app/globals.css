@@ -5169,6 +5169,10 @@ textarea:focus-visible,
 .settings-recipe-note,
 .settings-signal { border-color: var(--manga-rule); }
 
+.settings-recipe-toggle {
+  background: transparent;
+}
+
 .settings-signal select,
 .settings-quiet-action,
 .settings-randomize,
@@ -5258,8 +5262,22 @@ textarea:focus-visible,
 
 .music-shelf__tab,
 .music-shelf__track-state { color: var(--manga-paper-deep); }
-.music-shelf__tab.is-active,
-.music-shelf__track.is-active { border-color: var(--manga-vermilion); background: var(--manga-ink); color: var(--manga-paper); }
+.music-shelf__tab:hover,
+.music-shelf__tab:focus-visible {
+  border-color: transparent;
+  color: var(--manga-paper);
+}
+.music-shelf__tab.is-active {
+  border-color: transparent;
+  border-bottom-color: var(--manga-vermilion);
+  background: transparent;
+  color: var(--manga-paper);
+}
+.music-shelf__track.is-active {
+  border-color: var(--manga-rule);
+  background: var(--manga-ink);
+  color: var(--manga-paper);
+}
 .music-shelf__primary,
 .subtasks-empty__action,
 .subtasks-add button { border-color: var(--manga-vermilion); border-radius: 5px; background: var(--manga-vermilion); color: var(--manga-paper); }

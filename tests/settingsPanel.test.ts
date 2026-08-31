@@ -79,6 +79,11 @@ test("Focus Timer notification permission and Preview stay user-action driven", 
   assert.match(settingsPanelSource, /Allow notifications for this site in browser settings/);
 });
 
+test("Focus Timer behavior rows stay transparent and omit the recipe note", () => {
+  assert.doesNotMatch(settingsPanelSource, /Modes|Presets|Pomodoro, Countdown, Stopwatch, Animedoro, and 52\/17 are chosen from Focus/);
+  assert.match(stylesSource, /\.settings-recipe-toggle\s*\{[\s\S]*background:\s*transparent/);
+});
+
 test("Settings does not expose a quote setting", () => {
   assert.doesNotMatch(settingsPanelSource, /showQuote|\["quotes", "Quotes"\]|section === "quotes"/);
 });

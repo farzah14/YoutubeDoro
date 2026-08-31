@@ -4,7 +4,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/supabase/client";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { KEYS, PRESETS } from "@/lib/constants";
+import { KEYS } from "@/lib/constants";
 import { DEFAULT_FOCUS_PREFERENCES, migrateFocusPreferences } from "@/lib/migrations";
 import { COZY_THEMES, THEME_ORDER } from "@/lib/themeConfig";
 import { removeCustomTheme, saveCustomTheme, type CustomThemeMetadata } from "@/lib/customThemeStore";
@@ -264,10 +264,6 @@ export function SettingsPanel({
           <button type="button" className="settings-quiet-action" onClick={() => { playTimerAlert(preferences.alertSound, preferences.alertVolume); }}>Preview</button>
         </section>
 
-        <div className="settings-recipe-note">
-          <p><strong>Modes</strong> Pomodoro, Countdown, Stopwatch, Animedoro, and 52/17 are chosen from Focus.</p>
-          <p><strong>Presets</strong> {PRESETS.learning.join(" · ")} minutes focus.</p>
-        </div>
       </div>
     );
     if (section === "clock") return <div className="settings-content"><p className="eyebrow">Home clock</p><h3>Let the time stay quiet.</h3><div className="settings-toggle-list"><label className="settings-toggle"><span><strong>24-hour clock</strong><small>Use 18:30 instead of 6:30 PM.</small></span><input type="checkbox" checked={use24Hour} onChange={(event) => onUse24HourChange(event.target.checked)} /></label><label className="settings-toggle"><span><strong>Show seconds</strong><small>Show the precise second on Home.</small></span><input type="checkbox" checked={showSeconds} onChange={(event) => onShowSecondsChange(event.target.checked)} /></label></div></div>;
