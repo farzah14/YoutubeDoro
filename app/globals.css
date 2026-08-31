@@ -1178,7 +1178,7 @@ textarea:focus-visible,
 
 .home-hero__clock {
   color: #fff;
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   font-size: clamp(6rem, 12vw, 11rem);
   font-weight: 850;
   letter-spacing: -0.085em;

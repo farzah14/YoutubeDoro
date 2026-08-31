@@ -127,6 +127,7 @@ test("focus surface removes the helper copy and hides the running dock", () => {
 test("focus timer typography gives the method and clock a readable scale", () => {
   assert.match(stylesSource, /\.focus-dashboard__phase-option\s*\{[\s\S]*font-size:\s*0\.7rem/);
   assert.match(stylesSource, /\.focus-dashboard__time\s*\{[\s\S]*font-family:\s*var\(--font-mono\)[\s\S]*font-size:\s*clamp\(5\.25rem/);
+  assert.match(stylesSource, /\.home-hero__clock\s*\{[^}]*font-family:\s*var\(--font-mono\)/);
 });
 
 test("History uses a notepad icon beside the Sub-tasks dock action", () => {
