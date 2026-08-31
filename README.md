@@ -1,4 +1,4 @@
-# YoutubeDoro 🌸
+# YoutubeDoro
 
 An immersive anime-themed focus workspace and learning tracker built with **Next.js 16**, **React 19**, **Tailwind CSS v4**, and **Supabase**.
 
@@ -6,9 +6,9 @@ YoutubeDoro combines aesthetic anime visual environments, procedural ambient sou
 
 ---
 
-## ✨ Features
+## Features
 
-### ⏱️ Multi-Mode Focus Engine
+### Multi-Mode Focus Engine
 - **Multiple Timer Methods**:
   - **Pomodoro**: Classic customizable focus and break intervals.
   - **Animedoro**: Extended deep focus sessions tailored for intentional anime or video rest periods.
@@ -21,7 +21,7 @@ YoutubeDoro combines aesthetic anime visual environments, procedural ambient sou
   - **YouTube Break**: Integrated YouTube player with built-in wellness presets (Desk & Neck Stretch, Eye Strain Relief 20-20-20, Box Breathing, Nature Walks, Cozy Cafe) or custom video links.
 - **Audio & Visual Alerts**: Web Audio chime options (*Soft*, *Level-up*, or *Mute*) and optional browser push notifications.
 
-### 🎨 Atmospheric Theme System
+### Atmospheric Theme System
 - **15 Curated Anime Sceneries**: High-resolution WebP artwork featuring rich color palettes and ambient particle effects (stars, rainfall, floating dust):
   - *Anime Rooms*: Night Study (Default), Rainy Evening, Sunset Study, Lantern Library, Open Sky, Cozy Café.
   - *Ambient Worlds*: Rooftop Blue Hour, Last Train Window, Forest Cabin, Forest Green, Ocean Horizon, Misty Mountains.
@@ -29,7 +29,7 @@ YoutubeDoro combines aesthetic anime visual environments, procedural ambient sou
 - **Dual Workspace Theming**: Assign independent themes and overlay darkness to **Home** and **Focus** workspace slots.
 - **Custom Themes**: Upload custom background imagery with adjustable overlay dimming.
 
-### 🎧 Audio & Soundscape Engine
+### Audio & Soundscape Engine
 - **Procedural Soundscape Generator**: Real-time Web Audio noise synthesis supporting up to 5 simultaneous layered channels with independent volume sliders:
   - *Light Rain* (Highpass filtered white noise)
   - *Campfire* (Lowpass filtered brown noise)
@@ -38,19 +38,19 @@ YoutubeDoro combines aesthetic anime visual environments, procedural ambient sou
 - **Curated Lo-Fi Radio Stations**: Built-in YouTube audio stream player (Lofi Study Beats, Synthwave Coding, Cozy Coffee & Jazz, Binaural Alpha Waves, Gentle Rain & Thunder, Forest Stream).
 - **External Music Provider Embeds**: Embed music widgets from **Spotify**, **Apple Music**, **YouTube / YouTube Music**, **SoundCloud**, and **Amazon Music**.
 
-### 📋 Task & Subtask Planning
+### Task & Subtask Planning
 - **Focus Priorities**: Cloud-synced task queue with drag-and-drop reordering, estimated completion times (5–480 mins), custom emoji markers, color badges, and projected finish time calculations.
 - **Subtask Breakdown**: Nested checklist system for decomposing active priorities into actionable steps with completion progress indicators.
 - **Active Task Progress**: Dynamically attributes active focus timer seconds to specific tasks.
 
-### 📊 Learning Tracker & Analytics
+### Learning Tracker & Analytics
 - **Cloud-Synced History**: Secure session logging powered by Supabase with Row Level Security (RLS). Captures start/end timestamps, net learning time, break duration, timer mode, task title snapshots, status, and session notes.
 - **Daily & Weekly Analytics**: Daily totals, interactive weekly heatmaps, streak tracking (current and best streaks), and period-over-period comparisons.
 - **Local-to-Cloud Migration**: Seamless one-click migration tool to transfer existing browser storage data to your authenticated Supabase account without data loss.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 | :--- | :--- |
@@ -64,7 +64,7 @@ YoutubeDoro combines aesthetic anime visual environments, procedural ambient sou
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 YoutubeDoro/
@@ -116,7 +116,7 @@ YoutubeDoro/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Clone & Install Dependencies
 
@@ -160,7 +160,7 @@ Visit `http://127.0.0.1:3000` in your browser.
 
 ---
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 Run quality and build checks using the following commands:
 
@@ -180,7 +180,7 @@ npm run build
 
 ---
 
-## 🔒 Security & Privacy
+## Security & Privacy
 
 - **Row Level Security (RLS)**: Authenticated users have exclusive access to their own tasks, subtasks, and learning sessions (`user_id = auth.uid()`). Anonymous queries are revoked.
 - **Client-Side Privacy**: Presentation preferences (custom themes, active music stations, timer display settings) are stored locally in browser storage.
@@ -188,7 +188,8 @@ npm run build
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
+
 
