@@ -85,7 +85,7 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
 
   const isSignUp = mode === "sign-up";
   const isReset = mode === "reset";
-  const title = isReset ? "Reset your password" : isSignUp ? "Start your quiet practice" : "Welcome back";
+  const title = isReset ? "Reset your password" : isSignUp ? "Create account" : "Welcome back";
   const modeLabel = isReset ? "password reset" : isSignUp ? "new account" : "sign in";
 
   return (
@@ -93,7 +93,7 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
       <section className="auth-card" aria-labelledby="auth-title">
           <div className="auth-card__header">
             <div>
-              <p className="eyebrow">Account / {modeLabel}</p>
+              <p className="eyebrow">{modeLabel}</p>
               <h1 id="auth-title">{title}</h1>
             </div>
           </div>
