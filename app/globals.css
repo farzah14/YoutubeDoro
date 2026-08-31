@@ -5191,7 +5191,15 @@ textarea:focus-visible,
   color: var(--manga-vermilion);
 }
 
-.music-shelf,
+.music-shelf {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--manga-paper);
+  box-shadow: none;
+  padding: 1rem;
+}
+
 .subtasks-panel {
   border: 1px solid var(--manga-rule);
   border-radius: 8px;
@@ -5269,7 +5277,8 @@ textarea:focus-visible,
   .settings-select { display: block; width: 100%; min-height: 2.75rem; border: 1px solid var(--manga-rule); border-radius: 5px; background: var(--manga-ink); color: var(--manga-paper); }
   .settings-content__heading { flex-direction: column; }
   .settings-theme-grid { grid-template-columns: 1fr; }
-  .music-shelf, .subtasks-panel { padding: .8rem; }
+  .music-shelf { padding: .8rem; }
+  .subtasks-panel { padding: .8rem; }
   .music-shelf__controls, .subtasks-add { flex-wrap: wrap; }
   .music-shelf__track { grid-template-columns: .45rem 2.5rem minmax(0, 1fr) auto; }
   .music-shelf__frequency { display: none; }

@@ -102,7 +102,6 @@ export function LoFiPlayer() {
     <div className="audio-panel music-panel music-shelf">
       <header className="music-shelf__header">
         <div>
-          <p className="eyebrow">Broadcast desk</p>
           <h3>{activeEmbed ? activeEmbed.provider : station.name}</h3>
           <p className="music-shelf__now-playing">{activeEmbed ? "External provider" : station.genre}</p>
         </div>

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = readFileSync(new URL("../components/audio/LoFiPlayer.tsx", import.meta.url), "utf8");
+const stylesSource = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 
 test("Music exposes a simplified accessible station list", () => {
   assert.doesNotMatch(source, /music-shelf__dial/);
@@ -14,7 +15,7 @@ test("Music exposes a simplified accessible station list", () => {
   assert.match(source, /music-shelf__frequency/);
   assert.match(source, /const band =/);
   assert.match(source, /ON AIR/);
-  assert.match(source, />Broadcast desk</);
+  assert.doesNotMatch(source, />Broadcast desk</);
   assert.match(source, /music-shelf__now-playing/);
   assert.match(source, /aria-pressed=\{selected\}/);
   assert.match(source, /music-shelf__volume/);
@@ -24,4 +25,10 @@ test("Music exposes a simplified accessible station list", () => {
 test("Music exposes only Stations and My Music", () => {
   assert.match(source, /\[\["stations", "Stations"\], \["my-music", "My Music"\]\]/);
   assert.doesNotMatch(source, /Playlist Library|tab === "library"|type MusicTab = [^;]*library/);
+});
+
+test("Music removes the Broadcast Desk label and inner surface outline", () => {
+  assert.doesNotMatch(source, /Broadcast desk/i);
+  assert.match(stylesSource, /\.music-shelf\s*\{[\s\S]*border:\s*0/);
+  assert.match(stylesSource, /\.music-shelf\s*\{[\s\S]*background:\s*transparent/);
 });
