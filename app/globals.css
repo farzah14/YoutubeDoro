@@ -1989,10 +1989,32 @@ textarea:focus-visible,
   color: var(--manga-paper);
 }
 
+.overlay-panel:has(.subtasks-panel) .overlay-panel__surface {
+  width: min(100%, 24rem);
+}
+
+.overlay-panel:has(.subtasks-panel) .overlay-panel__header {
+  padding: 0.75rem 1rem;
+}
+
 .overlay-panel:has(.subtasks-panel) .overlay-panel__body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding: 0.75rem 1rem;
+}
+
+.overlay-panel:has(.subtasks-panel) .subtasks-panel {
+  gap: 0.75rem;
+  padding: 0;
+}
+
+.overlay-panel:has(.subtasks-panel) .subtasks-progress {
+  margin-top: 0.5rem;
+}
+
+.overlay-panel:has(.subtasks-panel) .subtask-row {
+  min-height: 2.75rem;
 }
 
 .notes-modal {
