@@ -3824,13 +3824,13 @@ textarea:focus-visible,
 }
 
 .settings-recipe-row > span:first-child {
-  grid-column: 2;
-  text-align: center;
+  grid-column: 1;
+  text-align: left;
 }
 
 .settings-recipe-row > .settings-number-field {
-  grid-column: 3;
-  justify-self: end;
+  grid-column: 2;
+  justify-self: center;
 }
 
 .settings-recipe-toggle {
