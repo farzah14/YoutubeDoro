@@ -1981,6 +1981,10 @@ textarea:focus-visible,
   background: transparent;
 }
 
+.overlay-panel:has(.subtasks-panel) {
+  align-items: flex-start;
+}
+
 .overlay-panel:has(.audio-overlay) .overlay-panel__surface {
   width: min(100%, 27.5rem);
   max-height: calc(100dvh - 2rem);
@@ -2715,6 +2719,10 @@ textarea:focus-visible,
   .overlay-panel {
     align-items: flex-end;
     padding: 0;
+  }
+
+  .overlay-panel:has(.subtasks-panel) {
+    align-items: flex-end;
   }
 
   .overlay-panel__surface,
