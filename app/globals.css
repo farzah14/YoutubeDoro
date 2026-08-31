@@ -1982,7 +1982,7 @@ textarea:focus-visible,
 }
 
 .overlay-panel:has(.subtasks-panel) {
-  align-items: flex-start;
+  align-items: flex-end;
 }
 
 .overlay-panel:has(.audio-overlay) .overlay-panel__surface {

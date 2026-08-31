@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatClock } from "@/lib/time";
 
 interface HomeHeroProps {
   hidden?: boolean;
@@ -14,17 +15,7 @@ function getClockState(use24Hour: boolean, showSeconds: boolean) {
   const now = new Date();
   const hour = now.getHours();
   const day = now.getDay();
-  const time = new Intl.DateTimeFormat([], {
-    hour: "numeric",
-    minute: "2-digit",
-    second: showSeconds ? "2-digit" : undefined,
-    hour12: !use24Hour,
-  })
-    .formatToParts(now)
-    .filter((part) => part.type !== "dayPeriod" && part.type !== "literal" || part.value === ":")
-    .map((part) => part.value)
-    .join("")
-    .trim();
+  const time = formatClock(now, use24Hour, showSeconds);
 
   return {
     time,
