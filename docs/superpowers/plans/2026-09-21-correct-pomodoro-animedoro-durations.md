@@ -56,4 +56,4 @@
 - [x] Run ESLint for all touched TypeScript and TSX files.
 - [x] Run `npm run build`.
 - [x] Review `git diff --check` and `git status --short`.
-- [ ] Commit and push the correction to `origin/feature/pomodoro-anime-break`, updating pull request #1.
+- [x] Commit and push the correction to `origin/feature/pomodoro-anime-break`, updating pull request #1.
