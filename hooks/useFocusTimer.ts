@@ -4,13 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KEYS } from "@/lib/constants";
 import {
   createTimerState,
+  finishMediaBreak as finishMediaBreakState,
   getDisplaySeconds,
   pauseTimer,
+  prepareMediaBreak as prepareMediaBreakState,
   resetTimer,
   resumeTimer,
   selectTimerPhase,
   startTimer,
+  syncMediaBreak,
   syncTimer,
+  type MediaBreakStatus,
   type FocusTimerState,
 } from "@/lib/focusTimerEngine";
 import { DEFAULT_FOCUS_PREFERENCES, migrateFocusPreferences } from "@/lib/migrations";
@@ -29,7 +33,7 @@ type StartBoundary = (context: TimerStartContext) => void | boolean | Promise<vo
 interface UseFocusTimerOptions {
   onFocusStart?: StartBoundary;
   onBreakStart?: StartBoundary;
-  onFocusDone?: (seconds: number, followedByBreak: boolean) => void;
+  onFocusDone?: (seconds: number, followedByBreak: boolean, mode: TimerMode) => void;
   onFocusStop?: (seconds: number) => void;
   onBreakDone?: (seconds: number) => void;
   onBreakStop?: (seconds: number) => void;
@@ -50,6 +54,8 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
   const callbacks = useRef(options);
   const wakeLock = useRef<WakeLockHandle | null>(null);
   const startingRef = useRef(false);
+  const mediaBreakStartedRef = useRef(false);
+  const mediaBreakFinalizedRef = useRef(false);
 
   stateRef.current = state;
 
@@ -82,12 +88,12 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
 
   useEffect(() => {
     const previous = previousState.current;
-    const completed = previous.status === "running" &&
+    const completed = previous.driver === "clock" && previous.status === "running" &&
       (previous.phase !== state.phase || state.status === "done");
     if (completed) {
       if (preferences.notificationEnabled) void notifyTimerComplete(previous.phase === "focus" ? "Your focus interval is complete." : "Your break is complete.");
       void playTimerAlert(preferences.alertSound, preferences.alertVolume);
-      if (previous.phase === "focus") callbacks.current.onFocusDone?.(previous.targetSeconds, state.phase === "break");
+      if (previous.phase === "focus") callbacks.current.onFocusDone?.(previous.targetSeconds, state.phase === "break", previous.mode);
       else callbacks.current.onBreakDone?.(previous.targetSeconds);
       if (previous.phase === "focus" && state.phase === "break" && state.status === "running") {
         callbacks.current.onBreakStart?.({ mode: state.mode, phase: "break", plannedSeconds: state.targetSeconds });
@@ -95,6 +101,56 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     }
     previousState.current = state;
   }, [preferences.alertSound, preferences.alertVolume, preferences.notificationEnabled, state]);
+
+  const prepareMediaBreak = useCallback((durationSeconds: number) => {
+    mediaBreakStartedRef.current = false;
+    mediaBreakFinalizedRef.current = false;
+    const prepared = prepareMediaBreakState(stateRef.current, durationSeconds);
+    stateRef.current = prepared;
+    setState(prepared);
+  }, []);
+
+  const startMediaBreak = useCallback(async () => {
+    if (mediaBreakStartedRef.current) return true;
+    const current = stateRef.current;
+    if (current.driver !== "media" || current.phase !== "break") return false;
+    const allowed = await callbacks.current.onBreakStart?.({
+      mode: current.mode,
+      phase: "break",
+      plannedSeconds: current.targetSeconds,
+    });
+    if (allowed === false) return false;
+    mediaBreakStartedRef.current = true;
+    setState((latest) => syncMediaBreak(latest, latest.elapsedSeconds, "running"));
+    return true;
+  }, []);
+
+  const updateMediaBreak = useCallback((elapsedSeconds: number, status: MediaBreakStatus) => {
+    setState((current) => syncMediaBreak(current, elapsedSeconds, status));
+  }, []);
+
+  const finalizeMediaBreak = useCallback((watchedSeconds: number, outcome: "done" | "stopped") => {
+    if (mediaBreakFinalizedRef.current) return;
+    mediaBreakFinalizedRef.current = true;
+    const normalizedSeconds = Math.max(0, Math.floor(watchedSeconds));
+    if (mediaBreakStartedRef.current) {
+      const watchedSeconds = normalizedSeconds;
+      if (outcome === "done") callbacks.current.onBreakDone?.(watchedSeconds);
+      else callbacks.current.onBreakStop?.(watchedSeconds);
+    }
+    mediaBreakStartedRef.current = false;
+    setState((current) => finishMediaBreakState(current, preferences));
+  }, [preferences]);
+
+  const finishMediaBreak = useCallback((watchedSeconds: number) => {
+    finalizeMediaBreak(watchedSeconds, "done");
+  }, [finalizeMediaBreak]);
+
+  const stopMediaBreak = useCallback((watchedSeconds?: number) => {
+    const current = stateRef.current;
+    if (current.driver !== "media") return;
+    finalizeMediaBreak(watchedSeconds ?? current.elapsedSeconds, "stopped");
+  }, [finalizeMediaBreak]);
 
   const start = useCallback(async () => {
     if (startingRef.current) return;
@@ -163,6 +219,11 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     selectPhase,
     setMode,
     updatePreferences,
+    prepareMediaBreak,
+    startMediaBreak,
+    updateMediaBreak,
+    finishMediaBreak,
+    stopMediaBreak,
   };
 }
 

@@ -9,7 +9,7 @@ StudyRythms is a focus timer and study dashboard that pairs anime artwork and am
 ### Focus timers
 - Five timer modes: Pomodoro, Animedoro (longer study intervals paired with video breaks), 52/17, target countdown, and open stopwatch.
 - Document Picture-in-Picture window showing the live clock, current task, and active background.
-- Two break styles: a plain timer or an embedded YouTube player with built-in stretch and breathing presets.
+- Pomodoro uses a fixed 50-minute focus interval. After focus, Anime Break can play a supported YouTube, Vimeo, MP4, or WebM link inside StudyRythms and derives the break duration from the video.
 - Web Audio completion chimes (Soft chime, Level-up, or Mute) and browser push notifications.
 - Optional on-device attention monitoring uses the camera only during a running focus interval and sounds once after five continuous seconds looking away.
 
@@ -182,6 +182,7 @@ npm run build
 - **Data portability**: Local data can be imported into your account while keeping a local browser backup intact.
 - **Attention camera**: Attention monitoring is off by default. When enabled, camera frames and head-pose results stay in the browser and are never recorded, uploaded, or stored.
 - **Local model assets**: The MediaPipe runtime and Face Landmarker model are served from this application; no remote inference service receives camera data.
+- **Anime Break links**: StudyRythms accepts only validated HTTPS links from supported providers. It does not proxy videos, bypass DRM, or embed arbitrary page HTML.
 
 ---
 

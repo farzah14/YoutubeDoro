@@ -13,6 +13,7 @@ import { useFocusTimer, type TimerStartContext } from "@/hooks/useFocusTimer";
 import { CozyAnimeTheme } from "@/types/theme";
 import type { ThemeSlot, WorkspaceMode, WorkspacePanel } from "@/types/workspace";
 import type { LearningSession } from "@/types/tracker";
+import type { TimerMode } from "@/types/focus";
 import { COZY_THEMES, DEFAULT_THEME, THEME_ORDER } from "@/lib/themeConfig";
 import { AmbientBackground } from "./anime/AmbientBackground";
 import { Header } from "./layout/Header";
@@ -235,9 +236,10 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
     });
   }, [finalizeSession, getLastMeasurements, refreshHistory]);
 
-  const handleLearnDone = useCallback((seconds: number, followedByBreak: boolean) => {
+  const handleLearnDone = useCallback((seconds: number, followedByBreak: boolean, mode: TimerMode) => {
     const current = getLastMeasurements();
     checkpointSession({ ...current, learningSeconds: seconds }, true);
+    if (followedByBreak && mode === "pomodoro") setOpenPanel("rest");
     if (!followedByBreak) finishSession("completed", seconds);
   }, [checkpointSession, finishSession, getLastMeasurements]);
   const handleLearnStop = useCallback((seconds: number) => finishSession("stopped", seconds), [finishSession]);
@@ -257,6 +259,10 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
     onBreakDone: handleBreakDone,
     onBreakStop: handleBreakStop,
   });
+  const closeBreakPanel = useCallback(() => {
+    focusTimer.stopMediaBreak();
+    closeWorkspacePanel();
+  }, [closeWorkspacePanel, focusTimer]);
   const attentionMonitoringActive = workspaceMode === "focus"
     && focusTimer.preferences.attentionMonitoringEnabled
     && focusTimer.state.phase === "focus"
@@ -377,8 +383,25 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
       <MusicEngine />
 
       {/* ── Modals & Drawers ── */}
-      <Modal open={openPanel === "rest"} onClose={closeWorkspacePanel} title="Break tools">
-        <RestCardContainer totalTodaySec={totalRestSec} onBreakStart={handleBreakStart} onBreakProgress={handleBreakProgress} onRestDone={handleRestDone} onRestStop={handleRestStop} onYTDone={handleRestDone} onYTStop={handleRestStop} />
+      <Modal open={openPanel === "rest"} onClose={closeBreakPanel} title="Break tools">
+        <RestCardContainer
+          totalTodaySec={totalRestSec}
+          defaultMode="anime"
+          onBreakStart={handleBreakStart}
+          onBreakProgress={handleBreakProgress}
+          onRestDone={handleRestDone}
+          onRestStop={handleRestStop}
+          onAnimeReady={focusTimer.prepareMediaBreak}
+          onAnimePlay={focusTimer.startMediaBreak}
+          onAnimePause={(seconds) => focusTimer.updateMediaBreak(seconds, "paused")}
+          onAnimeProgress={(seconds) => {
+            focusTimer.updateMediaBreak(seconds, "running");
+            handleBreakProgress(seconds);
+          }}
+          onAnimeBuffering={(seconds) => focusTimer.updateMediaBreak(seconds, "paused")}
+          onAnimeDone={focusTimer.finishMediaBreak}
+          onAnimeStop={focusTimer.stopMediaBreak}
+        />
       </Modal>
 
       <Modal open={openPanel === "tasks"} onClose={closeWorkspacePanel} title="Focus Priorities" className="priorities-modal">

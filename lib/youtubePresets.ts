@@ -1,4 +1,4 @@
-import { BreakPreset, SavedBreakVideo } from "@/types";
+import { BreakPreset, SavedBreakMedia } from "@/types";
 
 export const BREAK_PRESETS: BreakPreset[] = [
   {
@@ -43,17 +43,21 @@ export const BREAK_PRESETS: BreakPreset[] = [
   },
 ];
 
-export const DEFAULT_SAVED_BREAKS: SavedBreakVideo[] = [
+export const DEFAULT_SAVED_BREAKS: SavedBreakMedia[] = [
   {
     id: "def-stretch",
     title: "5-Min Desk Stretch",
-    videoId: "4BOTva4hSTc",
+    provider: "youtube",
+    sourceUrl: "https://www.youtube.com/watch?v=4BOTva4hSTc",
+    mediaId: "4BOTva4hSTc",
     addedAt: 1700000000000,
   },
   {
     id: "def-breathing",
     title: "Box Breathing Reset",
-    videoId: "inpok4MKVLM",
+    provider: "youtube",
+    sourceUrl: "https://www.youtube.com/watch?v=inpok4MKVLM",
+    mediaId: "inpok4MKVLM",
     addedAt: 1700000001000,
   },
 ];

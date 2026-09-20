@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import { Segmented } from "../ui/Segmented";
 import { PlainRestCard } from "./PlainRestCard";
-import { YouTubeRestCard } from "./YouTubeRestCard";
+import { AnimeBreakCard } from "./AnimeBreakCard";
 
 interface RestCardContainerProps {
   totalTodaySec: number;
@@ -13,8 +13,14 @@ interface RestCardContainerProps {
   onBreakProgress?: (seconds: number) => void;
   onRestDone: (sec: number) => void;
   onRestStop: (sec: number) => void;
-  onYTDone: (sec: number) => void;
-  onYTStop: (sec: number) => void;
+  defaultMode?: "plain" | "anime";
+  onAnimeReady: (durationSeconds: number) => void;
+  onAnimePlay: () => Promise<boolean>;
+  onAnimePause: (elapsedSeconds: number) => void;
+  onAnimeProgress: (elapsedSeconds: number) => void;
+  onAnimeBuffering: (elapsedSeconds: number) => void;
+  onAnimeDone: (elapsedSeconds: number) => void;
+  onAnimeStop: (elapsedSeconds: number) => void;
 }
 
 export function RestCardContainer({
@@ -24,10 +30,16 @@ export function RestCardContainer({
   onBreakProgress,
   onRestDone,
   onRestStop,
-  onYTDone,
-  onYTStop,
+  defaultMode,
+  onAnimeReady,
+  onAnimePlay,
+  onAnimePause,
+  onAnimeProgress,
+  onAnimeBuffering,
+  onAnimeDone,
+  onAnimeStop,
 }: RestCardContainerProps) {
-  const [mode, setMode] = useState<"plain" | "youtube">("plain");
+  const [mode, setMode] = useState<"plain" | "anime">(defaultMode ?? "plain");
   const [breakError, setBreakError] = useState("");
   const handleBreakStart = useCallback(async () => {
     const allowed = await onBreakStart?.();
@@ -47,10 +59,10 @@ export function RestCardContainer({
           <Segmented
             aria-label="Break mode"
             value={mode}
-            onChange={(v) => setMode(v as "plain" | "youtube")}
+            onChange={(v) => setMode(v as "plain" | "anime")}
             options={[
               { label: "Standard", value: "plain" },
-              { label: "YouTube", value: "youtube" },
+              { label: "Anime video", value: "anime" },
             ]}
           />
         </div>
@@ -68,12 +80,15 @@ export function RestCardContainer({
             onStop={onRestStop} 
           />
         ) : (
-          <YouTubeRestCard 
-            totalTodaySec={totalTodaySec} 
-            onBreakStart={handleBreakStart}
-            onProgress={onBreakProgress}
-            onDone={onYTDone} 
-            onStop={onYTStop} 
+          <AnimeBreakCard
+            totalTodaySec={totalTodaySec}
+            onReady={onAnimeReady}
+            onPlay={onAnimePlay}
+            onPause={onAnimePause}
+            onProgress={onAnimeProgress}
+            onBuffering={onAnimeBuffering}
+            onDone={onAnimeDone}
+            onStop={onAnimeStop}
           />
         )}
       </CardContent>

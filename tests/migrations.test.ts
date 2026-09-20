@@ -6,6 +6,7 @@ import {
   migrateTaskItems,
   migrateThemeSlots,
 } from "../lib/migrations.ts";
+import { createTimerState } from "../lib/focusTimerEngine.ts";
 
 test("migrates legacy pomodoro tasks without losing progress", () => {
   const [task] = migrateTaskItems(
@@ -146,4 +147,10 @@ test("attention monitoring is opt-in and preserves an explicit enabled value", (
     migrateFocusPreferences({ attentionMonitoringEnabled: "true" }).attentionMonitoringEnabled,
     false
   );
+});
+
+test("legacy flexible focus settings do not redefine fixed Pomodoro", () => {
+  const migrated = migrateFocusPreferences({ mode: "pomodoro", focusMinutes: 25 });
+  assert.equal(migrated.focusMinutes, 25);
+  assert.equal(createTimerState(migrated).targetSeconds, 3_000);
 });

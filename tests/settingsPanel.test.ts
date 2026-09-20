@@ -111,6 +111,13 @@ test("Focus Timer behavior rows stay transparent and omit the recipe note", () =
   assert.match(stylesSource, /\.settings-recipe-toggle\s*\{[\s\S]*background:\s*transparent/);
 });
 
+test("Focus Timer presents Pomodoro as fixed at fifty minutes", () => {
+  assert.match(settingsPanelSource, /Pomodoro focus/);
+  assert.match(settingsPanelSource, /50 min/);
+  assert.match(settingsPanelSource, /Flexible focus/);
+  assert.doesNotMatch(settingsPanelSource, /key: "focusMinutes", label: "Focus"/);
+});
+
 test("Settings does not expose a quote setting", () => {
   assert.doesNotMatch(settingsPanelSource, /showQuote|\["quotes", "Quotes"\]|section === "quotes"/);
 });
