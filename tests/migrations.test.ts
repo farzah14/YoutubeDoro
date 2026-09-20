@@ -149,12 +149,12 @@ test("attention monitoring is opt-in and preserves an explicit enabled value", (
   );
 });
 
-test("legacy flexible focus settings do not redefine fixed method durations", () => {
+test("migrated Pomodoro focus settings remain customizable while Animedoro stays fixed", () => {
   const pomodoro = migrateFocusPreferences({ mode: "pomodoro", focusMinutes: 90 });
   const animedoro = migrateFocusPreferences({ mode: "animedoro", focusMinutes: 25 });
 
   assert.equal(pomodoro.focusMinutes, 90);
   assert.equal(animedoro.focusMinutes, 25);
-  assert.equal(createTimerState(pomodoro).targetSeconds, 1_500);
+  assert.equal(createTimerState(pomodoro).targetSeconds, 5_400);
   assert.equal(createTimerState(animedoro).targetSeconds, 3_000);
 });

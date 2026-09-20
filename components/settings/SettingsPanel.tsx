@@ -53,6 +53,7 @@ const sections: Array<[SettingsSection, string]> = [
 ];
 
 const timerDurations = [
+  { key: "focusMinutes", label: "Pomodoro focus", max: 120 },
   { key: "breakMinutes", label: "Standard break", max: 120 },
 ] as const;
 
@@ -203,13 +204,6 @@ export function SettingsPanel({
 
         <section className="settings-duration-list" aria-labelledby="timer-durations-title">
           <h4 id="timer-durations-title">Session lengths</h4>
-          <div className="settings-recipe-row">
-            <span>
-              <strong>Pomodoro focus</strong>
-              <small>Fixed study interval.</small>
-            </span>
-            <output className="settings-number-field">25 min</output>
-          </div>
           <div className="settings-recipe-row">
             <span>
               <strong>Animedoro focus</strong>

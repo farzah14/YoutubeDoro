@@ -111,13 +111,13 @@ test("Focus Timer behavior rows stay transparent and omit the recipe note", () =
   assert.match(stylesSource, /\.settings-recipe-toggle\s*\{[\s\S]*background:\s*transparent/);
 });
 
-test("Focus Timer presents the fixed Pomodoro and Animedoro durations", () => {
+test("Focus Timer presents a customizable Pomodoro and fixed Animedoro duration", () => {
   assert.match(settingsPanelSource, /Pomodoro focus/);
-  assert.match(settingsPanelSource, /25 min/);
+  assert.match(settingsPanelSource, /key: "focusMinutes", label: "Pomodoro focus"/);
+  assert.match(settingsPanelSource, /value=\{preferences\[key\]\}/);
   assert.match(settingsPanelSource, /Animedoro focus/);
   assert.match(settingsPanelSource, /50 min/);
-  assert.doesNotMatch(settingsPanelSource, /Flexible focus/);
-  assert.doesNotMatch(settingsPanelSource, /key: "focusMinutes"/);
+  assert.match(settingsPanelSource, /Fixed study interval before an Anime Break/);
 });
 
 test("Settings does not expose a quote setting", () => {
