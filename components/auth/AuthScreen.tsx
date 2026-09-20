@@ -43,12 +43,9 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
 
   return (
     <main className="auth-screen">
-      <section className="auth-card" aria-labelledby="auth-title">
+      <section className="auth-card" aria-label="StudyRythms login">
         <div className="auth-card__header">
-          <div>
-            <p className="eyebrow">StudyRythms · Google sign in</p>
-            <h1 id="auth-title">Welcome back</h1>
-          </div>
+          <h1 id="auth-title">Login</h1>
         </div>
 
         <button
