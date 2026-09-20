@@ -108,6 +108,28 @@ export function playTimerAlert(kind: "soft" | "level-up" | "none", volume: numbe
   }
 }
 
+function scheduleAttentionAlert(context: AudioContext, normalizedVolume: number): void {
+  const startAt = context.currentTime;
+  const noteDuration = 0.14;
+  const noteSpacing = 0.16;
+  const peak = Math.max(0.02, normalizedVolume * 0.2);
+  const frequencies = [659.25, 783.99, 659.25];
+
+  frequencies.forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const noteStart = startAt + index * noteSpacing;
+    gain.gain.setValueAtTime(0.0001, noteStart);
+    gain.gain.exponentialRampToValueAtTime(peak, noteStart + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, noteStart + noteDuration);
+    oscillator.type = "triangle";
+    oscillator.frequency.value = frequency;
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(noteStart);
+    oscillator.stop(noteStart + noteDuration + 0.04);
+  });
+}
+
 export function playAttentionAlert(volume: number): void {
   try {
     const context = getTimerAudioContext();
@@ -117,27 +139,16 @@ export function playAttentionAlert(volume: number): void {
     const normalizedVolume = Math.min(1, Math.max(0, safeVolume / 100));
     if (normalizedVolume === 0) return;
 
-    if (context.state !== "running") void context.resume().catch(() => undefined);
+    if (context.state !== "running") {
+      void context.resume()
+        .then(() => {
+          if (context.state === "running") scheduleAttentionAlert(context, normalizedVolume);
+        })
+        .catch(() => undefined);
+      return;
+    }
 
-    const startAt = context.currentTime;
-    const noteDuration = 0.14;
-    const noteSpacing = 0.16;
-    const peak = Math.max(0.02, normalizedVolume * 0.2);
-    const frequencies = [659.25, 783.99, 659.25];
-
-    frequencies.forEach((frequency, index) => {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      const noteStart = startAt + index * noteSpacing;
-      gain.gain.setValueAtTime(0.0001, noteStart);
-      gain.gain.exponentialRampToValueAtTime(peak, noteStart + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.001, noteStart + noteDuration);
-      oscillator.type = "triangle";
-      oscillator.frequency.value = frequency;
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start(noteStart);
-      oscillator.stop(noteStart + noteDuration + 0.04);
-    });
+    scheduleAttentionAlert(context, normalizedVolume);
   } catch {
     // Attention audio is an enhancement, not a timer dependency.
   }

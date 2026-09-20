@@ -123,12 +123,14 @@ test("timer alerts reuse the primed audio context", async () => {
   }
 
   class FakeAudioContext {
+    static latest: FakeAudioContext | null = null;
     currentTime = 0;
     destination = {};
     state: "suspended" | "running" = "suspended";
 
     constructor() {
       stats.contexts += 1;
+      FakeAudioContext.latest = this;
     }
 
     resume() {
@@ -160,11 +162,18 @@ test("timer alerts reuse the primed audio context", async () => {
     await primeTimerAlertAudio();
     await playTimerAlert("soft", 70);
     await playTimerAlert("level-up", 70);
+    const audioContext = FakeAudioContext.latest;
+    if (audioContext === null) throw new Error("fake audio context was not created");
+    audioContext.state = "suspended";
+    const startsBeforeAttention = stats.starts;
     playAttentionAlert(70);
 
+    assert.equal(stats.starts, startsBeforeAttention);
+    await Promise.resolve();
+
     assert.equal(stats.contexts, 1);
-    assert.equal(stats.resumes, 1);
-    assert.equal(stats.starts, 5);
+    assert.equal(stats.resumes, 2);
+    assert.equal(stats.starts, startsBeforeAttention + 3);
     assert.equal(stats.closes, 0);
     assert.equal(oscillatorType, "triangle");
   } finally {
