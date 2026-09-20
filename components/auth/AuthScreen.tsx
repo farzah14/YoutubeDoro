@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { LoginHomeBackdrop } from "@/components/auth/LoginHomeBackdrop";
 
 interface AuthScreenProps {
   initialError?: string;
@@ -43,6 +44,7 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
 
   return (
     <main className="auth-screen">
+      <LoginHomeBackdrop />
       <section className="auth-card" aria-label="StudyRythms login">
         <div className="auth-card__header">
           <h1 id="auth-title">Login</h1>

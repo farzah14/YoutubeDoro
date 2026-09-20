@@ -8,6 +8,7 @@ const files = [
   "lib/supabase/server.ts",
   "lib/supabase/auth.ts",
   "proxy.ts",
+  "components/auth/LoginHomeBackdrop.tsx",
   "components/auth/AuthScreen.tsx",
   "app/auth/callback/route.ts",
   "app/page.tsx",
@@ -107,4 +108,40 @@ test("README documents Google-only Supabase authentication", () => {
   assert.match(readme, /https:\/\/study-rythms\.vercel\.app\/auth\/callback/);
   assert.doesNotMatch(readme, /Sign in, sign up, and password reset forms/);
   assert.doesNotMatch(readme, /disable \*\*Confirm email\*\*/);
+});
+
+test("login page includes an inert blurred Home workspace preview", () => {
+  const backdropSource = readFileSync(join(process.cwd(), "components/auth/LoginHomeBackdrop.tsx"), "utf8");
+  const authSource = readFileSync(join(process.cwd(), "components/auth/AuthScreen.tsx"), "utf8");
+
+  for (const token of [
+    "AmbientBackground",
+    "Header",
+    "HomeHero",
+    "WorkspaceDock",
+    "KEYS.themeBySlot(\"home\")",
+    "KEYS.themeSlots",
+    "aria-hidden=\"true\"",
+    "inert",
+    "Start focus",
+  ]) {
+    assert.equal(backdropSource.includes(token), true, `missing ${token}`);
+  }
+
+  assert.match(authSource, /<LoginHomeBackdrop\s*\/>/);
+
+  const styles = readFileSync(stylesFile, "utf8");
+  for (const selector of [
+    ".auth-home-backdrop",
+    ".auth-home-backdrop__preview",
+    ".auth-home-backdrop__veil",
+    ".auth-home-preview__timer",
+  ]) {
+    assert.match(styles, new RegExp(`\\${selector}\\s*\\{`), `missing ${selector} styles`);
+  }
+  assert.match(styles, /\.auth-home-backdrop__preview\s*\{[\s\S]*filter:\s*blur\(/);
+  assert.match(styles, /\.auth-home-backdrop__preview\s*\{[\s\S]*pointer-events:\s*none/);
+  assert.match(styles, /\.auth-home-backdrop__veil\s*\{[\s\S]*pointer-events:\s*none/);
+  assert.match(styles, /\.auth-card\s*\{[\s\S]*position:\s*relative/);
+  assert.match(styles, /\.auth-card\s*\{[\s\S]*z-index:\s*2/);
 });
