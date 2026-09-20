@@ -30,12 +30,12 @@ const preferences: FocusPreferences = {
   showTaskInPip: false,
 };
 
-test("pomodoro is always a fixed twenty-five-minute focus", () => {
+test("pomodoro uses the saved custom focus duration", () => {
   const legacy = { ...preferences, focusMinutes: 25 };
   const customized = { ...preferences, focusMinutes: 90 };
 
   assert.equal(createTimerState(legacy).targetSeconds, 25 * 60);
-  assert.equal(createTimerState(customized).targetSeconds, 25 * 60);
+  assert.equal(createTimerState(customized).targetSeconds, 90 * 60);
 });
 
 test("animedoro is always a fixed fifty-minute focus", () => {

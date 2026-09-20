@@ -1,5 +1,9 @@
 # Correct Pomodoro and Animedoro Durations Implementation Plan
 
+> **Superseded follow-up:** Pomodoro is now customizable (25 minutes by default) while Animedoro remains fixed at 50 minutes. See the current implementation and `docs/superpowers/specs/2026-09-21-pomodoro-anime-break-design.md` for the active contract.
+
+The checked-off steps below are retained as the historical fixed-duration correction record; they are not the current product contract.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Restore Pomodoro to 25 minutes, make Animedoro a fixed 50 minutes, and open the media-duration Anime Break only after Animedoro focus completes.

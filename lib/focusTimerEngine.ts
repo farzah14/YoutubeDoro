@@ -1,6 +1,5 @@
 import type { FocusPreferences, TimerMode, TimerPhase } from "../types/focus.ts";
 
-export const POMODORO_FOCUS_MINUTES = 25;
 export const ANIMEDORO_FOCUS_MINUTES = 50;
 
 export type TimerDriver = "clock" | "media";
@@ -23,7 +22,7 @@ function phaseSeconds(mode: TimerMode, phase: TimerPhase, preferences: FocusPref
     if (mode === "stopwatch") return 0;
     if (mode === "countdown") return preferences.countdownMinutes * 60;
     if (mode === "52-17") return 52 * 60;
-    if (mode === "pomodoro") return POMODORO_FOCUS_MINUTES * 60;
+    if (mode === "pomodoro") return preferences.focusMinutes * 60;
     if (mode === "animedoro") return ANIMEDORO_FOCUS_MINUTES * 60;
     return preferences.focusMinutes * 60;
   }

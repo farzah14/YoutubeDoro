@@ -1,19 +1,19 @@
 # Animedoro 50-Minute Anime Break Design
 
 **Date:** 2026-09-21  
-**Status:** Approved correction
+**Status:** Approved correction (with customizable Pomodoro focus)
 
 ## Goal
 
-Keep Pomodoro at its standard fixed 25-minute focus interval. Make Animedoro a fixed 50-minute focus method, then let the user paste a supported anime or video link and watch it inside StudyRythms. The Animedoro break duration comes from the loaded video's real duration rather than the standard break preference.
+Keep Pomodoro at a customizable focus interval with a 25-minute default. Make Animedoro a fixed 50-minute focus method, then let the user paste a supported anime or video link and watch it inside StudyRythms. The Animedoro break duration comes from the loaded video's real duration rather than the standard break preference.
 
 ## User experience
 
 ### Focus phase
 
-- Selecting Pomodoro always creates a 25:00 focus interval.
+- Selecting Pomodoro creates a focus interval from the saved Pomodoro focus setting (25:00 by default).
 - Selecting Animedoro always creates a 50:00 focus interval.
-- These method durations are fixed and are not changed by a legacy stored flexible-focus preference.
+- Pomodoro's saved focus setting is editable; Animedoro stays fixed and does not use that setting.
 - Other methods retain their current duration rules.
 - The standard break preference remains available for non-video breaks.
 
@@ -60,9 +60,9 @@ StudyRythms does not promise that every web page can be embedded. Sites that req
 
 ### Focus-method duration contract
 
-A named Pomodoro duration constant defines 25 minutes, and a named Animedoro duration constant defines 50 minutes. The focus timer engine selects the matching constant for each method. Tests assert both engine results directly, so a stored legacy preference cannot silently reverse the durations again.
+A named Animedoro duration constant defines 50 minutes. The focus timer engine uses the sanitized saved `focusMinutes` preference for Pomodoro (25 minutes by default) and the named constant for Animedoro. Tests assert both engine results directly, so migration keeps custom Pomodoro values while Animedoro remains fixed.
 
-The Focus Timer settings show both fixed method durations. The UI must not show an editable flexible-focus value that neither Pomodoro nor Animedoro uses.
+The Focus Timer settings show an editable Pomodoro focus value and a read-only 50-minute Animedoro value. The existing 1–120 minute preference bounds apply to Pomodoro.
 
 ### Media link parser
 
@@ -117,7 +117,7 @@ The existing saved YouTube breaks are preserved. Stored entries are migrated int
 
 Automated coverage will include:
 
-- Pomodoro creates a fixed 1,500-second focus interval regardless of stored legacy focus minutes.
+- Pomodoro creates a focus interval from the saved focus minutes (1,500 seconds at the default 25 minutes; 5,400 seconds for a 90-minute customization).
 - Animedoro creates a fixed 3,000-second focus interval regardless of stored legacy focus minutes.
 - Other timer modes retain their existing duration behavior.
 - The parser accepts supported YouTube, Vimeo, MP4, and WebM examples.
@@ -131,13 +131,14 @@ Automated coverage will include:
 
 Manual browser verification will confirm:
 
-1. Pomodoro shows 25:00 before starting.
+1. Pomodoro shows the saved focus duration (25:00 by default) before starting.
 2. Animedoro shows 50:00 before starting.
-3. Finishing Animedoro focus opens Anime Break inside StudyRythms.
-4. A supported link loads without opening another tab.
-5. The displayed break duration matches the media duration.
-6. Pause, resume, stop, and natural completion produce the expected timer and session state.
-7. Unsupported links show the designed error and never start a break.
+3. Changing Pomodoro focus in Settings updates the next Pomodoro interval without changing Animedoro.
+4. Finishing Animedoro focus opens Anime Break inside StudyRythms.
+5. A supported link loads without opening another tab.
+6. The displayed break duration matches the media duration.
+7. Pause, resume, stop, and natural completion produce the expected timer and session state.
+8. Unsupported links show the designed error and never start a break.
 
 ## Non-goals
 
@@ -149,4 +150,4 @@ Manual browser verification will confirm:
 
 ## Acceptance criteria
 
-The feature is complete when Pomodoro is a fixed 25-minute method and a user can finish a fixed 50-minute Animedoro, paste a supported anime/video link, watch it entirely inside StudyRythms, have the break duration follow the video's metadata and playback, and return to an idle 50-minute Animedoro without duplicate session accounting. Unsupported links must fail safely and clearly.
+The feature is complete when a user can customize Pomodoro (default 25 minutes), finish a fixed 50-minute Animedoro, paste a supported anime/video link, watch it entirely inside StudyRythms, have the break duration follow the video's metadata and playback, and return to an idle 50-minute Animedoro without duplicate session accounting. Unsupported links must fail safely and clearly.

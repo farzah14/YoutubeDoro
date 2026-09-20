@@ -9,7 +9,7 @@ StudyRythms is a focus timer and study dashboard that pairs anime artwork and am
 ### Focus timers
 - Five timer modes: Pomodoro, Animedoro (longer study intervals paired with video breaks), 52/17, target countdown, and open stopwatch.
 - Document Picture-in-Picture window showing the live clock, current task, and active background.
-- Pomodoro uses a fixed 25-minute focus interval. Animedoro uses a fixed 50-minute focus interval, then Anime Break can play a supported YouTube, Vimeo, MP4, or WebM link inside StudyRythms and derive the break duration from the video.
+- Pomodoro uses a customizable focus interval (25 minutes by default). Animedoro uses a fixed 50-minute focus interval, then Anime Break can play a supported YouTube, Vimeo, MP4, or WebM link inside StudyRythms and derive the break duration from the video.
 - Web Audio completion chimes (Soft chime, Level-up, or Mute) and browser push notifications.
 - Optional on-device attention monitoring uses the camera only during a running focus interval and sounds once after five continuous seconds looking away.
 
