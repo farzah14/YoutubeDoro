@@ -2,9 +2,13 @@ import type { FocusPreferences, TimerMode, TimerPhase } from "../types/focus.ts"
 
 export const POMODORO_FOCUS_MINUTES = 50;
 
+export type TimerDriver = "clock" | "media";
+export type MediaBreakStatus = "idle" | "running" | "paused";
+
 export interface FocusTimerState {
   mode: TimerMode;
   phase: TimerPhase;
+  driver: TimerDriver;
   status: "idle" | "running" | "paused" | "done";
   targetSeconds: number;
   elapsedSeconds: number;
@@ -28,6 +32,7 @@ export function createTimerState(preferences: FocusPreferences): FocusTimerState
   return {
     mode: preferences.mode,
     phase: "focus",
+    driver: "clock",
     status: "idle",
     targetSeconds: phaseSeconds(preferences.mode, "focus", preferences),
     elapsedSeconds: 0,
@@ -52,6 +57,7 @@ export function advanceTimer(state: FocusTimerState, preferences: FocusPreferenc
   return {
     ...state,
     phase,
+    driver: "clock",
     status: state.phase === "focus" && state.mode !== "pomodoro" && preferences.autoStartBreaks ? "running" : "idle",
     targetSeconds: phaseSeconds(state.mode, phase, preferences),
     elapsedSeconds: 0,
@@ -82,7 +88,7 @@ export function syncTimer(
   preferences: FocusPreferences,
   nowMs: number
 ): FocusTimerState {
-  if (state.status !== "running") return state;
+  if (state.driver === "media" || state.status !== "running") return state;
 
   const elapsedSeconds = elapsedAt(state, nowMs);
   if (state.mode === "stopwatch" || elapsedSeconds < state.targetSeconds) {
@@ -124,6 +130,47 @@ export function resetTimer(_state: FocusTimerState, preferences: FocusPreference
   return createTimerState(preferences);
 }
 
+function safeMediaSeconds(value: number, fallback = 0): number {
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : fallback;
+}
+
+export function prepareMediaBreak(state: FocusTimerState, durationSeconds: number): FocusTimerState {
+  const targetSeconds = Math.max(1, safeMediaSeconds(durationSeconds, 1));
+  return {
+    ...state,
+    driver: "media",
+    phase: "break",
+    status: "idle",
+    targetSeconds,
+    elapsedSeconds: 0,
+    startedAtMs: null,
+    runStartedElapsedSeconds: 0,
+  };
+}
+
+export function syncMediaBreak(
+  state: FocusTimerState,
+  elapsedSeconds: number,
+  status: MediaBreakStatus,
+): FocusTimerState {
+  if (state.driver !== "media" || state.phase !== "break") return state;
+  return {
+    ...state,
+    status,
+    elapsedSeconds: Math.min(state.targetSeconds, safeMediaSeconds(elapsedSeconds)),
+    startedAtMs: null,
+    runStartedElapsedSeconds: 0,
+  };
+}
+
+export function finishMediaBreak(
+  state: FocusTimerState,
+  preferences: FocusPreferences,
+): FocusTimerState {
+  const next = createTimerState({ ...preferences, mode: state.mode });
+  return { ...next, completedFocusSessions: state.completedFocusSessions };
+}
+
 export function selectTimerPhase(
   state: FocusTimerState,
   preferences: FocusPreferences,
@@ -132,6 +179,7 @@ export function selectTimerPhase(
   return {
     ...state,
     phase,
+    driver: "clock",
     status: "idle",
     targetSeconds: phaseSeconds(state.mode, phase, preferences),
     elapsedSeconds: 0,

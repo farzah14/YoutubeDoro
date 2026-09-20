@@ -5,11 +5,14 @@ import {
   advanceTimer,
   createTimerState,
   getDisplaySeconds,
+  finishMediaBreak,
   pauseTimer,
+  prepareMediaBreak,
   resetTimer,
   resumeTimer,
   selectTimerPhase,
   startTimer,
+  syncMediaBreak,
   syncTimer,
 } from "../lib/focusTimerEngine.ts";
 import type { FocusPreferences } from "../types/focus.ts";
@@ -41,6 +44,32 @@ test("pomodoro waits for Anime Break even when auto-start is enabled", () => {
 
   assert.equal(done.phase, "break");
   assert.equal(done.status, "idle");
+});
+
+test("media break duration and progress come from the player", () => {
+  const focusDone = advanceTimer(createTimerState(preferences), preferences);
+  const prepared = prepareMediaBreak(focusDone, 24 * 60 + 12);
+  const playing = syncMediaBreak(prepared, 37, "running");
+  const paused = syncMediaBreak(playing, 40, "paused");
+
+  assert.equal(prepared.driver, "media");
+  assert.equal(prepared.targetSeconds, 24 * 60 + 12);
+  assert.equal(playing.elapsedSeconds, 37);
+  assert.equal(playing.status, "running");
+  assert.equal(paused.elapsedSeconds, 40);
+  assert.equal(paused.status, "paused");
+});
+
+test("finishing a media break returns to idle fifty-minute Pomodoro", () => {
+  const focusDone = advanceTimer(createTimerState(preferences), preferences);
+  const media = prepareMediaBreak(focusDone, 1_440);
+  const finished = finishMediaBreak(syncMediaBreak(media, 1_440, "running"), preferences);
+
+  assert.equal(finished.driver, "clock");
+  assert.equal(finished.phase, "focus");
+  assert.equal(finished.status, "idle");
+  assert.equal(finished.targetSeconds, 3_000);
+  assert.equal(finished.completedFocusSessions, 1);
 });
 
 test("pomodoro advances focus to a generic break", () => {
