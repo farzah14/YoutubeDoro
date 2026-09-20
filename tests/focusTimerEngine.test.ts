@@ -21,6 +21,7 @@ const preferences: FocusPreferences = {
   countdownMinutes: 40,
   autoStartBreaks: false,
   notificationEnabled: false,
+  attentionMonitoringEnabled: false,
   alertSound: "soft",
   alertVolume: 70,
   showTaskInPip: false,

@@ -250,6 +250,20 @@ export function SettingsPanel({
             <span><strong>Browser notifications</strong><small>{notificationState === "denied" ? "Allow notifications for this site in browser settings, then return here." : notificationState === "unsupported" ? "Not supported in this browser." : "Notify when an interval completes."}</small></span>
             <input type="checkbox" checked={preferences.notificationEnabled && notificationState === "granted"} disabled={notificationState === "unsupported" || notificationState === "denied"} onChange={async (event) => { const next = event.target.checked; const permission = next ? await requestNotificationPermission() : notificationState; setNotificationState(permission); setStoredPreferences({ ...preferences, notificationEnabled: next && permission === "granted" }); }} />
           </label>
+          <label className="settings-toggle settings-recipe-toggle">
+            <span>
+              <strong>Attention monitoring</strong>
+              <small>Process head direction on this device; the camera is used only while a focus interval is running.</small>
+            </span>
+            <input
+              type="checkbox"
+              checked={preferences.attentionMonitoringEnabled}
+              onChange={(event) => setStoredPreferences({
+                ...preferences,
+                attentionMonitoringEnabled: event.target.checked,
+              })}
+            />
+          </label>
         </section>
 
         <section className="settings-signal" aria-labelledby="timer-signal-title">

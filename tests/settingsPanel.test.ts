@@ -98,6 +98,13 @@ test("Focus Timer notification permission and Preview stay user-action driven", 
   assert.match(settingsPanelSource, /Allow notifications for this site in browser settings/);
 });
 
+test("Focus Timer settings exposes privacy-first attention monitoring", () => {
+  assert.match(settingsPanelSource, /Attention monitoring/);
+  assert.match(settingsPanelSource, /camera is used only while a focus interval is running/i);
+  assert.match(settingsPanelSource, /preferences\.attentionMonitoringEnabled/);
+  assert.match(settingsPanelSource, /attentionMonitoringEnabled: event\.target\.checked/);
+});
+
 test("Focus Timer behavior rows stay transparent and omit the recipe note", () => {
   assert.doesNotMatch(settingsPanelSource, /Modes|Presets|Pomodoro, Countdown, Stopwatch, Animedoro, and 52\/17 are chosen from Focus/);
   assert.match(stylesSource, /\.settings-recipe-toggle\s*\{[\s\S]*background:\s*transparent/);

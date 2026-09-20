@@ -128,9 +128,22 @@ test("sanitizes focus preferences into supported ranges", () => {
       countdownMinutes: 42,
       autoStartBreaks: false,
       notificationEnabled: true,
+      attentionMonitoringEnabled: false,
       alertSound: "soft",
       alertVolume: 0,
       showTaskInPip: true,
     }
+  );
+});
+
+test("attention monitoring is opt-in and preserves an explicit enabled value", () => {
+  assert.equal(migrateFocusPreferences({}).attentionMonitoringEnabled, false);
+  assert.equal(
+    migrateFocusPreferences({ attentionMonitoringEnabled: true }).attentionMonitoringEnabled,
+    true
+  );
+  assert.equal(
+    migrateFocusPreferences({ attentionMonitoringEnabled: "true" }).attentionMonitoringEnabled,
+    false
   );
 });

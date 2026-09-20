@@ -9,6 +9,7 @@ export interface FocusPreferences {
   countdownMinutes: number;
   autoStartBreaks: boolean;
   notificationEnabled: boolean;
+  attentionMonitoringEnabled: boolean;
   alertSound: "soft" | "level-up" | "none";
   alertVolume: number;
   showTaskInPip: boolean;
