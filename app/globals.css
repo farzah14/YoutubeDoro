@@ -344,6 +344,91 @@ textarea:focus-visible,
   opacity: 0.35;
 }
 
+.auth-home-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-home-backdrop__preview {
+  position: absolute;
+  inset: -5%;
+  display: flex;
+  min-height: 110%;
+  flex-direction: column;
+  filter: blur(9px);
+  opacity: 0.82;
+  pointer-events: none;
+  transform: scale(1.06);
+  user-select: none;
+  will-change: filter, transform;
+}
+
+.auth-home-backdrop__preview .workspace-scene {
+  min-height: 0;
+}
+
+.auth-home-backdrop__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgb(8 12 18 / 52%);
+  pointer-events: none;
+}
+
+.auth-home-preview__timer {
+  position: absolute;
+  right: 50%;
+  bottom: clamp(5rem, 12vh, 8rem);
+  display: grid;
+  min-width: min(15rem, 72vw);
+  justify-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 1rem;
+  background: rgb(7 17 30 / 34%);
+  padding: 1rem 1.25rem;
+  color: #fff;
+  transform: translateX(50%);
+}
+
+.auth-home-preview__timer p {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.auth-home-preview__timer strong {
+  font-family: var(--font-mono);
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  letter-spacing: 0.04em;
+}
+
+.auth-home-preview__timer button {
+  min-height: 2.4rem;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  color: inherit;
+  cursor: not-allowed;
+  font: inherit;
+  padding: 0.35rem 1rem;
+}
+
+@media (max-width: 34rem) {
+  .auth-home-backdrop__preview {
+    filter: blur(7px);
+  }
+
+  .auth-home-preview__timer {
+    bottom: 4.5rem;
+  }
+}
+
 .auth-grid {
   position: relative;
   z-index: 1;
@@ -682,6 +767,8 @@ textarea:focus-visible,
 }
 
 .auth-card {
+  position: relative;
+  z-index: 2;
   display: flex;
   min-width: 0;
   flex-direction: column;

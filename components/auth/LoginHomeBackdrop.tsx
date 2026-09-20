@@ -13,8 +13,8 @@ import { WorkspaceDock } from "../layout/WorkspaceDock";
 const defaultThemeSlots: Record<ThemeSlot, string | null> = { home: null, focus: null };
 const defaultThemeOverlays: Record<ThemeSlot, number> = { home: 42, focus: 42 };
 
-const noopModeChange = (_mode: WorkspaceMode) => {};
-const noopPanelToggle = (_panel: WorkspacePanel) => {};
+const noopModeChange = (_mode: WorkspaceMode) => { void _mode; };
+const noopPanelToggle = (_panel: WorkspacePanel) => { void _panel; };
 
 function normalizeTheme(value: CozyAnimeTheme, fallback: CozyAnimeTheme): CozyAnimeTheme {
   return THEME_ORDER.includes(value) ? value : fallback;
