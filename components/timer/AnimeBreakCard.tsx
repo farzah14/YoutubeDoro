@@ -58,8 +58,8 @@ export function AnimeBreakCard({
 
   const clearError = () => setErrorMsg("");
 
-  const finalizeBreak = useCallback((outcome: "done" | "stopped", seconds = elapsedRef.current) => {
-    if (finalizedRef.current || !startedRef.current) return;
+  const finalizeBreak = useCallback((outcome: "done" | "stopped", seconds = elapsedRef.current, force = false) => {
+    if (finalizedRef.current || (!startedRef.current && !force)) return;
     finalizedRef.current = true;
     const watchedSeconds = Math.max(0, Math.floor(seconds));
     if (outcome === "done") onDone(watchedSeconds);
@@ -67,7 +67,7 @@ export function AnimeBreakCard({
   }, [onDone, onStop]);
 
   const selectMedia = (descriptor: BreakMediaDescriptor, nextTitle: string) => {
-    finalizeBreak("stopped");
+    finalizeBreak("stopped", elapsedRef.current, true);
     playerRef.current?.stop();
     finalizedRef.current = false;
     startedRef.current = false;
@@ -148,13 +148,13 @@ export function AnimeBreakCard({
   const handlePlayerError = useCallback(() => {
     setStatus("Error");
     setErrorMsg(PLAYER_ERROR);
-    finalizeBreak("stopped");
+    finalizeBreak("stopped", elapsedRef.current, true);
   }, [finalizeBreak]);
 
   const handleStop = () => {
     const elapsed = elapsedRef.current;
     playerRef.current?.stop();
-    finalizeBreak("stopped", elapsed);
+    finalizeBreak("stopped", elapsed, true);
     setStatus("Idle");
     startedRef.current = false;
     durationRef.current = 0;
@@ -200,7 +200,7 @@ export function AnimeBreakCard({
   }, [handlePlayerError, media]);
 
   useEffect(() => () => {
-    finalizeBreak("stopped");
+    finalizeBreak("stopped", elapsedRef.current, true);
   }, [finalizeBreak]);
 
   const progress = durationSec > 0 ? Math.min(1, elapsedSec / durationSec) : 0;
