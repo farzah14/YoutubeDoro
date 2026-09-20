@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useRef, useEffect, ComponentType } from "react";
 import { formatMMSS } from "@/lib/time";
 import { extractYouTubeVideoId } from "@/lib/youtube";
-import { PlayerLike, YouTubeComponentProps, SavedBreakVideo } from "@/types";
+import { PlayerLike, YouTubeComponentProps, SavedBreakMedia } from "@/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { KEYS } from "@/lib/constants";
 import { BREAK_PRESETS, DEFAULT_SAVED_BREAKS } from "@/lib/youtubePresets";
@@ -35,7 +35,7 @@ export function YouTubeRestCard({ totalTodaySec, onBreakStart, onProgress, onDon
   const [remainingSec, setRemainingSec] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const [savedBreaks, setSavedBreaks] = useLocalStorage<SavedBreakVideo[]>(
+  const [savedBreaks, setSavedBreaks] = useLocalStorage<SavedBreakMedia[]>(
     KEYS.savedBreakVideos,
     DEFAULT_SAVED_BREAKS
   );
@@ -157,13 +157,15 @@ export function YouTubeRestCard({ totalTodaySec, onBreakStart, onProgress, onDon
   // Save active video to favorites
   const handleSaveFavorite = () => {
     if (!videoId) return;
-    const existing = savedBreaks.find((b) => b.videoId === videoId);
+    const existing = savedBreaks.find((b) => b.provider === "youtube" && b.mediaId === videoId);
     if (existing) return;
 
-    const newEntry: SavedBreakVideo = {
+    const newEntry: SavedBreakMedia = {
       id: `break_${Date.now()}`,
       title: videoTitle || "Favorite Break",
-      videoId,
+      provider: "youtube",
+      sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      mediaId: videoId,
       addedAt: Date.now(),
     };
     setSavedBreaks([newEntry, ...savedBreaks]);
@@ -176,7 +178,7 @@ export function YouTubeRestCard({ totalTodaySec, onBreakStart, onProgress, onDon
   useEffect(() => () => clearTick(), []);
 
   const progress = durationSec > 0 ? remainingSec / durationSec : 0;
-  const isCurrentSaved = videoId ? savedBreaks.some((b) => b.videoId === videoId) : false;
+  const isCurrentSaved = videoId ? savedBreaks.some((b) => b.provider === "youtube" && b.mediaId === videoId) : false;
 
   return (
     <div className="rest-card__content flex flex-col space-y-5">
@@ -233,7 +235,7 @@ export function YouTubeRestCard({ totalTodaySec, onBreakStart, onProgress, onDon
                   >
                     <button
                       type="button"
-                      onClick={() => loadVideo(b.videoId, b.title)}
+                      onClick={() => b.mediaId && loadVideo(b.mediaId, b.title)}
                       className="text-text-secondary hover:text-foreground font-medium truncate max-w-[120px]"
                       title={`Load "${b.title}"`}
                     >

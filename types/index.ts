@@ -76,6 +76,21 @@ export interface BreakPreset {
   durationLabel: string;
 }
 
+export type BreakMediaProvider = "youtube" | "vimeo" | "file";
+
+export interface BreakMediaDescriptor {
+  provider: BreakMediaProvider;
+  sourceUrl: string;
+  mediaId?: string;
+}
+
+export interface SavedBreakMedia extends BreakMediaDescriptor {
+  id: string;
+  title: string;
+  addedAt: number;
+}
+
+/** @deprecated Use SavedBreakMedia for provider-neutral saved breaks. */
 export interface SavedBreakVideo {
   id: string;
   title: string;
