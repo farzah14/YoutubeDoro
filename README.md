@@ -136,9 +136,11 @@ npm install
    - In **Authentication** -> **Providers** -> **Google**, enable Google and add the OAuth client ID and secret from Google Cloud.
    - In **Authentication** -> **Providers** -> **Email**, disable the Email provider.
    - In **Authentication** -> **URL Configuration**, add these redirect URLs:
-     - `http://127.0.0.1:3000/auth/callback`
-     - `https://study-rythms.vercel.app/auth/callback`
-   - Add the equivalent `/auth/callback` URL for every additional deployed domain.
+     - `http://localhost:3000/**`
+     - `http://127.0.0.1:3000/**`
+     - `https://study-rythms.vercel.app/**`
+   - Use the same hostname that is visible in the browser (`localhost` and `127.0.0.1` are different origins).
+   - Add a `/**` entry for every additional deployed domain. The wildcard is required because the app enables Supabase's flow-aware PKCE callback and Supabase appends the reserved `sb_flow_id` query parameter.
 
 StudyRythms uses Google-only authentication. A user's first Google login creates the Supabase user automatically; the application does not provide a separate registration page.
 
@@ -148,7 +150,7 @@ StudyRythms uses Google-only authentication. A user's first Google login creates
 npm run dev
 ```
 
-Open `http://127.0.0.1:3000` in your browser.
+Open `http://localhost:3000` (or `http://127.0.0.1:3000`) in your browser and keep the hostname consistent with the redirect URL you allow-listed.
 
 ---
 

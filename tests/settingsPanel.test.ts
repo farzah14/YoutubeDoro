@@ -148,6 +148,18 @@ test("Manga Editorial Desk keeps Settings opaque and readable", () => {
   assert.doesNotMatch(stylesSource, /settings-folio[\s\S]*backdrop-filter/i);
 });
 
+test("settings sidebar stays anchored while the content column scrolls", () => {
+  const marker = "/* Settings folio scrolling: anchor sidebar, scroll content only. */";
+  assert.equal(stylesSource.includes(marker), true, "missing settings scrolling contract");
+  const scrollingStyles = stylesSource.slice(stylesSource.indexOf(marker));
+
+  assert.match(scrollingStyles, /\.settings-panel \.overlay-panel__body\s*\{[\s\S]*display:\s*flex;[\s\S]*overflow:\s*hidden;/);
+  assert.match(scrollingStyles, /\.settings-folio\s*\{[\s\S]*display:\s*flex;[\s\S]*min-height:\s*0;/);
+  assert.match(scrollingStyles, /\.settings-layout\s*\{[\s\S]*height:\s*100%;[\s\S]*min-height:\s*0;/);
+  assert.match(scrollingStyles, /\.settings-main\s*\{[\s\S]*min-height:\s*0;[\s\S]*overflow-y:\s*auto;/);
+  assert.match(scrollingStyles, /@media \(max-width: 720px\)[\s\S]*\.settings-panel \.overlay-panel__body[\s\S]*overflow-y:\s*auto/);
+});
+
 test("Music and Sub-tasks receive the frozen editorial hooks", () => {
   for (const token of [
     "subtasks-context__folio",

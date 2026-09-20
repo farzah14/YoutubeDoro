@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { getOAuthErrorMessage } from "../lib/supabase/oauthError";
 
 const files = [
   "lib/supabase/client.ts",
@@ -106,15 +107,40 @@ test("server authentication accepts Google identities only", () => {
   assert.match(callbackSource, /auth\.getUser\(\)/);
   assert.match(callbackSource, /auth\.signOut\(\)/);
   assert.match(callbackSource, /error=provider/);
-  assert.match(authPageSource, /Use a Google account to continue/);
+  assert.match(authPageSource, /getOAuthErrorMessage/);
+  assert.match(authPageSource, /error_code/);
+});
+
+test("OAuth callback keeps each PKCE flow tied to its verifier", () => {
+  const browserSource = readFileSync(join(process.cwd(), "lib/supabase/client.ts"), "utf8");
+  const serverSource = readFileSync(join(process.cwd(), "lib/supabase/server.ts"), "utf8");
+
+  assert.match(browserSource, /appendPkceFlowIdToRedirects:\s*true/);
+  assert.match(serverSource, /appendPkceFlowIdToRedirects:\s*true/);
+  assert.match(callbackSource, /const flowId = url\.searchParams\.get\("sb_flow_id"\)/);
+  assert.match(callbackSource, /exchangeCodeForSession\(\s*code,\s*flowId \? \{ flowId \} : undefined/);
+});
+
+test("OAuth state failures become a safe retry message", () => {
+  assert.equal(
+    getOAuthErrorMessage({ error: "oauth", reason: "bad_oauth_state" }),
+    "This Google sign-in attempt expired or was already used. Start again.",
+  );
+  assert.equal(
+    getOAuthErrorMessage({ error: "oauth" }),
+    "Google sign-in could not be completed. Please try again.",
+  );
+  assert.equal(getOAuthErrorMessage({ error: "unknown" }), undefined);
 });
 
 test("README documents Google-only Supabase authentication", () => {
   const readme = readFileSync(join(process.cwd(), "README.md"), "utf8");
   assert.match(readme, /Google-only authentication/);
   assert.match(readme, /disable the Email provider/i);
-  assert.match(readme, /http:\/\/127\.0\.0\.1:3000\/auth\/callback/);
-  assert.match(readme, /https:\/\/study-rythms\.vercel\.app\/auth\/callback/);
+  assert.match(readme, /http:\/\/localhost:3000\/\*\*/);
+  assert.match(readme, /http:\/\/127\.0\.0\.1:3000\/\*\*/);
+  assert.match(readme, /https:\/\/study-rythms\.vercel\.app\/\*\*/);
+  assert.match(readme, /sb_flow_id/);
   assert.doesNotMatch(readme, /Sign in, sign up, and password reset forms/);
   assert.doesNotMatch(readme, /disable \*\*Confirm email\*\*/);
 });

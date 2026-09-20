@@ -8,6 +8,9 @@ export async function proxy(request: NextRequest) {
   if (!url || !key) return response;
 
   const supabase = createServerClient(url, key, {
+    auth: {
+      experimental: { appendPkceFlowIdToRedirects: true },
+    },
     cookies: {
       getAll() {
         return request.cookies.getAll();

@@ -13,6 +13,10 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient | nul
 
   const cookieStore = await cookies();
   return createServerClient(url, key, {
+    auth: {
+      // Match the browser client when the callback exchanges a specific flow.
+      experimental: { appendPkceFlowIdToRedirects: true },
+    },
     cookies: {
       getAll() {
         return cookieStore.getAll();
