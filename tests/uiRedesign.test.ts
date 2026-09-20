@@ -113,10 +113,13 @@ test("Focus Priorities actions use the atelier palette", () => {
   assert.match(stylesSource, /\.priorities-progress i\s*\{[^}]*background:\s*var\(--atelier-moss\)/);
 });
 
-test("timer recipe exposes one shared break length", () => {
-  assert.match(settingsSource, /label: "Break"/);
+test("timer recipe distinguishes standard and media-derived breaks", () => {
+  const restSource = readWorkspaceFile("components/timer/RestCardContainer.tsx");
+  assert.match(settingsSource, /label: "Standard break"/);
   assert.doesNotMatch(settingsSource, /Short break|Long break/);
-  assert.match(settingsSource, /key: "breakMinutes"/);
+  assert.match(restSource, /Anime video/);
+  assert.match(restSource, /AnimeBreakCard/);
+  assert.doesNotMatch(restSource, /YouTubeRestCard|label: "YouTube"/);
   assert.match(prioritiesSource, /breakMinutes/);
   assert.doesNotMatch(prioritiesSource, /shortBreakMinutes|longBreakMinutes/);
 });
