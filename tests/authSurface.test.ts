@@ -165,6 +165,8 @@ test("login page includes an inert blurred Home workspace preview", () => {
   }
 
   assert.match(authSource, /<LoginHomeBackdrop\s*\/>/);
+  assert.match(backdropSource, />25:00</);
+  assert.doesNotMatch(backdropSource, />50:00</);
 
   const styles = readFileSync(stylesFile, "utf8");
   for (const selector of [
