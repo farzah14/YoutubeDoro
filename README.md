@@ -11,6 +11,7 @@ StudyRythms is a focus timer and study dashboard that pairs anime artwork and am
 - Document Picture-in-Picture window showing the live clock, current task, and active background.
 - Two break styles: a plain timer or an embedded YouTube player with built-in stretch and breathing presets.
 - Web Audio completion chimes (Soft chime, Level-up, or Mute) and browser push notifications.
+- Optional on-device attention monitoring uses the camera only during a running focus interval and sounds once after five continuous seconds looking away.
 
 ### Background themes
 - 15 illustrated rooms, landscapes, and gradients in WebP format with optional canvas particles (stars, rain, dust).
@@ -167,6 +168,8 @@ npm run build
 - **Row Level Security (RLS)**: Authenticated users can only read, insert, update, and delete their own rows (`user_id = auth.uid()`). Public and anonymous access to tracker tables is revoked.
 - **Local preferences**: UI themes, audio volume, and clock options are saved to browser storage and never sent to the server.
 - **Data portability**: Local data can be imported into your account while keeping a local browser backup intact.
+- **Attention camera**: Attention monitoring is off by default. When enabled, camera frames and head-pose results stay in the browser and are never recorded, uploaded, or stored.
+- **Local model assets**: The MediaPipe runtime and Face Landmarker model are served from this application; no remote inference service receives camera data.
 
 ---
 
