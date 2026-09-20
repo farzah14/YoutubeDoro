@@ -27,9 +27,25 @@ const preferences: FocusPreferences = {
   showTaskInPip: false,
 };
 
+test("pomodoro is always a fixed fifty-minute focus", () => {
+  const legacy = { ...preferences, focusMinutes: 25 };
+  const customized = { ...preferences, focusMinutes: 90 };
+
+  assert.equal(createTimerState(legacy).targetSeconds, 50 * 60);
+  assert.equal(createTimerState(customized).targetSeconds, 50 * 60);
+});
+
+test("pomodoro waits for Anime Break even when auto-start is enabled", () => {
+  const configured = { ...preferences, autoStartBreaks: true };
+  const done = syncTimer(startTimer(createTimerState(configured), 0), configured, 50 * 60_000);
+
+  assert.equal(done.phase, "break");
+  assert.equal(done.status, "idle");
+});
+
 test("pomodoro advances focus to a generic break", () => {
   const running = startTimer(createTimerState(preferences), 1_000);
-  const next = syncTimer(running, preferences, 1_000 + 25 * 60 * 1_000);
+  const next = syncTimer(running, preferences, 1_000 + 50 * 60 * 1_000);
 
   assert.equal(next.phase, "break");
   assert.equal(next.targetSeconds, 5 * 60);
@@ -99,7 +115,7 @@ test("pause and resume exclude paused wall-clock time", () => {
   const current = syncTimer(resumed, preferences, 110_000);
 
   assert.equal(current.elapsedSeconds, 25);
-  assert.equal(getDisplaySeconds(current), 25 * 60 - 25);
+  assert.equal(getDisplaySeconds(current), 50 * 60 - 25);
 });
 
 test("frequent sub-second syncs do not discard elapsed time", () => {
@@ -109,7 +125,7 @@ test("frequent sub-second syncs do not discard elapsed time", () => {
   }
 
   assert.equal(current.elapsedSeconds, 1);
-  assert.equal(getDisplaySeconds(current), 25 * 60 - 1);
+  assert.equal(getDisplaySeconds(current), 50 * 60 - 1);
 });
 
 test("reset restores the configured opening phase", () => {
@@ -140,7 +156,7 @@ test("manual phase selection resets only the active interval", () => {
 });
 
 test("auto-start breaks does not auto-start the next focus session", () => {
-  const autoPreferences = { ...preferences, autoStartBreaks: true };
+  const autoPreferences = { ...preferences, mode: "animedoro" as const, autoStartBreaks: true };
   const focusDone = syncTimer(startTimer(createTimerState(autoPreferences), 0), autoPreferences, 25 * 60_000);
   assert.equal(focusDone.phase, "break");
   assert.equal(focusDone.status, "running");
