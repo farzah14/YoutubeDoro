@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { KEYS } from "@/lib/constants";
 import { migrateSavedBreakMedia, parseBreakMediaInput } from "@/lib/breakMedia";
 import { BREAK_PRESETS, DEFAULT_SAVED_BREAKS } from "@/lib/youtubePresets";
@@ -58,15 +58,16 @@ export function AnimeBreakCard({
 
   const clearError = () => setErrorMsg("");
 
-  const finalizeBreak = (outcome: "done" | "stopped", seconds = elapsedRef.current) => {
+  const finalizeBreak = useCallback((outcome: "done" | "stopped", seconds = elapsedRef.current) => {
     if (finalizedRef.current || !startedRef.current) return;
     finalizedRef.current = true;
     const watchedSeconds = Math.max(0, Math.floor(seconds));
     if (outcome === "done") onDone(watchedSeconds);
     else onStop(watchedSeconds);
-  };
+  }, [onDone, onStop]);
 
   const selectMedia = (descriptor: BreakMediaDescriptor, nextTitle: string) => {
+    finalizeBreak("stopped");
     playerRef.current?.stop();
     finalizedRef.current = false;
     startedRef.current = false;
@@ -144,11 +145,11 @@ export function AnimeBreakCard({
     finalizeBreak("done", elapsed);
   };
 
-  const handlePlayerError = () => {
+  const handlePlayerError = useCallback(() => {
     setStatus("Error");
     setErrorMsg(PLAYER_ERROR);
     finalizeBreak("stopped");
-  };
+  }, [finalizeBreak]);
 
   const handleStop = () => {
     const elapsed = elapsedRef.current;
@@ -196,11 +197,11 @@ export function AnimeBreakCard({
       }
     }, 10_000);
     return () => window.clearTimeout(timeout);
-  }, [media]);
+  }, [handlePlayerError, media]);
 
   useEffect(() => () => {
     finalizeBreak("stopped");
-  }, []);
+  }, [finalizeBreak]);
 
   const progress = durationSec > 0 ? Math.min(1, elapsedSec / durationSec) : 0;
   const activeSaved = media ? savedBreaks.some((item) => item.sourceUrl === media.sourceUrl) : false;

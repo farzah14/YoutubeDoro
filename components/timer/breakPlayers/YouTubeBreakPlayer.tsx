@@ -18,7 +18,9 @@ export const YouTubeBreakPlayer = forwardRef<BreakPlayerHandle, YouTubeBreakPlay
   const eventsRef = useRef(events);
   const durationReportedRef = useRef(false);
 
-  eventsRef.current = events;
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
 
   const clearTick = () => {
     if (tickRef.current !== null) {

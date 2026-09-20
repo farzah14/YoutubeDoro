@@ -12,7 +12,9 @@ export const VimeoBreakPlayer = forwardRef<BreakPlayerHandle, VimeoBreakPlayerPr
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const playerRef = useRef<Player | null>(null);
   const eventsRef = useRef(events);
-  eventsRef.current = events;
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
 
   useImperativeHandle(ref, () => ({
     play: () => playerRef.current?.play(),
