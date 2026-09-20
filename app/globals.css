@@ -1231,16 +1231,6 @@ textarea:focus-visible,
   line-height: 0.9;
 }
 
-.scene-brand p {
-  margin: 0.65rem 0 0;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.28em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
 .home-hero {
   display: flex;
   min-height: 0;
@@ -4419,10 +4409,6 @@ textarea:focus-visible,
 @media (max-width: 640px) {
   .scene-header {
     gap: 1rem;
-  }
-
-  .scene-brand p {
-    display: none;
   }
 
   .home-hero {

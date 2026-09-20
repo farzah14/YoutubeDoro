@@ -40,10 +40,11 @@ test("focus prompt does not render the decorative star glyph", () => {
 test("scene brand aligns with the workspace padding", () => {
   assert.match(headerSource, /className="scene-brand"/);
   assert.match(stylesSource, /\.scene-header\s*\{[\s\S]*inset:\s*1\.75rem 2rem auto/);
-  assert.match(stylesSource, /\.scene-brand p\s*\{[\s\S]*margin-top:\s*0\.65rem/);
+  assert.doesNotMatch(stylesSource, /\.scene-brand p\s*\{/);
 });
 
 test("scene header keeps branding without quote content", () => {
+  assert.doesNotMatch(headerSource, /anime focus room/i);
   assert.doesNotMatch(headerSource, /scene-quote|blockquote|quote/);
 });
 
