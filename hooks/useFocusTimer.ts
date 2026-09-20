@@ -33,7 +33,7 @@ type StartBoundary = (context: TimerStartContext) => void | boolean | Promise<vo
 interface UseFocusTimerOptions {
   onFocusStart?: StartBoundary;
   onBreakStart?: StartBoundary;
-  onFocusDone?: (seconds: number, followedByBreak: boolean) => void;
+  onFocusDone?: (seconds: number, followedByBreak: boolean, mode: TimerMode) => void;
   onFocusStop?: (seconds: number) => void;
   onBreakDone?: (seconds: number) => void;
   onBreakStop?: (seconds: number) => void;
@@ -93,7 +93,7 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     if (completed) {
       if (preferences.notificationEnabled) void notifyTimerComplete(previous.phase === "focus" ? "Your focus interval is complete." : "Your break is complete.");
       void playTimerAlert(preferences.alertSound, preferences.alertVolume);
-      if (previous.phase === "focus") callbacks.current.onFocusDone?.(previous.targetSeconds, state.phase === "break");
+      if (previous.phase === "focus") callbacks.current.onFocusDone?.(previous.targetSeconds, state.phase === "break", previous.mode);
       else callbacks.current.onBreakDone?.(previous.targetSeconds);
       if (previous.phase === "focus" && state.phase === "break" && state.status === "running") {
         callbacks.current.onBreakStart?.({ mode: state.mode, phase: "break", plannedSeconds: state.targetSeconds });
