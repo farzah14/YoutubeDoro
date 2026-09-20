@@ -31,7 +31,7 @@ import { LoFiPlayer, MusicEngine } from "./audio/LoFiPlayer";
 import { SettingsPanel } from "./settings/SettingsPanel";
 import { useAttentionMonitor } from "@/hooks/useAttentionMonitor";
 
-export default function YouTubeRestTimer({ accountEmail, accountProvider }: { accountEmail?: string; accountProvider?: string } = {}) {
+export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: string } = {}) {
   const [today] = useState<string>(() => dayKey());
 
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("home");
@@ -438,7 +438,6 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
         showSeconds={showSeconds}
         onShowSecondsChange={setShowSeconds}
         accountEmail={accountEmail}
-        accountProvider={accountProvider}
         tasks={tasks}
         sessions={visibleSessions}
         today={today}

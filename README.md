@@ -32,6 +32,7 @@ StudyRythms is a focus timer and study dashboard that pairs anime artwork and am
 - Account-backed session history stored in Supabase with Row Level Security. Logs duration, break time, timer mode, task title snapshot, status, and session notes.
 - Daily totals, weekly heatmap, and streak tracking.
 - Local storage import tool to transfer existing browser data into Supabase without losing local backups.
+- Google-only authentication through Supabase OAuth; there are no email/password or registration forms.
 
 ---
 
@@ -56,14 +57,14 @@ StudyRythms/
 ├── app/                        # Next.js App Router
 │   ├── api/                    # API route handlers
 │   │   └── tracker/            # Tasks, subtasks, sessions, migration endpoints
-│   ├── auth/                   # Authentication and password reset pages
+│   ├── auth/                   # Google OAuth entry and callback routes
 │   ├── globals.css             # Base styles, Tailwind directives, theme variables
 │   ├── layout.tsx              # Root HTML shell and font definitions
 │   └── page.tsx                # Server component router (Auth or Main dashboard)
 ├── components/                 # React UI components
 │   ├── anime/                  # Canvas particles and background picker
 │   ├── audio/                  # Lo-Fi player and procedural sound mixer
-│   ├── auth/                   # Sign in, sign up, and password reset forms
+│   ├── auth/                   # Google-only sign-in card
 │   ├── history/                # Session logbook and note editing
 │   ├── layout/                 # Navigation, header, and workspace dock
 │   ├── migration/              # Local storage data import dialog
@@ -131,9 +132,15 @@ npm install
    - Paste and run the contents of `supabase/migrations/20260828000000_learning_tracker.sql`.
    - This creates `tasks`, `subtasks`, `learning_sessions`, and `migration_runs` tables with Row Level Security enabled.
 
-5. Configure authentication settings:
-   - In **Authentication** -> **Providers** -> **Email**, disable **Confirm email** since this app does not require email confirmation.
-   - If using Google login, enable **Google** under providers and add `http://127.0.0.1:3000/auth/callback` (or your site domain) to the redirect URL allowlist.
+5. Configure Google-only authentication:
+   - In **Authentication** -> **Providers** -> **Google**, enable Google and add the OAuth client ID and secret from Google Cloud.
+   - In **Authentication** -> **Providers** -> **Email**, disable the Email provider.
+   - In **Authentication** -> **URL Configuration**, add these redirect URLs:
+     - `http://127.0.0.1:3000/auth/callback`
+     - `https://study-rythms.vercel.app/auth/callback`
+   - Add the equivalent `/auth/callback` URL for every additional deployed domain.
+
+StudyRythms uses Google-only authentication. A user's first Google login creates the Supabase user automatically; the application does not provide a separate registration page.
 
 ### 3. Run the development server
 
@@ -165,6 +172,7 @@ npm run build
 
 ## Security and privacy
 
+- **Google-only authentication**: The UI, OAuth callback, server pages, and tracker APIs accept Google identities only. Disable Supabase's Email provider so the hosted auth configuration matches the application policy.
 - **Row Level Security (RLS)**: Authenticated users can only read, insert, update, and delete their own rows (`user_id = auth.uid()`). Public and anonymous access to tracker tables is revoked.
 - **Local preferences**: UI themes, audio volume, and clock options are saved to browser storage and never sent to the server.
 - **Data portability**: Local data can be imported into your account while keeping a local browser backup intact.

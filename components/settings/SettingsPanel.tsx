@@ -41,7 +41,6 @@ interface SettingsPanelProps {
   showSeconds: boolean;
   onShowSecondsChange: (value: boolean) => void;
   accountEmail?: string;
-  accountProvider?: string;
   tasks: TaskItem[];
   sessions: LearningSession[];
   today: string;
@@ -80,7 +79,6 @@ export function SettingsPanel({
   showSeconds,
   onShowSecondsChange,
   accountEmail,
-  accountProvider,
   tasks,
   sessions,
   today,
@@ -182,7 +180,7 @@ export function SettingsPanel({
         <p className="settings-copy">Tasks, subtasks, sessions, breaks, and session notes belong to this account.</p>
         <div className="settings-info-grid">
           <div className="settings-info-card"><p className="eyebrow">Email</p><strong className="settings-account__email">{accountEmail || "Unavailable"}</strong><p>Your authenticated account email.</p></div>
-          <div className="settings-info-card"><p className="eyebrow">Sign-in method</p><strong>{accountProvider ? accountProvider.charAt(0).toUpperCase() + accountProvider.slice(1) : "Email"}</strong></div>
+          <div className="settings-info-card"><p className="eyebrow">Sign-in method</p><strong>Google</strong></div>
         </div>
         <div className="settings-extras-actions settings-account__actions">
           <Button type="button" variant="secondary" onClick={() => selectSection("history")}>Open session History</Button>

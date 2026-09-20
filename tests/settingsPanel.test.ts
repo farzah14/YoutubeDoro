@@ -56,7 +56,8 @@ test("settings exposes the signed-in account and session history", () => {
   assert.match(settingsPanelSource, /\["account", "Account"\]/);
   assert.match(settingsPanelSource, /\["history", "History"\]/);
   assert.match(settingsPanelSource, /accountEmail/);
-  assert.match(settingsPanelSource, /accountProvider/);
+  assert.doesNotMatch(settingsPanelSource, /accountProvider/);
+  assert.match(settingsPanelSource, /<strong>Google<\/strong>/);
   assert.match(settingsPanelSource, /initialSection/);
   assert.match(settingsPanelSource, /useState<SettingsSection>\(initialSection \?\? "themes"\)/);
   assert.match(settingsPanelSource, /<HistoryPanel[\s\S]*tasks=\{tasks\}/);

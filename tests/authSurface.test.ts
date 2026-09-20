@@ -95,3 +95,13 @@ test("server authentication accepts Google identities only", () => {
   assert.match(callbackSource, /error=provider/);
   assert.match(authPageSource, /Use a Google account to continue/);
 });
+
+test("README documents Google-only Supabase authentication", () => {
+  const readme = readFileSync(join(process.cwd(), "README.md"), "utf8");
+  assert.match(readme, /Google-only authentication/);
+  assert.match(readme, /disable the Email provider/i);
+  assert.match(readme, /http:\/\/127\.0\.0\.1:3000\/auth\/callback/);
+  assert.match(readme, /https:\/\/study-rythms\.vercel\.app\/auth\/callback/);
+  assert.doesNotMatch(readme, /Sign in, sign up, and password reset forms/);
+  assert.doesNotMatch(readme, /disable \*\*Confirm email\*\*/);
+});
