@@ -140,6 +140,7 @@ test("README documents Google-only Supabase authentication", () => {
   assert.match(readme, /http:\/\/localhost:3000\/\*\*/);
   assert.match(readme, /http:\/\/127\.0\.0\.1:3000\/\*\*/);
   assert.match(readme, /https:\/\/study-rythms\.vercel\.app\/\*\*/);
+  assert.match(readme, /Site URL[\s\S]*https:\/\/study-rythms\.vercel\.app/);
   assert.match(readme, /sb_flow_id/);
   assert.doesNotMatch(readme, /Sign in, sign up, and password reset forms/);
   assert.doesNotMatch(readme, /disable \*\*Confirm email\*\*/);

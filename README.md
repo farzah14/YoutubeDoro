@@ -135,9 +135,11 @@ npm install
 5. Configure Google-only authentication:
    - In **Authentication** -> **Providers** -> **Google**, enable Google and add the OAuth client ID and secret from Google Cloud.
    - In **Authentication** -> **Providers** -> **Email**, disable the Email provider.
-   - In **Authentication** -> **URL Configuration**, add these redirect URLs:
+   - In **Authentication** -> **URL Configuration**, set **Site URL** to `https://study-rythms.vercel.app` for the production project. Do not leave the production Site URL set to `http://localhost:3000`, because Supabase falls back to it when a redirect is not on the allow list.
+   - In the same **URL Configuration** page, add these redirect URLs:
      - `http://localhost:3000/**`
      - `http://127.0.0.1:3000/**`
+     - `http://127.0.0.1:3001/**` (if using the alternate local port)
      - `https://study-rythms.vercel.app/**`
    - Use the same hostname that is visible in the browser (`localhost` and `127.0.0.1` are different origins).
    - Add a `/**` entry for every additional deployed domain. The wildcard is required because the app enables Supabase's flow-aware PKCE callback and Supabase appends the reserved `sb_flow_id` query parameter.
