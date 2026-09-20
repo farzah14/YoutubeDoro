@@ -85,6 +85,14 @@ test("auth surface has Google OAuth and no password flows", () => {
   }
   assert.equal(mobileSizing.includes("overflow-y: auto"), true, "mobile auth must allow vertical scrolling");
   assert.equal(mobileSizing.includes("overflow-x: hidden"), true, "mobile auth must avoid horizontal overflow");
+
+  const loginSpacingMarker = "/* Auth login spacing: balanced card and centered Google control. */";
+  assert.equal(styles.includes(loginSpacingMarker), true, "missing login spacing contract");
+  const loginSpacing = styles.slice(styles.indexOf(loginSpacingMarker));
+  assert.match(loginSpacing, /\.auth-card\s*\{\s*padding: clamp\(1\.25rem, 3vw, 2rem\);/);
+  assert.match(loginSpacing, /\.auth-card h1\s*\{\s*margin: 0;/);
+  assert.match(loginSpacing, /\.auth-google\s*\{\s*justify-content: center;/);
+  assert.match(loginSpacing, /\.auth-google__content\s*\{\s*justify-content: center;/);
 });
 
 const serverAuthSource = readFileSync(join(process.cwd(), "lib/supabase/auth.ts"), "utf8");

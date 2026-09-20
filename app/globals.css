@@ -5084,6 +5084,25 @@ textarea:focus-visible,
 }
 
 /* Auth mobile sizing: compact controls. */
+/* Auth login spacing: balanced card and centered Google control. */
+.auth-card {
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.auth-card h1 {
+  margin: 0;
+}
+
+.auth-google {
+  justify-content: center;
+  margin-top: 1.25rem;
+  padding: 0.7rem 1rem;
+}
+
+.auth-google__content {
+  justify-content: center;
+}
+
 .auth-card {
   width: min(100%, 30rem);
 }
@@ -5098,7 +5117,7 @@ textarea:focus-visible,
   .auth-card {
     width: min(100%, 25rem);
     border-radius: 0.9rem;
-    padding: 1rem;
+    padding: 1.25rem;
   }
 
   .auth-card h1 {
@@ -5121,11 +5140,11 @@ textarea:focus-visible,
   .auth-google,
   .auth-submit {
     min-height: 2.7rem;
-    padding: 0.6rem 0.75rem;
+    padding: 0.65rem 1rem;
   }
 
   .auth-google {
-    margin-top: 0.85rem;
+    margin-top: 1rem;
   }
 
   .auth-divider {
