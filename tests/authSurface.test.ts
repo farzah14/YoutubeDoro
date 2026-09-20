@@ -89,3 +89,17 @@ test("auth surface has SSR clients, password flows, and OAuth callback", () => {
   assert.equal(mobileSizing.includes("overflow-y: auto"), true, "mobile auth must allow vertical scrolling");
   assert.equal(mobileSizing.includes("overflow-x: hidden"), true, "mobile auth must avoid horizontal overflow");
 });
+
+const serverAuthSource = readFileSync(join(process.cwd(), "lib/supabase/auth.ts"), "utf8");
+const callbackSource = readFileSync(join(process.cwd(), "app/auth/callback/route.ts"), "utf8");
+const authPageSource = readFileSync(join(process.cwd(), "app/auth/page.tsx"), "utf8");
+
+test("server authentication accepts Google identities only", () => {
+  assert.match(serverAuthSource, /hasGoogleIdentity/);
+  assert.match(serverAuthSource, /Google authentication is required/);
+  assert.match(callbackSource, /hasGoogleIdentity/);
+  assert.match(callbackSource, /auth\.getUser\(\)/);
+  assert.match(callbackSource, /auth\.signOut\(\)/);
+  assert.match(callbackSource, /error=provider/);
+  assert.match(authPageSource, /Use a Google account to continue/);
+});
