@@ -51,6 +51,7 @@ test("auth surface has Google OAuth and no password flows", () => {
   assert.equal(authSource.includes("auth-card"), true, "sign-in should keep the auth card");
   assert.equal(authSource.includes("auth-google"), true);
   assert.match(authSource, /aria-label="StudyRythms login"/);
+  assert.match(authSource, /<p className="eyebrow auth-brand-label">StudyRythms<\/p>/);
   assert.match(authSource, /<h1 id="auth-title">Login<\/h1>/);
   assert.equal(authSource.includes("StudyRythms · Google sign in"), false);
   assert.equal(existsSync(join(process.cwd(), "app/auth/reset-password/page.tsx")), false);
