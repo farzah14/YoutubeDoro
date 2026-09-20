@@ -81,5 +81,13 @@ test("rejects malformed and non-finite transforms as away", () => {
     ),
     "away",
   );
+  assert.equal(
+    classifyHeadTransform(undefined as unknown as MatrixTransform, 25, 20),
+    "away",
+  );
+  assert.equal(
+    classifyHeadTransform("invalid" as unknown as MatrixTransform, 25, 20),
+    "away",
+  );
   assert.equal(extractHeadPose(null), null);
 });

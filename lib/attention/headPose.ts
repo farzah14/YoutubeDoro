@@ -9,18 +9,28 @@ export type HeadPose = {
   pitchDeg: number;
 };
 
-function isValidTransform(transform: MatrixTransform | null): transform is MatrixTransform {
+function isValidTransform(transform: unknown): transform is MatrixTransform {
   return (
-    transform !== null &&
-    transform.rows === 4 &&
-    transform.columns === 4 &&
-    Array.isArray(transform.data) &&
-    transform.data.length === 16 &&
-    transform.data.every(Number.isFinite)
+    !!transform &&
+    typeof transform === "object" &&
+    (() => {
+      const candidate = transform as {
+        rows?: unknown;
+        columns?: unknown;
+        data?: unknown;
+      };
+      return (
+        candidate.rows === 4 &&
+        candidate.columns === 4 &&
+        Array.isArray(candidate.data) &&
+        candidate.data.length === 16 &&
+        candidate.data.every(Number.isFinite)
+      );
+    })()
   );
 }
 
-export function extractHeadPose(transform: MatrixTransform | null): HeadPose | null {
+export function extractHeadPose(transform: unknown): HeadPose | null {
   if (!isValidTransform(transform)) {
     return null;
   }
@@ -34,7 +44,7 @@ export function extractHeadPose(transform: MatrixTransform | null): HeadPose | n
 }
 
 export function classifyHeadTransform(
-  transform: MatrixTransform | null,
+  transform: unknown,
   yawThresholdDeg: number,
   pitchThresholdDeg: number,
 ): "focused" | "away" {
