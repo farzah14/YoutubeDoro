@@ -116,7 +116,10 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
     }
   }, []);
   const pause = useCallback(() => setState((current) => pauseTimer(current, Date.now())), []);
-  const resume = useCallback(() => setState((current) => resumeTimer(current, Date.now())), []);
+  const resume = useCallback(() => {
+    void primeTimerAlertAudio();
+    setState((current) => resumeTimer(current, Date.now()));
+  }, []);
   const reset = useCallback(() => {
     setState((current) => {
       const stopped = current.status === "running" ? pauseTimer(current, Date.now()) : current;

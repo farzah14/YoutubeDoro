@@ -13,6 +13,9 @@ const subtasksSource = readWorkspaceFile("components/tasks/SubtaskPanel.tsx");
 const prioritiesSource = readWorkspaceFile("components/tasks/TaskQueue.tsx");
 const historySource = readWorkspaceFile("components/history/HistoryPanel.tsx");
 const timerSource = readWorkspaceFile("components/YouTubeRestTimer.tsx");
+const learningCardSource = readWorkspaceFile("components/timer/LearningCard.tsx");
+const attentionHookSource = readWorkspaceFile("hooks/useAttentionMonitor.ts");
+const attentionStatusSource = readWorkspaceFile("components/attention/AttentionStatus.tsx");
 
 test("overlay surfaces use the Studio Window matte contract", () => {
   assert.match(
@@ -126,4 +129,32 @@ test("History is organized around account sessions", () => {
   assert.match(settingsSource, /<HistoryPanel[\s\S]*tasks=\{tasks\}/);
   assert.doesNotMatch(timerSource, /<Modal open=\{openPanel === "history"\}/);
   assert.match(timerSource, /initialSection=\{openPanel === "history" \? "history" : undefined\}/);
+});
+
+test("attention monitoring is gated to a running focus interval", () => {
+  assert.match(
+    timerSource,
+    /workspaceMode === "focus"\s*&&\s*focusTimer\.preferences\.attentionMonitoringEnabled\s*&&\s*focusTimer\.state\.phase === "focus"\s*&&\s*focusTimer\.state\.status === "running"/,
+  );
+  assert.match(timerSource, /useAttentionMonitor\(/);
+  assert.match(timerSource, /attentionStatus=\{attentionStatus\}/);
+  assert.match(learningCardSource, /attentionStatus: AttentionMonitorStatus/);
+  assert.match(learningCardSource, /<AttentionStatus status=\{attentionStatus\} \/>/);
+});
+
+test("attention status badge is accessible and never renders a camera preview", () => {
+  assert.match(attentionHookSource, /createAttentionMonitor/);
+  assert.match(attentionHookSource, /openAttentionCamera/);
+  assert.match(attentionHookSource, /createMediaPipeDetector/);
+  assert.match(attentionStatusSource, /role="status"/);
+  assert.match(attentionStatusSource, /aria-live="polite"/);
+  for (const label of ["Camera starting", "Focused", "Look back", "Camera blocked", "Unavailable"]) {
+    assert.match(attentionStatusSource, new RegExp(label));
+  }
+  assert.doesNotMatch(attentionStatusSource, /<video|<canvas/i);
+});
+
+test("attention status badge has compact dashboard styling", () => {
+  assert.match(stylesSource, /\.focus-dashboard__attention\s*\{/);
+  assert.match(stylesSource, /\.focus-dashboard__attention[\s\S]*?font-size:/);
 });

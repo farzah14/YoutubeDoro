@@ -1217,6 +1217,23 @@ textarea:focus-visible,
   text-align: center;
 }
 
+.focus-dashboard__attention {
+  display: inline-flex;
+  min-height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  color: var(--studio-pencil);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .focus-dashboard__context-label {
   color: var(--studio-pencil);
   font-family: var(--font-mono);

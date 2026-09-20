@@ -29,6 +29,7 @@ import { MigrationPrompt, isMigrationSuppressed } from "./migration/MigrationPro
 import { BROWSER_MIGRATION_KEY, exportBrowserTrackerData, getBrowserMigrationKey, type BrowserMigrationExport } from "@/lib/browserMigration";
 import { LoFiPlayer, MusicEngine } from "./audio/LoFiPlayer";
 import { SettingsPanel } from "./settings/SettingsPanel";
+import { useAttentionMonitor } from "@/hooks/useAttentionMonitor";
 
 export default function YouTubeRestTimer({ accountEmail, accountProvider }: { accountEmail?: string; accountProvider?: string } = {}) {
   const [today] = useState<string>(() => dayKey());
@@ -256,6 +257,11 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
     onBreakDone: handleBreakDone,
     onBreakStop: handleBreakStop,
   });
+  const attentionMonitoringActive = workspaceMode === "focus"
+    && focusTimer.preferences.attentionMonitoringEnabled
+    && focusTimer.state.phase === "focus"
+    && focusTimer.state.status === "running";
+  const attentionStatus = useAttentionMonitor(attentionMonitoringActive, focusTimer.preferences.alertVolume);
   const handleRestDone = useCallback((seconds: number) => endBreak(seconds), [endBreak]);
   const handleRestStop = useCallback((seconds: number) => endBreak(seconds), [endBreak]);
 
@@ -350,6 +356,7 @@ export default function YouTubeRestTimer({ accountEmail, accountProvider }: { ac
               activeTaskId={activeTaskId}
               onOpenTasks={() => toggleWorkspacePanel("tasks")}
               onProgress={handleProgress}
+              attentionStatus={attentionStatus}
             />
           </main>
         </div>

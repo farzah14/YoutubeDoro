@@ -108,6 +108,41 @@ export function playTimerAlert(kind: "soft" | "level-up" | "none", volume: numbe
   }
 }
 
+export function playAttentionAlert(volume: number): void {
+  try {
+    const context = getTimerAudioContext();
+    if (!context || context.state === "closed") return;
+
+    const safeVolume = Number.isFinite(volume) ? volume : 0;
+    const normalizedVolume = Math.min(1, Math.max(0, safeVolume / 100));
+    if (normalizedVolume === 0) return;
+
+    if (context.state !== "running") void context.resume().catch(() => undefined);
+
+    const startAt = context.currentTime;
+    const noteDuration = 0.14;
+    const noteSpacing = 0.16;
+    const peak = Math.max(0.02, normalizedVolume * 0.2);
+    const frequencies = [659.25, 783.99, 659.25];
+
+    frequencies.forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const noteStart = startAt + index * noteSpacing;
+      gain.gain.setValueAtTime(0.0001, noteStart);
+      gain.gain.exponentialRampToValueAtTime(peak, noteStart + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteStart + noteDuration);
+      oscillator.type = "triangle";
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(noteStart);
+      oscillator.stop(noteStart + noteDuration + 0.04);
+    });
+  } catch {
+    // Attention audio is an enhancement, not a timer dependency.
+  }
+}
+
 export interface WakeLockHandle {
   release: () => Promise<void>;
 }

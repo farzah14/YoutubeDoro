@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { notifyTimerComplete, playTimerAlert, primeTimerAlertAudio } from "../lib/browserFeatures.ts";
+import {
+  notifyTimerComplete,
+  playAttentionAlert,
+  playTimerAlert,
+  primeTimerAlertAudio,
+} from "../lib/browserFeatures.ts";
 
 const focusTimerSource = readFileSync(
   fileURLToPath(new URL("../hooks/useFocusTimer.ts", import.meta.url)),
@@ -18,6 +23,7 @@ const notificationWorkerSource = existsSync(notificationWorkerPath) ? readFileSy
 test("focus start primes the alert audio path for later completion", () => {
   assert.match(focusTimerSource, /primeTimerAlertAudio/);
   assert.match(focusTimerSource, /void primeTimerAlertAudio\(\)/);
+  assert.match(focusTimerSource, /const resume = useCallback\(\(\) => \{[\s\S]*?void primeTimerAlertAudio\(\);[\s\S]*?resumeTimer/);
 });
 
 test("picture-in-picture support covers document and mobile video paths", () => {
@@ -154,10 +160,11 @@ test("timer alerts reuse the primed audio context", async () => {
     await primeTimerAlertAudio();
     await playTimerAlert("soft", 70);
     await playTimerAlert("level-up", 70);
+    playAttentionAlert(70);
 
     assert.equal(stats.contexts, 1);
     assert.equal(stats.resumes, 1);
-    assert.equal(stats.starts, 2);
+    assert.equal(stats.starts, 5);
     assert.equal(stats.closes, 0);
     assert.equal(oscillatorType, "triangle");
   } finally {

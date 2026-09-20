@@ -3,9 +3,11 @@
 import { formatMMSS } from "@/lib/time";
 import type { FocusTimer } from "@/hooks/useFocusTimer";
 import { supportsPictureInPicture } from "@/lib/browserFeatures";
+import type { AttentionMonitorStatus } from "@/lib/attention/attentionMonitor";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TaskItem } from "@/types";
 import type { TimerPhase } from "@/types/focus";
+import { AttentionStatus } from "../attention/AttentionStatus";
 import { FlameIcon, LightbulbIcon, PencilIcon, PictureInPictureIcon, RotateCcwIcon } from "../icons";
 
 interface LearningCardProps {
@@ -18,6 +20,7 @@ interface LearningCardProps {
   activeTaskId: string | null;
   onOpenTasks: () => void;
   onProgress?: (phase: TimerPhase, elapsedSeconds: number, status: "idle" | "running" | "paused" | "done") => void;
+  attentionStatus: AttentionMonitorStatus;
 }
 
 interface PipSnapshot {
@@ -182,6 +185,7 @@ export function LearningCard({
   activeTaskId,
   onOpenTasks,
   onProgress,
+  attentionStatus,
 }: LearningCardProps) {
   const pipSupported = useSyncExternalStore(
     subscribeToPipSupport,
@@ -475,6 +479,8 @@ export function LearningCard({
           <span className="sr-only">Change priority</span>
         </button>
       </header>
+
+      <AttentionStatus status={attentionStatus} />
 
       <time className="focus-dashboard__time numeric-time" aria-live="polite">
         {formatMMSS(timer.displaySeconds)}
