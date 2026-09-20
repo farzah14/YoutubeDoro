@@ -24,7 +24,7 @@ export const DirectBreakPlayer = forwardRef<BreakPlayerHandle, DirectBreakPlayer
   return (
     <video
       ref={videoRef}
-      className="break-player break-player--file"
+      className="break-player break-player--file absolute inset-0 h-full w-full object-contain"
       src={sourceUrl}
       controls
       preload="metadata"

@@ -62,7 +62,7 @@ export const VimeoBreakPlayer = forwardRef<BreakPlayerHandle, VimeoBreakPlayerPr
       ref={iframeRef}
       title="Vimeo break video"
       src={`https://player.vimeo.com/video/${mediaId}?autoplay=0&dnt=1`}
-      className="break-player break-player--vimeo"
+      className="break-player break-player--vimeo absolute inset-0 h-full w-full border-0"
       allow="autoplay; fullscreen; picture-in-picture"
       allowFullScreen
     />

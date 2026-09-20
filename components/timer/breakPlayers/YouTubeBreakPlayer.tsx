@@ -66,7 +66,7 @@ export const YouTubeBreakPlayer = forwardRef<BreakPlayerHandle, YouTubeBreakPlay
         height: "100%",
         playerVars: { rel: 0, modestbranding: 1, autoplay: 0 },
       }}
-      className="break-player break-player--youtube"
+      className="break-player break-player--youtube absolute inset-0 h-full w-full"
       onReady={(event) => {
         playerRef.current = event.target;
         durationReportedRef.current = false;
