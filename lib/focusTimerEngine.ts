@@ -1,6 +1,7 @@
 import type { FocusPreferences, TimerMode, TimerPhase } from "../types/focus.ts";
 
-export const POMODORO_FOCUS_MINUTES = 50;
+export const POMODORO_FOCUS_MINUTES = 25;
+export const ANIMEDORO_FOCUS_MINUTES = 50;
 
 export type TimerDriver = "clock" | "media";
 export type MediaBreakStatus = "idle" | "running" | "paused";
@@ -23,6 +24,7 @@ function phaseSeconds(mode: TimerMode, phase: TimerPhase, preferences: FocusPref
     if (mode === "countdown") return preferences.countdownMinutes * 60;
     if (mode === "52-17") return 52 * 60;
     if (mode === "pomodoro") return POMODORO_FOCUS_MINUTES * 60;
+    if (mode === "animedoro") return ANIMEDORO_FOCUS_MINUTES * 60;
     return preferences.focusMinutes * 60;
   }
   return (mode === "52-17" ? 17 : preferences.breakMinutes) * 60;
@@ -58,7 +60,7 @@ export function advanceTimer(state: FocusTimerState, preferences: FocusPreferenc
     ...state,
     phase,
     driver: "clock",
-    status: state.phase === "focus" && state.mode !== "pomodoro" && preferences.autoStartBreaks ? "running" : "idle",
+    status: state.phase === "focus" && state.mode !== "animedoro" && preferences.autoStartBreaks ? "running" : "idle",
     targetSeconds: phaseSeconds(state.mode, phase, preferences),
     elapsedSeconds: 0,
     completedFocusSessions,

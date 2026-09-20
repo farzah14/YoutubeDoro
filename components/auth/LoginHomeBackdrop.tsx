@@ -52,7 +52,7 @@ export function LoginHomeBackdrop() {
           />
           <section className="auth-home-preview__timer" aria-hidden="true">
             <p>Focus timer</p>
-            <strong>50:00</strong>
+            <strong>25:00</strong>
             <button type="button" disabled>Start focus</button>
           </section>
         </div>

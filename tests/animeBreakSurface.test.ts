@@ -24,8 +24,9 @@ test("Break tools expose an in-app provider-neutral Anime Break", () => {
   assert.doesNotMatch(rest, /YouTubeRestCard|label: "YouTube"/);
 });
 
-test("completed Pomodoro opens and wires Anime Break", () => {
-  assert.match(timer, /followedByBreak\s*&&\s*mode === "pomodoro"/);
+test("completed Animedoro opens and wires Anime Break", () => {
+  assert.match(timer, /followedByBreak\s*&&\s*mode === "animedoro"/);
+  assert.doesNotMatch(timer, /followedByBreak\s*&&\s*mode === "pomodoro"/);
   assert.match(timer, /setOpenPanel\("rest"\)/);
   assert.match(timer, /defaultMode="anime"/);
   for (const token of [
