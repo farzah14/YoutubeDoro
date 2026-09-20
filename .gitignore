@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/public/mediapipe/wasm/
 /.pnp
 .pnp.*
 .yarn/*

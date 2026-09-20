@@ -8,9 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/copy-mediapipe-assets.mjs",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test \"tests/*.test.ts\""
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "next": "16.1.1",
