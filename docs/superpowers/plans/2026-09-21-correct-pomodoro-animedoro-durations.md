@@ -17,14 +17,14 @@
 - Modify: `tests/animeBreakSurface.test.ts`
 - Modify: `tests/settingsPanel.test.ts`
 - Modify: `tests/migrations.test.ts`
-- Modify: `tests/uiRedesign.test.ts`
+- Modify: `tests/authSurface.test.ts`
 
-- [ ] Replace the fixed-50 Pomodoro assertions with a fixed-25 Pomodoro test and a fixed-50 Animedoro test.
-- [ ] Assert that Animedoro waits for media metadata even when auto-start is enabled, while Pomodoro can use its normal clock break.
-- [ ] Assert that only completed Animedoro opens Anime Break.
-- [ ] Assert settings expose fixed `25 min` Pomodoro and fixed `50 min` Animedoro rows without a `Flexible focus` control.
-- [ ] Assert the login preview shows `25:00`.
-- [ ] Run `npx --yes tsx --test tests/focusTimerEngine.test.ts tests/animeBreakSurface.test.ts tests/settingsPanel.test.ts tests/migrations.test.ts tests/uiRedesign.test.ts` and confirm the new assertions fail for the reversed current implementation.
+- [x] Replace the fixed-50 Pomodoro assertions with a fixed-25 Pomodoro test and a fixed-50 Animedoro test.
+- [x] Assert that Animedoro waits for media metadata even when auto-start is enabled, while Pomodoro can use its normal clock break.
+- [x] Assert that only completed Animedoro opens Anime Break.
+- [x] Assert settings expose fixed `25 min` Pomodoro and fixed `50 min` Animedoro rows without a `Flexible focus` control.
+- [x] Assert the login preview shows `25:00`.
+- [x] Run `npx --yes tsx --test tests/focusTimerEngine.test.ts tests/animeBreakSurface.test.ts tests/settingsPanel.test.ts tests/migrations.test.ts tests/authSurface.test.ts` and confirm the new assertions fail for the reversed current implementation.
 
 ### Task 2: Correct the engine and UI mapping
 
@@ -34,13 +34,13 @@
 - Modify: `components/settings/SettingsPanel.tsx`
 - Modify: `components/auth/LoginHomeBackdrop.tsx`
 
-- [ ] Define `POMODORO_FOCUS_MINUTES = 25` and `ANIMEDORO_FOCUS_MINUTES = 50`.
-- [ ] Route `pomodoro` and `animedoro` through their matching engine constants.
-- [ ] Keep Animedoro idle at the focus-to-break boundary until a video supplies metadata; retain normal Pomodoro clock-break behavior.
-- [ ] Open Anime Break only when `followedByBreak && mode === "animedoro"`.
-- [ ] Replace the settings flexible-focus control with read-only Pomodoro and Animedoro duration rows.
-- [ ] Restore the unauthenticated home preview to `25:00`.
-- [ ] Run the focused tests again and confirm they pass.
+- [x] Define `POMODORO_FOCUS_MINUTES = 25` and `ANIMEDORO_FOCUS_MINUTES = 50`.
+- [x] Route `pomodoro` and `animedoro` through their matching engine constants.
+- [x] Keep Animedoro idle at the focus-to-break boundary until a video supplies metadata; retain normal Pomodoro clock-break behavior.
+- [x] Open Anime Break only when `followedByBreak && mode === "animedoro"`.
+- [x] Replace the settings flexible-focus control with read-only Pomodoro and Animedoro duration rows.
+- [x] Restore the unauthenticated home preview to `25:00`.
+- [x] Run the focused tests again and confirm they pass.
 
 ### Task 3: Align durable documentation and verify the branch
 
@@ -49,11 +49,11 @@
 - Modify: `docs/superpowers/specs/2026-09-21-pomodoro-anime-break-design.md`
 - Modify: `docs/superpowers/plans/2026-09-21-pomodoro-anime-break.md`
 
-- [ ] Describe Pomodoro as 25 minutes and Animedoro as 50 minutes with a media-duration break.
-- [ ] Mark the original implementation plan's duration ownership as superseded by this correction plan.
-- [ ] Run `npx --yes tsx --test tests/*.test.ts`.
-- [ ] Run `npm run typecheck`.
-- [ ] Run ESLint for all touched TypeScript and TSX files.
-- [ ] Run `npm run build`.
-- [ ] Review `git diff --check` and `git status --short`.
+- [x] Describe Pomodoro as 25 minutes and Animedoro as 50 minutes with a media-duration break.
+- [x] Mark the original implementation plan's duration ownership as superseded by this correction plan.
+- [x] Run `npx --yes tsx --test tests/*.test.ts`.
+- [x] Run `npm run typecheck`.
+- [x] Run ESLint for all touched TypeScript and TSX files.
+- [x] Run `npm run build`.
+- [x] Review `git diff --check` and `git status --short`.
 - [ ] Commit and push the correction to `origin/feature/pomodoro-anime-break`, updating pull request #1.

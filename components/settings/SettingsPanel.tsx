@@ -53,7 +53,6 @@ const sections: Array<[SettingsSection, string]> = [
 ];
 
 const timerDurations = [
-  { key: "focusMinutes", label: "Flexible focus", max: 120 },
   { key: "breakMinutes", label: "Standard break", max: 120 },
 ] as const;
 
@@ -208,6 +207,13 @@ export function SettingsPanel({
             <span>
               <strong>Pomodoro focus</strong>
               <small>Fixed study interval.</small>
+            </span>
+            <output className="settings-number-field">25 min</output>
+          </div>
+          <div className="settings-recipe-row">
+            <span>
+              <strong>Animedoro focus</strong>
+              <small>Fixed study interval before an Anime Break.</small>
             </span>
             <output className="settings-number-field">50 min</output>
           </div>

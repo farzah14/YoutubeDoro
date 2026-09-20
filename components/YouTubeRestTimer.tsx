@@ -239,7 +239,7 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
   const handleLearnDone = useCallback((seconds: number, followedByBreak: boolean, mode: TimerMode) => {
     const current = getLastMeasurements();
     checkpointSession({ ...current, learningSeconds: seconds }, true);
-    if (followedByBreak && mode === "pomodoro") setOpenPanel("rest");
+    if (followedByBreak && mode === "animedoro") setOpenPanel("rest");
     if (!followedByBreak) finishSession("completed", seconds);
   }, [checkpointSession, finishSession, getLastMeasurements]);
   const handleLearnStop = useCallback((seconds: number) => finishSession("stopped", seconds), [finishSession]);

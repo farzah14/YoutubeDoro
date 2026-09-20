@@ -30,16 +30,24 @@ const preferences: FocusPreferences = {
   showTaskInPip: false,
 };
 
-test("pomodoro is always a fixed fifty-minute focus", () => {
+test("pomodoro is always a fixed twenty-five-minute focus", () => {
   const legacy = { ...preferences, focusMinutes: 25 };
   const customized = { ...preferences, focusMinutes: 90 };
+
+  assert.equal(createTimerState(legacy).targetSeconds, 25 * 60);
+  assert.equal(createTimerState(customized).targetSeconds, 25 * 60);
+});
+
+test("animedoro is always a fixed fifty-minute focus", () => {
+  const legacy = { ...preferences, mode: "animedoro" as const, focusMinutes: 25 };
+  const customized = { ...preferences, mode: "animedoro" as const, focusMinutes: 90 };
 
   assert.equal(createTimerState(legacy).targetSeconds, 50 * 60);
   assert.equal(createTimerState(customized).targetSeconds, 50 * 60);
 });
 
-test("pomodoro waits for Anime Break even when auto-start is enabled", () => {
-  const configured = { ...preferences, autoStartBreaks: true };
+test("animedoro waits for Anime Break even when auto-start is enabled", () => {
+  const configured = { ...preferences, mode: "animedoro" as const, autoStartBreaks: true };
   const done = syncTimer(startTimer(createTimerState(configured), 0), configured, 50 * 60_000);
 
   assert.equal(done.phase, "break");
@@ -60,10 +68,11 @@ test("media break duration and progress come from the player", () => {
   assert.equal(paused.status, "paused");
 });
 
-test("finishing a media break returns to idle fifty-minute Pomodoro", () => {
-  const focusDone = advanceTimer(createTimerState(preferences), preferences);
+test("finishing a media break returns to idle fifty-minute Animedoro", () => {
+  const configured = { ...preferences, mode: "animedoro" as const };
+  const focusDone = advanceTimer(createTimerState(configured), configured);
   const media = prepareMediaBreak(focusDone, 1_440);
-  const finished = finishMediaBreak(syncMediaBreak(media, 1_440, "running"), preferences);
+  const finished = finishMediaBreak(syncMediaBreak(media, 1_440, "running"), configured);
 
   assert.equal(finished.driver, "clock");
   assert.equal(finished.phase, "focus");
@@ -74,7 +83,7 @@ test("finishing a media break returns to idle fifty-minute Pomodoro", () => {
 
 test("pomodoro advances focus to a generic break", () => {
   const running = startTimer(createTimerState(preferences), 1_000);
-  const next = syncTimer(running, preferences, 1_000 + 50 * 60 * 1_000);
+  const next = syncTimer(running, preferences, 1_000 + 25 * 60 * 1_000);
 
   assert.equal(next.phase, "break");
   assert.equal(next.targetSeconds, 5 * 60);
@@ -144,7 +153,7 @@ test("pause and resume exclude paused wall-clock time", () => {
   const current = syncTimer(resumed, preferences, 110_000);
 
   assert.equal(current.elapsedSeconds, 25);
-  assert.equal(getDisplaySeconds(current), 50 * 60 - 25);
+  assert.equal(getDisplaySeconds(current), 25 * 60 - 25);
 });
 
 test("frequent sub-second syncs do not discard elapsed time", () => {
@@ -154,7 +163,7 @@ test("frequent sub-second syncs do not discard elapsed time", () => {
   }
 
   assert.equal(current.elapsedSeconds, 1);
-  assert.equal(getDisplaySeconds(current), 50 * 60 - 1);
+  assert.equal(getDisplaySeconds(current), 25 * 60 - 1);
 });
 
 test("reset restores the configured opening phase", () => {
@@ -185,7 +194,7 @@ test("manual phase selection resets only the active interval", () => {
 });
 
 test("auto-start breaks does not auto-start the next focus session", () => {
-  const autoPreferences = { ...preferences, mode: "animedoro" as const, autoStartBreaks: true };
+  const autoPreferences = { ...preferences, autoStartBreaks: true };
   const focusDone = syncTimer(startTimer(createTimerState(autoPreferences), 0), autoPreferences, 25 * 60_000);
   assert.equal(focusDone.phase, "break");
   assert.equal(focusDone.status, "running");
