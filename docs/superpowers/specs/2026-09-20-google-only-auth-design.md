@@ -10,10 +10,12 @@ Any Google account may continue. On the first successful Google OAuth login, Sup
 
 The existing single-card authentication layout remains. Its content becomes:
 
-- the existing StudyRythms sign-in heading;
+- a single `Login` heading with no visible eyebrow or extra sign-in copy;
 - one Google OAuth button;
 - an inline loading state while the redirect begins; and
 - an accessible error message if Supabase is missing or Google OAuth cannot start or finish.
+
+The card keeps an accessible section label for screen readers while removing the visible brand/sign-in eyebrow.
 
 The page will not render:
 
