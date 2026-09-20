@@ -14,6 +14,7 @@ function isValidTransform(transform: MatrixTransform | null): transform is Matri
     transform !== null &&
     transform.rows === 4 &&
     transform.columns === 4 &&
+    Array.isArray(transform.data) &&
     transform.data.length === 16 &&
     transform.data.every(Number.isFinite)
   );
