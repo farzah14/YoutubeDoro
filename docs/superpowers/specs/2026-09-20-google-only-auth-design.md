@@ -17,6 +17,12 @@ The existing single-card authentication layout remains. Its content becomes:
 
 The card keeps an accessible section label for screen readers while removing the visible brand/sign-in eyebrow.
 
+## Login backdrop
+
+The signed-out auth screen will show a read-only Home workspace preview behind the login card. The preview reuses the saved Home theme, custom background, clock, header, hero, a static disabled focus-timer panel, and workspace dock. A blur, dimming veil, and `pointer-events: none`/`inert` boundary make the dashboard visibly disabled while keeping the login card sharp and interactive.
+
+The preview is deliberately not the authenticated `YouTubeRestTimer` instance. It must not start the real timer, camera, attention monitor, tracker requests, music engine, or any other authenticated side effect.
+
 The page will not render:
 
 - Sign in/Create account mode tabs;
