@@ -1,5 +1,7 @@
 # Pomodoro Anime Break Implementation Plan
 
+> **Superseded duration mapping:** The original plan below assigned the 50-minute media-break workflow to Pomodoro. The approved correction assigns Pomodoro 25 minutes and Animedoro 50 minutes; implementation details are in `docs/superpowers/plans/2026-09-21-correct-pomodoro-animedoro-durations.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make Pomodoro a fixed 50-minute focus interval and provide an in-app Anime Break whose duration and progress follow a supported YouTube, Vimeo, MP4, or WebM video.
