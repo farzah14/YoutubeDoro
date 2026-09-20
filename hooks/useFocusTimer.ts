@@ -105,7 +105,9 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
   const prepareMediaBreak = useCallback((durationSeconds: number) => {
     mediaBreakStartedRef.current = false;
     mediaBreakFinalizedRef.current = false;
-    setState((current) => prepareMediaBreakState(current, durationSeconds));
+    const prepared = prepareMediaBreakState(stateRef.current, durationSeconds);
+    stateRef.current = prepared;
+    setState(prepared);
   }, []);
 
   const startMediaBreak = useCallback(async () => {
