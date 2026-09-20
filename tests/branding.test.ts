@@ -15,7 +15,6 @@ test("website-facing branding uses StudyRythms", () => {
     readWorkspaceFile("../components/layout/Header.tsx"),
     readWorkspaceFile("../components/layout/WorkspaceDock.tsx"),
     readWorkspaceFile("../components/auth/AuthScreen.tsx"),
-    readWorkspaceFile("../app/auth/reset-password/page.tsx"),
     readWorkspaceFile("../components/settings/SettingsPanel.tsx"),
     readWorkspaceFile("../hooks/useTimer.ts"),
   ];

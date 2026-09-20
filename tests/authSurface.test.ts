@@ -10,48 +10,46 @@ const files = [
   "proxy.ts",
   "components/auth/AuthScreen.tsx",
   "app/auth/callback/route.ts",
-  "app/auth/reset-password/page.tsx",
   "app/page.tsx",
 ].map((file) => join(process.cwd(), file));
 const stylesFile = join(process.cwd(), "app/globals.css");
 
-test("auth surface has SSR clients, password flows, and OAuth callback", () => {
+test("auth surface has Google OAuth and no password flows", () => {
   for (const file of files) assert.equal(existsSync(file), true, `missing ${file}`);
   const source = files.map((file) => readFileSync(file, "utf8")).join("\n");
   for (const token of [
     "createBrowserClient",
     "createServerClient",
     "signInWithOAuth",
-    "signInWithPassword",
-    "signUp",
-    "resetPasswordForEmail",
+    "provider: \"google\"",
     "exchangeCodeForSession",
+    "hasGoogleIdentity",
     "signOut",
     "/auth/callback",
   ]) {
     assert.equal(source.includes(token), true, `missing ${token}`);
   }
+  for (const forbidden of [
+    "signInWithPassword",
+    "signUp",
+    "resetPasswordForEmail",
+    "type=\"password\"",
+    "Create account",
+    "Create an account",
+    "Forgot password",
+    "or use email",
+  ]) {
+    assert.equal(source.includes(forbidden), false, `Google-only auth should not include ${forbidden}`);
+  }
   assert.equal(source.includes("verifyOtp"), false);
   assert.equal(source.toLowerCase().includes("verify your email before"), false);
 
   const authSource = readFileSync(join(process.cwd(), "components/auth/AuthScreen.tsx"), "utf8");
-  const resetSource = readFileSync(join(process.cwd(), "app/auth/reset-password/page.tsx"), "utf8");
-  for (const [name, source] of [["sign-in", authSource], ["reset", resetSource]] as const) {
-    assert.equal(source.includes("AuthShowcase"), false, `${name} should not render the showcase panel`);
-    assert.equal(source.includes("auth-grid"), false, `${name} should use a single auth card`);
-  }
+  assert.equal(authSource.includes("AuthShowcase"), false);
+  assert.equal(authSource.includes("auth-grid"), false);
   assert.equal(authSource.includes("auth-card"), true, "sign-in should keep the auth card");
-  for (const text of [
-    "AuthShowcase",
-    "auth-grid",
-    "Private space",
-    "Your tasks, sessions, and notes are waiting in the studio.",
-    "Create a calm home for your tasks, sessions, breaks, and notes.",
-    "Your focus room stays yours. We keep the noise outside.",
-  ]) {
-    assert.equal(authSource.includes(text), false, `sign-in should not include ${text}`);
-  }
-  assert.equal(authSource.includes("auth-card__copy"), false, "sign-in should not render helper copy");
+  assert.equal(authSource.includes("auth-google"), true);
+  assert.equal(existsSync(join(process.cwd(), "app/auth/reset-password/page.tsx")), false);
 
   const styles = readFileSync(stylesFile, "utf8");
   for (const selector of [
@@ -59,13 +57,7 @@ test("auth surface has SSR clients, password flows, and OAuth callback", () => {
     ".auth-card",
     ".auth-google",
     ".auth-google__icon",
-    ".auth-form",
-    ".auth-field",
-    ".auth-mode-switch",
-    ".auth-submit",
-    ".auth-links",
     ".auth-message",
-    ".auth-card__footer",
   ]) {
     assert.match(styles, new RegExp(`\\${selector}\\s*\\{`), `missing ${selector} styles`);
   }
