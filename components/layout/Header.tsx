@@ -5,7 +5,6 @@ export function Header() {
     <header className="scene-header">
       <div className="scene-brand">
         <h1>StudyRythms</h1>
-        <p>anime focus room</p>
       </div>
     </header>
   );
