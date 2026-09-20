@@ -47,8 +47,7 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
       <LoginHomeBackdrop />
       <section className="auth-card" aria-label="StudyRythms login">
         <div className="auth-card__header">
-          <p className="eyebrow auth-brand-label">StudyRythms</p>
-          <h1 id="auth-title">Login</h1>
+          <h1 id="auth-title">Welcome to StudyRythms</h1>
         </div>
 
         <button
