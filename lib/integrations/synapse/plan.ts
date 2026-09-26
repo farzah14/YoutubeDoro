@@ -2,6 +2,9 @@ import { z } from "zod";
 
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
+const MAX_SYNCED_COURSES = 200;
+const MAX_SYNCED_PRIORITIES = 400;
+
 const uuid = z.string().uuid();
 const course = z.object({
   id: uuid,
@@ -27,8 +30,10 @@ const priority = z.object({
 export const synapsePlanSchema = z.object({
   sourceUserId: z.string().trim().min(1).max(128),
   snapshotAt: z.string().datetime({ offset: true }),
-  courses: z.array(course).max(200),
-  priorities: z.array(priority).max(200),
+  courses: z.array(course).max(MAX_SYNCED_COURSES),
+  // Synapse can send one priority for each starred course plus its selected
+  // tasks, so the combined limit must allow both 200-item groups.
+  priorities: z.array(priority).max(MAX_SYNCED_PRIORITIES),
 }).strict().superRefine((plan, context) => {
   const courseIds = new Set(plan.courses.map((item) => item.id));
   if (courseIds.size !== plan.courses.length) {

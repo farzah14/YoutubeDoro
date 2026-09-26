@@ -1,5 +1,7 @@
 # StudyRythms
 
+The Synapse integration accepts plans with up to 200 starred courses and 400 combined priorities. Synapse may include one synthetic priority per starred course plus up to 200 selected tasks. Each priority can contain up to 100 sub-tasks; the whole plan is limited to 1,000 sub-tasks and 512 KiB.
+
 StudyRythms is a focus timer and study dashboard that pairs anime artwork and ambient audio with task planning and session tracking. Built with Next.js 16, React 19, Tailwind CSS v4, and Supabase.
 
 ---
