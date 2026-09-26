@@ -1,4 +1,5 @@
 import type { SubtaskItem, TaskItem } from "../types/index.ts";
+import type { SynapseCourse } from "../types/tracker.ts";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(Number.isFinite(value) ? value : min)));
@@ -153,4 +154,23 @@ export function getOverallProgress(tasks: TaskItem[]): number {
 export function selectActiveTask(tasks: TaskItem[], activeId: string | null): TaskItem | undefined {
   return tasks.find((task) => task.id === activeId && !task.completed)
     ?? tasks.find((task) => !task.completed);
+}
+
+export function selectActiveTaskForSynapseCourses(
+  tasks: TaskItem[], activeId: string | null, courses: SynapseCourse[], previousPreferredKey: string | null | undefined,
+): { task: TaskItem | undefined; preferredKey: string | null } {
+  const courseKey = courses[0]?.id;
+  const marker = ":course:";
+  const markerAt = courseKey?.lastIndexOf(marker) ?? -1;
+  const taskKey = courseKey && markerAt >= 0
+    ? `${courseKey.slice(0, markerAt)}:task:${courseKey.slice(markerAt + marker.length)}`
+    : null;
+  const preferred = taskKey
+    ? tasks.find((task) => !task.completed && task.sourceKey === taskKey && task.synapseCourseKey === courseKey)
+    : undefined;
+  const preferredKey = preferred?.sourceKey ?? null;
+  return {
+    task: preferred && preferredKey !== previousPreferredKey ? preferred : selectActiveTask(tasks, activeId),
+    preferredKey,
+  };
 }
