@@ -29,12 +29,12 @@ export default async function SynapseAuthorizationPage({ searchParams }: {
         <div className="auth-card__header">
           <p className="eyebrow">Connected app request</p>
           <h1 id="synapse-consent-title">Connect Synapse</h1>
-          <p>Allow Synapse to read saved focus sessions and send your Synapse courses, selected priorities, and sub-tasks to StudyRythms.</p>
+          <p>Allow Synapse to read saved focus sessions and send your selected current-priority courses, focus priorities, and sub-tasks to StudyRythms.</p>
         </div>
         <div className="settings-info-card" role="note">
           <p className="eyebrow">Permission</p>
           <strong>Read focus sessions and update your Synapse study plan</strong>
-          <p>Synapse can add or update its own courses, selected priorities, and sub-tasks here. It cannot change your StudyRythms timer, notes, or personal priorities.</p>
+          <p>Synapse can add or update its selected courses, focus priorities, and sub-tasks here. It cannot change your StudyRythms timer, notes, or personal priorities.</p>
         </div>
         <form action="/api/integrations/synapse/decision" method="post" className="settings-extras-actions">
           <input type="hidden" name="client_id" value={authorization.clientId} />

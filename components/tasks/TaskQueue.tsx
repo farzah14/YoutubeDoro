@@ -90,8 +90,8 @@ export function TaskQueue({
         <div><span>Progress</span><strong>{progress}%</strong></div>
       </div>
       {synapseCourses.length > 0 && (
-        <section className="synapse-course-shelf" aria-label="Synapse courses">
-          <p>Synapse courses</p>
+        <section className="synapse-course-shelf" aria-label="Synapse priority courses">
+          <p>Synapse priority courses</p>
           <ul>{synapseCourses.map((course) => <li key={course.id}>{course.title}</li>)}</ul>
         </section>
       )}
