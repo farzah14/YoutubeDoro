@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TaskItem } from "@/types";
 import type { SynapseCourse, TrackerTask } from "@/types/tracker";
 import { trackerApi } from "@/lib/trackerApi";
@@ -8,6 +8,7 @@ import {
   moveTaskItem,
   reorderTaskItems,
   selectActiveTask,
+  selectActiveTaskForSynapseCourses,
   setTaskCompletion,
   toggleSubtaskItem,
 } from "@/lib/taskModel";
@@ -56,15 +57,19 @@ export function useCloudTasks() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const lastPreferredKey = useRef<string | null | undefined>(undefined);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       const result = await trackerApi.listTasks();
       const next = result.tasks.map(toTaskItem).sort((a, b) => a.order - b.order);
+      const courses = result.synapseCourses ?? [];
       setTasks(next);
-      setSynapseCourses(result.synapseCourses ?? []);
-      setActiveTaskId((current) => selectActiveTask(next, current)?.id ?? null);
+      setSynapseCourses(courses);
+      const priorPreferredKey = lastPreferredKey.current;
+      lastPreferredKey.current = selectActiveTaskForSynapseCourses(next, null, courses, priorPreferredKey).preferredKey;
+      setActiveTaskId((current) => selectActiveTaskForSynapseCourses(next, current, courses, priorPreferredKey).task?.id ?? null);
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load tasks.");

@@ -11,6 +11,7 @@ import {
   reorderTaskItems,
   resetTaskItems,
   selectActiveTask,
+  selectActiveTaskForSynapseCourses,
   setTaskCompletion,
   toggleSubtaskItem,
 } from "../lib/taskModel.ts";
@@ -84,6 +85,26 @@ test("selects the requested incomplete task or the first remaining task", () => 
   assert.equal(selectActiveTask(tasks, "c")?.id, "c");
   assert.equal(selectActiveTask(tasks, "a")?.id, "b");
   assert.equal(selectActiveTask(tasks, null)?.id, "b");
+});
+
+test("newly starred Synapse course becomes current while manual selection remains usable", () => {
+  const courseKey = "synapse:source:course:course-1";
+  const courseTask = task("course-task", {
+    text: "Learning Python", sourceKey: "synapse:source:task:course-1", synapseCourseKey: courseKey,
+  });
+  const tasks = [task("networking"), courseTask];
+  const courses = [{ id: courseKey, title: "Learning Python", order: 0 }];
+
+  const first = selectActiveTaskForSynapseCourses(tasks, "networking", courses, undefined);
+  assert.equal(first.task?.id, "course-task");
+  assert.equal(first.preferredKey, courseTask.sourceKey);
+
+  const manual = selectActiveTaskForSynapseCourses(tasks, "networking", courses, first.preferredKey);
+  assert.equal(manual.task?.id, "networking");
+
+  const removed = selectActiveTaskForSynapseCourses([tasks[0]], "course-task", [], first.preferredKey);
+  assert.equal(removed.task?.id, "networking");
+  assert.equal(removed.preferredKey, null);
 });
 
 test("manages nested sub-tasks without completing the parent", () => {
