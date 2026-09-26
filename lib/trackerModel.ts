@@ -42,6 +42,7 @@ export function mapSubtaskRow(row: Record<string, unknown>): TrackerSubtask {
     order: safeInteger(row.subtask_order),
     createdAt: safeText(row.created_at, ""),
     updatedAt: safeText(row.updated_at, safeText(row.created_at, "")),
+    sourceKey: typeof row.source_key === "string" ? row.source_key : null,
   };
 }
 
@@ -70,6 +71,7 @@ export function mapTaskRow(
     createdAt,
     updatedAt: safeText(row.updated_at, createdAt),
     sourceKey: typeof row.source_key === "string" ? row.source_key : null,
+    synapseCourseKey: typeof row.synapse_course_key === "string" ? row.synapse_course_key : null,
   };
 }
 

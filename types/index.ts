@@ -41,6 +41,7 @@ export interface SubtaskItem {
   completed: boolean;
   createdAt: number;
   order: number;
+  sourceKey?: string | null;
 }
 
 export interface TaskItem {
@@ -57,6 +58,8 @@ export interface TaskItem {
   linkedSessionCount?: number;
   order: number;
   subtasks: SubtaskItem[];
+  sourceKey?: string | null;
+  synapseCourseKey?: string | null;
 }
 
 export interface RadioStation {

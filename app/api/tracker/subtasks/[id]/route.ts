@@ -27,6 +27,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const { supabase, row } = await ownedSubtask(id, user.id);
   if (!supabase) return errorResponse("Supabase is not configured.", 500);
   if (!row) return errorResponse("Subtask not found.", 404);
+  if (typeof row.source_key === "string" && row.source_key.startsWith("synapse:")) {
+    return errorResponse("Update this sub-task in Synapse.", 403);
+  }
   let body: unknown;
   try { body = await request.json(); } catch { return errorResponse("Invalid JSON body.", 400); }
   const parsed = subtaskPatchSchema.safeParse(body);
@@ -51,6 +54,9 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   const { supabase, row } = await ownedSubtask(id, user.id);
   if (!supabase) return errorResponse("Supabase is not configured.", 500);
   if (!row) return errorResponse("Subtask not found.", 404);
+  if (typeof row.source_key === "string" && row.source_key.startsWith("synapse:")) {
+    return errorResponse("Remove this sub-task in Synapse.", 403);
+  }
   const { error } = await supabase.from("subtasks").delete().eq("id", id).select().single();
   if (error) return errorResponse(error.message, 500);
   return NextResponse.json({ deleted: true });

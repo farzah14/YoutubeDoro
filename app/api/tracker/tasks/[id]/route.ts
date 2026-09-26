@@ -32,6 +32,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const parsed = taskPatchSchema.safeParse(body);
   if (!parsed.success) return errorResponse("Invalid task update.", 400, parsed.error.flatten());
   const value = parsed.data;
+  if (typeof row.source_key === "string" && row.source_key.startsWith("synapse:")
+    && (value.title !== undefined || value.completed !== undefined)) {
+    return errorResponse("Update this priority in Synapse.", 403);
+  }
   const update = {
     ...(value.title === undefined ? {} : { title: value.title }),
     ...(value.completed === undefined ? {} : { completed: value.completed }),
@@ -53,6 +57,9 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   if (!user) return errorResponse("Authentication required.", 401);
   if (!supabase) return errorResponse("Supabase is not configured.", 500);
   if (!row) return errorResponse("Task not found.", 404);
+  if (typeof row.source_key === "string" && row.source_key.startsWith("synapse:")) {
+    return errorResponse("Remove this priority in Synapse.", 403);
+  }
 
   const { count, error: countError } = await supabase.from("learning_sessions").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("task_id", id);
   if (countError) return errorResponse(countError.message, 500);

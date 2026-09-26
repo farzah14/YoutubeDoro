@@ -10,6 +10,13 @@ export interface TrackerSubtask {
   order: number;
   createdAt: string;
   updatedAt: string;
+  sourceKey: string | null;
+}
+
+export interface SynapseCourse {
+  id: string;
+  title: string;
+  order: number;
 }
 
 export interface TrackerTask {
@@ -28,6 +35,7 @@ export interface TrackerTask {
   createdAt: string;
   updatedAt: string;
   sourceKey: string | null;
+  synapseCourseKey: string | null;
 }
 
 export interface LearningSession {

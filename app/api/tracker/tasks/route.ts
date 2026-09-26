@@ -23,9 +23,18 @@ export async function GET() {
     .from("tasks")
     .select("*")
     .eq("user_id", user.id)
+    .eq("synapse_active", true)
     .order("task_order", { ascending: true })
     .order("created_at", { ascending: true });
   if (taskError) return errorResponse(taskError.message, 500);
+
+  const { data: courseRows, error: courseError } = await supabase
+    .from("synapse_courses")
+    .select("source_key, title, course_order")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .order("course_order", { ascending: true });
+  if (courseError) return errorResponse(courseError.message, 500);
 
   const rows = taskRows ?? [];
   const ids = rows.map((row) => row.id as string);
@@ -61,6 +70,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
+    synapseCourses: (courseRows ?? []).map((row) => ({ id: row.source_key, title: row.title, order: row.course_order })),
     tasks: rows.map((row) => {
       const progress = focusByTask.get(row.id as string) ?? { seconds: 0, completed: 0, linked: 0 };
       return mapTaskRow(row, subtasksByTask.get(row.id as string) ?? [], progress.seconds, progress.completed, progress.linked);

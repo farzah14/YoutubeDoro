@@ -18,6 +18,7 @@ import { OverlayPanel } from "../ui/OverlayPanel";
 import { DailyStats } from "../stats/DailyStats";
 import { WeeklyHeatmap } from "../stats/WeeklyHeatmap";
 import { HistoryPanel } from "../history/HistoryPanel";
+import { SynapseGrantControls } from "./SynapseGrantControls";
 import { CheckIcon } from "../icons";
 
 type SettingsSection =
@@ -182,6 +183,7 @@ export function SettingsPanel({
           <div className="settings-info-card"><p className="eyebrow">Email</p><strong className="settings-account__email">{accountEmail || "Unavailable"}</strong><p>Your authenticated account email.</p></div>
           <div className="settings-info-card"><p className="eyebrow">Sign-in method</p><strong>Google</strong></div>
         </div>
+        <SynapseGrantControls />
         <div className="settings-extras-actions settings-account__actions">
           <Button type="button" variant="secondary" onClick={() => selectSection("history")}>Open session History</Button>
           <Button type="button" variant="danger" className="settings-account__sign-out" onClick={() => { void handleSignOut(); }} disabled={signingOut}>
