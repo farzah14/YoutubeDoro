@@ -107,6 +107,21 @@ test("newly starred Synapse course becomes current while manual selection remain
   assert.equal(removed.preferredKey, null);
 });
 
+test("uses the matching Synapse study task as the course priority when their titles match", () => {
+  const courseKey = "synapse:source:course:sql-course";
+  const matchingTask = task("sql-task", {
+    text: "Learning SQL", sourceKey: "synapse:source:task:sql-task", synapseCourseKey: courseKey,
+    subtasks: [{ id: "hello", text: "Hello", completed: false, createdAt: 1, order: 0, sourceKey: "synapse:source:subtask:hello" }],
+  });
+  const selected = selectActiveTaskForSynapseCourses(
+    [task("networking"), matchingTask], "networking",
+    [{ id: courseKey, title: "Learning SQL", order: 0 }], undefined,
+  );
+
+  assert.equal(selected.task?.id, "sql-task");
+  assert.equal(selected.task?.subtasks[0]?.text, "Hello");
+});
+
 test("manages nested sub-tasks without completing the parent", () => {
   const added = addSubtaskItem([task("a")], "a", {
     id: "a-1",
