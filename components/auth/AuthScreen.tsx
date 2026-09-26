@@ -6,6 +6,7 @@ import { LoginHomeBackdrop } from "@/components/auth/LoginHomeBackdrop";
 
 interface AuthScreenProps {
   initialError?: string;
+  next?: string;
 }
 
 function GoogleIcon() {
@@ -19,7 +20,7 @@ function GoogleIcon() {
   );
 }
 
-export function AuthScreen({ initialError }: AuthScreenProps) {
+export function AuthScreen({ initialError, next = "/" }: AuthScreenProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError ?? "");
 
@@ -32,9 +33,11 @@ export function AuthScreen({ initialError }: AuthScreenProps) {
     }
 
     setBusy(true);
+    const callback = new URL("/auth/callback", window.location.origin);
+    callback.searchParams.set("next", next);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: callback.toString() },
     });
     if (oauthError) {
       setBusy(false);

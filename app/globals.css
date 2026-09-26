@@ -5488,6 +5488,23 @@ textarea:focus-visible,
 .subtasks-add input { border-color: var(--manga-rule); background: var(--manga-ink); color: var(--manga-paper); }
 .subtasks-empty { border-color: var(--manga-rule); color: var(--manga-paper-muted); }
 
+.synapse-course-shelf {
+  margin: 1rem 0;
+  padding: .85rem 1rem;
+  border: 1px solid var(--manga-rule);
+  border-radius: 6px;
+  background: var(--manga-ink);
+}
+.synapse-course-shelf p {
+  margin: 0 0 .65rem;
+  color: var(--manga-paper-muted);
+  font: 700 .65rem/1.2 var(--font-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.synapse-course-shelf ul { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.synapse-course-shelf li { padding: .3rem .55rem; border: 1px solid var(--manga-rule); border-radius: 4px; color: var(--manga-paper); font-size: .8rem; }
+
 /* Settings folio scrolling: anchor sidebar, scroll content only. */
 .settings-panel .overlay-panel__body {
   display: flex;

@@ -11,10 +11,12 @@ import {
 import { DEFAULT_FOCUS_PREFERENCES, migrateFocusPreferences } from "@/lib/migrations";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { TaskItem } from "@/types";
+import type { SynapseCourse } from "@/types/tracker";
 import { CheckIcon, PlusIcon, TrashIcon } from "../icons";
 
 interface TaskQueueProps {
   tasks: TaskItem[];
+  synapseCourses: SynapseCourse[];
   activeTaskId: string | null;
   currentTopic: string;
   onSelectTask: (task: TaskItem) => void;
@@ -35,6 +37,7 @@ const plannedLabel = (minutes: number) => minutes >= 60
 
 export function TaskQueue({
   tasks,
+  synapseCourses,
   activeTaskId,
   currentTopic,
   onSelectTask,
@@ -57,6 +60,7 @@ export function TaskQueue({
   const preferences = migrateFocusPreferences(storedPreferences);
   const activeTask = tasks.find((task) => task.id === activeTaskId && !task.completed)
     ?? tasks.find((task) => !task.completed);
+  const courseTitles = new Map(synapseCourses.map((course) => [course.id, course.title]));
   const totalMinutes = getTotalPlannedMinutes(tasks);
   const progress = getOverallProgress(tasks);
   const finishTime = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" })
@@ -85,6 +89,12 @@ export function TaskQueue({
         <div><span>Finishing at</span><strong>{finishTime}</strong></div>
         <div><span>Progress</span><strong>{progress}%</strong></div>
       </div>
+      {synapseCourses.length > 0 && (
+        <section className="synapse-course-shelf" aria-label="Synapse courses">
+          <p>Synapse courses</p>
+          <ul>{synapseCourses.map((course) => <li key={course.id}>{course.title}</li>)}</ul>
+        </section>
+      )}
       {showProgress && <div className="priorities-progress" role="progressbar" aria-valuenow={progress}><i style={{ width: `${progress}%` }} /></div>}
 
       <form className="priorities-add" onSubmit={handleAdd}>
@@ -102,14 +112,16 @@ export function TaskQueue({
         {tasks.map((task) => {
           const taskProgress = getTaskProgress(task);
           const isActive = task.id === activeTask?.id;
+          const fromSynapse = task.sourceKey?.startsWith("synapse:") ?? false;
+          const courseTitle = task.synapseCourseKey ? courseTitles.get(task.synapseCourseKey) : null;
           return (
             <article
               key={task.id}
               className="priority-work-row"
               data-active={isActive || undefined}
               data-complete={task.completed || undefined}
-              draggable
-              onDragStart={(event) => event.dataTransfer.setData("text/task-id", task.id)}
+              draggable={!fromSynapse}
+              onDragStart={(event) => { if (!fromSynapse) event.dataTransfer.setData("text/task-id", task.id); }}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
                 event.preventDefault();
@@ -117,11 +129,12 @@ export function TaskQueue({
               }}
             >
               <span className="priority-work-row__drag" aria-hidden="true" />
-              <button type="button" className="priority-work-row__check" onClick={() => { onToggleTask(task.id); }} aria-label={task.completed ? "Mark " + task.text + " incomplete" : "Mark " + task.text + " complete"}>
+              <button type="button" className="priority-work-row__check" onClick={() => { onToggleTask(task.id); }} disabled={fromSynapse} title={fromSynapse ? "Complete this priority in Synapse" : undefined} aria-label={fromSynapse ? `Managed in Synapse: ${task.text}` : task.completed ? "Mark " + task.text + " incomplete" : "Mark " + task.text + " complete"}>
                 {task.completed && <CheckIcon aria-hidden="true" />}
               </button>
               <button type="button" className="priority-work-row__title" onClick={() => !task.completed && onSelectTask(task)} aria-current={isActive ? "true" : undefined}>
                 <strong>{task.text}</strong>
+                {fromSynapse && <span>{courseTitle ? `${courseTitle} · Synapse` : "Synapse"}</span>}
                 <span>{taskProgress}% focused</span>
               </button>
               <label className="priority-work-row__eta">
@@ -129,7 +142,7 @@ export function TaskQueue({
                 <input type="number" min="5" max="480" step="5" defaultValue={task.estimatedMinutes} onBlur={(event) => onUpdateTask(task.id, { estimatedMinutes: Number(event.target.value) })} />
                 <small>min</small>
               </label>
-              <button type="button" className="priority-work-row__delete" onClick={() => onDeleteTask(task.id)} aria-label={`Delete ${task.text}`}><TrashIcon /></button>
+              {!fromSynapse && <button type="button" className="priority-work-row__delete" onClick={() => onDeleteTask(task.id)} aria-label={`Delete ${task.text}`}><TrashIcon /></button>}
               {showProgress && <div className="priority-work-row__progress"><i style={{ width: taskProgress + "%" }} /></div>}
             </article>
           );

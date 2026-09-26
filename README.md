@@ -125,7 +125,7 @@ npm install
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key_here
    NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000
    ```
-   Never put a service-role key in client environment variables.
+   Never put a Supabase secret key in client environment variables.
 
 4. Apply the database schema:
    - In your Supabase dashboard, open the **SQL Editor**.
@@ -145,6 +145,20 @@ npm install
    - Add a `/**` entry for every additional deployed domain. The wildcard is required because the app enables Supabase's flow-aware PKCE callback and Supabase appends the reserved `sb_flow_id` query parameter.
 
 StudyRythms uses Google-only authentication. A user's first Google login creates the Supabase user automatically; the application does not provide a separate registration page.
+
+### Synapse connection
+
+Synapse reads saved StudyRythms focus sessions through a separate, user-approved server integration. It does not use the StudyRythms browser cookie or match accounts by email. Apply `supabase/migrations/20260925000000_synapse_integration.sql` and the preparatory `supabase/migrations/20260925120000_synapse_saved_snapshots.sql` migration to the project, then deploy the updated provider consent and API code. The preparatory migration adds consent versioning without broadening the legacy change feed. Only after the updated code is live, apply `supabase/migrations/20260925130000_synapse_saved_snapshots_revoke_legacy.sql`; it disables legacy grant creation, revokes old grants, and enables the expanded change feed. Configure the server-only variables in `.env.local` and the deployment environment:
+
+- `SUPABASE_SECRET_KEY`: Supabase secret key used only by server API routes. It bypasses Row Level Security and must never use a `NEXT_PUBLIC_` prefix or reach browser code. Integration queries still filter every row by the approved token's `user_id`.
+- `SYNAPSE_CLIENT_ID`: registered Synapse client identifier.
+- `SYNAPSE_CLIENT_SECRET_HASH`: base64url SHA-256 digest of a high-entropy client secret held by the Synapse server. Configure the raw secret only in Synapse; do not put it in this repository.
+- `SYNAPSE_REDIRECT_URI`: the exact callback registered in Synapse. Local development uses `http://localhost:5173/api/studyrythms/callback`; production uses the matching HTTPS Synapse origin.
+- `INTEGRATION_CURSOR_KEY`: at least 32 random bytes for signing initial-import cursors.
+
+The consent screen grants `sessions:read plan:write`. Synapse reads saved focus sessions, including database snapshots of active sessions, and writes a full snapshot of its courses, explicitly selected focus priorities, and their sub-tasks to `PUT /api/integrations/v1/plan`. The provider stores these by source key, hides priorities removed from the Synapse plan, and preserves linked focus sessions and native StudyRythms tasks. Imported priorities and sub-tasks are managed in Synapse. Apply `supabase/migrations/20260926110000_synapse_plan_sync.sql` after the previous provider migrations and before deploying the new API. The expanded permission requires each user to reconnect and approve it again. Users can review and revoke Synapse access from StudyRythms Settings.
+
+Use a distinct client ID, client secret, secret hash, and exact callback registration for local, staging, and production deployments. Register a separate exact HTTPS callback for each deployed environment. The integration uses fixed API paths under `STUDYRYTHMS_ORIGIN`, HTTPS outside localhost, opaque short-lived tokens, and server-to-server requests. Follow the staged migration order above before enabling Synapse Connect. Deploy StudyRythms before Synapse, then configure Synapse's matching client credentials and callback. Session-read responses contain no notes, tasks, break information, or camera data; the separate plan-write endpoint accepts only course titles, priority tasks, and sub-tasks.
 
 ### 3. Run the development server
 

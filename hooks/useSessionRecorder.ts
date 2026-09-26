@@ -36,7 +36,7 @@ export function useSessionRecorder() {
   }, []);
 
   const flush = useCallback(async () => {
-    if (!sessionId.current || finalized.current) return false;
+    if (!sessionId.current || finalized.current || finalizing.current) return false;
     try {
       await enqueueUpdate(sessionId.current, { ...measurements.current });
       setError("");

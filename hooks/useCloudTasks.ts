@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TaskItem } from "@/types";
-import type { TrackerTask } from "@/types/tracker";
+import type { SynapseCourse, TrackerTask } from "@/types/tracker";
 import { trackerApi } from "@/lib/trackerApi";
 import {
   moveTaskItem,
@@ -26,12 +26,15 @@ function toTaskItem(task: TrackerTask): TaskItem {
     focusedSeconds: task.focusedSeconds,
     linkedSessionCount: task.linkedSessionCount,
     order: task.order,
+    sourceKey: task.sourceKey,
+    synapseCourseKey: task.synapseCourseKey,
     subtasks: task.subtasks.map((subtask) => ({
       id: subtask.id,
       text: subtask.text,
       completed: subtask.completed,
       createdAt: Date.parse(subtask.createdAt) || 0,
       order: subtask.order,
+      sourceKey: subtask.sourceKey,
     })),
   };
 }
@@ -49,6 +52,7 @@ function taskPatch(patch: Partial<TaskItem>) {
 
 export function useCloudTasks() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [synapseCourses, setSynapseCourses] = useState<SynapseCourse[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -59,6 +63,7 @@ export function useCloudTasks() {
       const result = await trackerApi.listTasks();
       const next = result.tasks.map(toTaskItem).sort((a, b) => a.order - b.order);
       setTasks(next);
+      setSynapseCourses(result.synapseCourses ?? []);
       setActiveTaskId((current) => selectActiveTask(next, current)?.id ?? null);
       setError("");
     } catch (cause) {
@@ -68,7 +73,12 @@ export function useCloudTasks() {
     }
   }, []);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    void reload();
+    const onVisible = () => { if (document.visibilityState === "visible") void reload(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [reload]);
 
   const addTask = useCallback(async (text: string, estimatedMinutes = 25) => {
     const trimmed = text.trim();
@@ -195,8 +205,8 @@ export function useCloudTasks() {
 
   const resetTasks = useCallback(async () => {
     try {
-      await Promise.all(tasks.filter((task) => task.completed).map((task) => trackerApi.updateTask(task.id, { completed: false })));
-      setTasks((current) => current.map((task) => ({ ...task, completed: false })));
+      await Promise.all(tasks.filter((task) => task.completed && !task.sourceKey?.startsWith("synapse:")).map((task) => trackerApi.updateTask(task.id, { completed: false })));
+      setTasks((current) => current.map((task) => task.sourceKey?.startsWith("synapse:") ? task : { ...task, completed: false }));
       setActiveTaskId((current) => selectActiveTask(tasks, current)?.id ?? tasks[0]?.id ?? null);
       setError("");
     } catch (cause) {
@@ -208,6 +218,7 @@ export function useCloudTasks() {
 
   return {
     tasks,
+    synapseCourses,
     activeTaskId,
     activeTask,
     setActiveTaskId,
