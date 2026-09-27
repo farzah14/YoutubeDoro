@@ -165,7 +165,12 @@ export function selectActiveTaskForSynapseCourses(
   const taskKey = courseKey && markerAt >= 0
     ? `${courseKey.slice(0, markerAt)}:task:${courseKey.slice(markerAt + marker.length)}`
     : null;
-  const preferred = taskKey
+  const courseTitle = courses[0]?.title.trim().toLowerCase();
+  const matchingTasks = tasks.filter((task) =>
+    !task.completed && task.synapseCourseKey === courseKey && task.sourceKey !== taskKey
+      && task.text.trim().toLowerCase() === courseTitle,
+  );
+  const preferred = matchingTasks.length === 1 ? matchingTasks[0] : taskKey
     ? tasks.find((task) => !task.completed && task.sourceKey === taskKey && task.synapseCourseKey === courseKey)
     : undefined;
   const preferredKey = preferred?.sourceKey ?? null;

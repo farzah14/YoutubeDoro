@@ -107,6 +107,37 @@ test("newly starred Synapse course becomes current while manual selection remain
   assert.equal(removed.preferredKey, null);
 });
 
+test("uses the matching Synapse study task as the course priority when their titles match", () => {
+  const courseKey = "synapse:source:course:sql-course";
+  const matchingTask = task("sql-task", {
+    text: "Learning SQL", sourceKey: "synapse:source:task:sql-task", synapseCourseKey: courseKey,
+    subtasks: [{ id: "hello", text: "Hello", completed: false, createdAt: 1, order: 0, sourceKey: "synapse:source:subtask:hello" }],
+  });
+  const selected = selectActiveTaskForSynapseCourses(
+    [task("networking"), matchingTask], "networking",
+    [{ id: courseKey, title: "Learning SQL", order: 0 }], undefined,
+  );
+
+  assert.equal(selected.task?.id, "sql-task");
+  assert.equal(selected.task?.subtasks[0]?.text, "Hello");
+});
+
+test("keeps the course priority when matching Synapse task titles are ambiguous", () => {
+  const courseKey = "synapse:source:course:sql-course";
+  const tasks = [
+    task("networking"),
+    task("sql-a", { text: "Learning SQL", sourceKey: "synapse:source:task:sql-a", synapseCourseKey: courseKey }),
+    task("sql-b", { text: "Learning SQL", sourceKey: "synapse:source:task:sql-b", synapseCourseKey: courseKey }),
+    task("course-priority", { text: "Learning SQL", sourceKey: "synapse:source:task:sql-course", synapseCourseKey: courseKey }),
+  ];
+
+  const selected = selectActiveTaskForSynapseCourses(
+    tasks, "networking", [{ id: courseKey, title: "Learning SQL", order: 0 }], undefined,
+  );
+
+  assert.equal(selected.task?.id, "course-priority");
+});
+
 test("manages nested sub-tasks without completing the parent", () => {
   const added = addSubtaskItem([task("a")], "a", {
     id: "a-1",
