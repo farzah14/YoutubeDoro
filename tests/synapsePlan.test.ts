@@ -31,3 +31,23 @@ test("rejects missing course references and duplicate source identifiers", () =>
     priorities: [{ ...plan.priorities[0], subtasks: [plan.priorities[0].subtasks[0], plan.priorities[0].subtasks[0]] }],
   }).success, false);
 });
+
+test("accepts one priority for every starred course and every selected task", () => {
+  const uuid = (value: number) => `00000000-0000-4000-8000-${value.toString(16).padStart(12, "0")}`;
+  const boundaryPlan = {
+    ...plan,
+    courses: Array.from({ length: 200 }, (_, index) => ({
+      id: uuid(index + 1), title: `Course ${index + 1}`, order: index,
+    })),
+    priorities: Array.from({ length: 400 }, (_, index) => ({
+      id: uuid(index + 1_000), title: `Priority ${index + 1}`, completed: false,
+      estimatedMinutes: 25, courseId: index < 200 ? uuid(index + 1) : null,
+      order: index, subtasks: [],
+    })),
+  };
+  assert.equal(synapsePlanSchema.safeParse(boundaryPlan).success, true);
+  assert.equal(synapsePlanSchema.safeParse({
+    ...boundaryPlan,
+    priorities: [...boundaryPlan.priorities, { ...boundaryPlan.priorities[0], id: uuid(9999), order: 400 }],
+  }).success, false);
+});

@@ -148,15 +148,11 @@ test("detector startup failure releases an acquired camera", async () => {
 });
 
 test("stopping while camera startup is pending releases the stale camera without changing status", async () => {
-  const cameraDeferred = {
-    resolve: (_camera: { frame: HTMLVideoElement; stop(): void }): void => {
-      throw new Error("camera resolver was not initialized");
-    },
-  };
+  let resolveCamera!: (camera: { frame: HTMLVideoElement; stop(): void }) => void;
   let stopped = 0;
   const statuses: string[] = [];
   const cameraPromise = new Promise<{ frame: HTMLVideoElement; stop(): void }>((resolve) => {
-    cameraDeferred.resolve = resolve;
+    resolveCamera = resolve;
   });
   const monitor = createAttentionMonitor({
     openCamera: () => cameraPromise,
@@ -172,7 +168,7 @@ test("stopping while camera startup is pending releases the stale camera without
 
   const startPromise = monitor.start();
   monitor.stop();
-  cameraDeferred.resolve({
+  resolveCamera({
     frame: {} as HTMLVideoElement,
     stop: () => {
       stopped += 1;
@@ -186,15 +182,11 @@ test("stopping while camera startup is pending releases the stale camera without
 });
 
 test("stopping while detector startup is pending releases stale resources", async () => {
-  const detectorDeferred = {
-    resolve: (_detector: { observe(): AttentionObservation; close(): void }): void => {
-      throw new Error("detector resolver was not initialized");
-    },
-  };
+  let resolveDetector!: (detector: { observe(): AttentionObservation; close(): void }) => void;
   let cameraStops = 0;
   let detectorCloses = 0;
   const detectorPromise = new Promise<{ observe(): AttentionObservation; close(): void }>((resolve) => {
-    detectorDeferred.resolve = resolve;
+    resolveDetector = resolve;
   });
   const monitor = createAttentionMonitor({
     openCamera: async () => ({
@@ -214,7 +206,7 @@ test("stopping while detector startup is pending releases stale resources", asyn
   const startPromise = monitor.start();
   await Promise.resolve();
   monitor.stop();
-  detectorDeferred.resolve({
+  resolveDetector({
     observe: () => "focused",
     close: () => {
       detectorCloses += 1;
