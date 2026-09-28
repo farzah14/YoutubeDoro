@@ -15,6 +15,8 @@ const subtask = z.object({
   id: uuid,
   text: z.string().trim().min(1).max(240),
   completed: z.boolean(),
+  // Optional while older Synapse deployments are still sending plans.
+  completedChangedAt: z.string().datetime({ offset: true }).optional(),
   order: z.number().int().min(0).max(100_000),
 }).strict();
 const priority = z.object({

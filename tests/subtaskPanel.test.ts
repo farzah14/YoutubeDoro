@@ -27,6 +27,7 @@ test("subtask panel renders a native checklist for the active priority", () => {
 test("subtask checkboxes expose complete and incomplete actions", () => {
   assert.match(panelSource, /Mark incomplete sub-task/);
   assert.match(panelSource, /Mark complete sub-task/);
+  assert.doesNotMatch(panelSource, /disabled=\{subtask\.sourceKey/);
 });
 
 test("subtasks omit decorative CUT row labels while keeping row semantics", () => {

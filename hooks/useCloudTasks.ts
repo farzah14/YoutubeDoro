@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TaskItem } from "@/types";
 import type { SynapseCourse, TrackerTask } from "@/types/tracker";
-import { trackerApi } from "@/lib/trackerApi";
+import { TrackerApiError, trackerApi } from "@/lib/trackerApi";
 import {
   moveTaskItem,
   reorderTaskItems,
   selectActiveTask,
   selectActiveTaskForSynapseCourses,
   setTaskCompletion,
-  toggleSubtaskItem,
 } from "@/lib/taskModel";
 
 function toTaskItem(task: TrackerTask): TaskItem {
@@ -58,11 +57,17 @@ export function useCloudTasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const lastPreferredKey = useRef<string | null | undefined>(undefined);
+  const requestSequence = useRef(0);
+  const pendingSubtasks = useRef(new Set<string>());
+  const pollAllowed = useRef(true);
 
-  const reload = useCallback(async () => {
-    setLoading(true);
+  const reload = useCallback(async (silent = false) => {
+    if (pendingSubtasks.current.size) return;
+    const sequence = ++requestSequence.current;
+    if (!silent) setLoading(true);
     try {
       const result = await trackerApi.listTasks();
+      if (sequence !== requestSequence.current) return;
       const next = result.tasks.map(toTaskItem).sort((a, b) => a.order - b.order);
       const courses = result.synapseCourses ?? [];
       setTasks(next);
@@ -71,18 +76,33 @@ export function useCloudTasks() {
       lastPreferredKey.current = selectActiveTaskForSynapseCourses(next, null, courses, priorPreferredKey).preferredKey;
       setActiveTaskId((current) => selectActiveTaskForSynapseCourses(next, current, courses, priorPreferredKey).task?.id ?? null);
       setError("");
+      pollAllowed.current = true;
     } catch (cause) {
+      if (sequence !== requestSequence.current) return;
+      if (cause instanceof TrackerApiError && cause.status === 401) pollAllowed.current = false;
       setError(cause instanceof Error ? cause.message : "Could not load tasks.");
     } finally {
-      setLoading(false);
+      if (sequence === requestSequence.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void reload();
-    const onVisible = () => { if (document.visibilityState === "visible") void reload(); };
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      pollAllowed.current = true;
+      void reload(true);
+    };
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible" && pollAllowed.current) void reload(true);
+    }, 5_000);
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, [reload]);
 
   const addTask = useCallback(async (text: string, estimatedMinutes = 25) => {
@@ -185,15 +205,32 @@ export function useCloudTasks() {
   const toggleSubtask = useCallback(async (taskId: string, subtaskId: string) => {
     const task = tasks.find((item) => item.id === taskId);
     const subtask = task?.subtasks.find((item) => item.id === subtaskId);
-    if (!subtask) return;
+    if (!subtask || pendingSubtasks.current.has(subtaskId)) return;
+    pendingSubtasks.current.add(subtaskId);
+    requestSequence.current += 1;
+    const nextCompleted = !subtask.completed;
+    setTasks((current) => current.map((item) => item.id !== taskId ? item : {
+      ...item,
+      subtasks: item.subtasks.map((child) => child.id === subtaskId ? { ...child, completed: nextCompleted } : child),
+    }));
     try {
-      await trackerApi.updateSubtask(subtaskId, { completed: !subtask.completed });
-      setTasks((current) => toggleSubtaskItem(current, taskId, subtaskId));
+      const { subtask: saved } = await trackerApi.updateSubtask(subtaskId, { completed: nextCompleted });
+      setTasks((current) => current.map((item) => item.id !== taskId ? item : {
+        ...item,
+        subtasks: item.subtasks.map((child) => child.id === subtaskId ? { ...child, completed: saved.completed } : child),
+      }));
       setError("");
     } catch (cause) {
+      setTasks((current) => current.map((item) => item.id !== taskId ? item : {
+        ...item,
+        subtasks: item.subtasks.map((child) => child.id === subtaskId ? { ...child, completed: subtask.completed } : child),
+      }));
       setError(cause instanceof Error ? cause.message : "Could not update subtask.");
+    } finally {
+      pendingSubtasks.current.delete(subtaskId);
+      if (!pendingSubtasks.current.size) void reload(true);
     }
-  }, [tasks]);
+  }, [reload, tasks]);
 
   const deleteSubtask = useCallback(async (taskId: string, subtaskId: string) => {
     try {
