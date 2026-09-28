@@ -4,6 +4,7 @@ import type {
   MigrationSummary,
   SessionFilters,
   TrackerTask,
+  TrackerSubtask,
   SynapseCourse,
 } from "@/types/tracker";
 
@@ -43,7 +44,7 @@ export const trackerApi = {
   updateTask: (id: string, input: unknown) => trackerFetch<{ task: TrackerTask }>(`/api/tracker/tasks/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteTask: (id: string) => trackerFetch<{ deleted: boolean; linkedSessions: number }>(`/api/tracker/tasks/${id}`, { method: "DELETE" }),
   createSubtask: (taskId: string, input: unknown) => trackerFetch<{ subtask: unknown }>(`/api/tracker/tasks/${taskId}/subtasks`, { method: "POST", body: JSON.stringify(input) }),
-  updateSubtask: (id: string, input: unknown) => trackerFetch<{ subtask: unknown }>(`/api/tracker/subtasks/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+  updateSubtask: (id: string, input: unknown) => trackerFetch<{ subtask: TrackerSubtask }>(`/api/tracker/subtasks/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteSubtask: (id: string) => trackerFetch<{ deleted: boolean }>(`/api/tracker/subtasks/${id}`, { method: "DELETE" }),
   listSessions: (filters: SessionFilters = {}, signal?: AbortSignal) => {
     const query = new URLSearchParams();

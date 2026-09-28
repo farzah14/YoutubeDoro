@@ -20,6 +20,14 @@ const plan = {
 test("accepts a scoped plan with courses, selected priorities, and sub-tasks", () => {
   assert.equal(synapsePlanSchema.safeParse(plan).success, true);
   assert.equal(synapsePlanSchema.safeParse({ ...plan, priorities: [] }).success, true);
+  assert.equal(synapsePlanSchema.safeParse({ ...plan, priorities: [{
+    ...plan.priorities[0],
+    subtasks: [{ ...plan.priorities[0].subtasks[0], completedChangedAt: "2026-09-28T02:00:00.000Z" }],
+  }] }).success, true);
+  assert.equal(synapsePlanSchema.safeParse({ ...plan, priorities: [{
+    ...plan.priorities[0],
+    subtasks: [{ ...plan.priorities[0].subtasks[0], completedChangedAt: "yesterday" }],
+  }] }).success, false);
 });
 
 test("rejects missing course references and duplicate source identifiers", () => {

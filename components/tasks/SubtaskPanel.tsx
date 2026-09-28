@@ -59,7 +59,7 @@ export function SubtaskPanel({
             {activeTask.subtasks.map((subtask) => (
               <li className="subtask-row" data-complete={subtask.completed || undefined} key={subtask.id}>
                 <label>
-                  <input type="checkbox" checked={subtask.completed} disabled={subtask.sourceKey?.startsWith("synapse:") ?? false} onChange={() => onToggleSubtask(activeTask.id, subtask.id)} aria-label={(subtask.completed ? "Mark incomplete sub-task " : "Mark complete sub-task ") + subtask.text} />
+                  <input type="checkbox" checked={subtask.completed} onChange={() => onToggleSubtask(activeTask.id, subtask.id)} aria-label={(subtask.completed ? "Mark incomplete sub-task " : "Mark complete sub-task ") + subtask.text} />
                   <span>{subtask.text}</span>
                 </label>
                 {!subtask.sourceKey?.startsWith("synapse:") && <button
