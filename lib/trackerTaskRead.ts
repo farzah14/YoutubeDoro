@@ -74,12 +74,13 @@ export function mapSessionSummaryRows(
     const taskId = requiredString(row.task_id, "session summary task ID");
     if (seenTaskIds.has(taskId)) throw new Error("The database returned a duplicate task summary.");
     seenTaskIds.add(taskId);
-    if (!visibleTaskIds.has(taskId)) continue;
-    summaries.set(taskId, {
+    const summary = {
       seconds: safeCount(row.focused_seconds, "focused-seconds"),
       completed: safeCount(row.completed_sessions, "completed-session"),
       linked: safeCount(row.linked_session_count, "linked-session"),
-    });
+    };
+    if (!visibleTaskIds.has(taskId)) continue;
+    summaries.set(taskId, summary);
   }
   return summaries;
 }

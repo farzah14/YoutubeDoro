@@ -72,6 +72,12 @@ test("maps aggregate rows only for visible tasks and rejects invalid numeric val
     { task_id: "task-a", focused_seconds: "not-a-number", completed_sessions: 0, linked_session_count: 0 },
   ], new Set(["task-a"])), /unsafe/);
   assert.throws(() => mapSessionSummaryRows([
+    { task_id: "inactive-task", focused_seconds: "not-a-number", completed_sessions: 0, linked_session_count: 0 },
+  ], new Set(["task-a"])), /unsafe/);
+  assert.throws(() => mapSessionSummaryRows([
+    { task_id: "inactive-task", focused_seconds: 0, completed_sessions: 0, linked_session_count: -1 },
+  ], new Set(["task-a"])), /unsafe/);
+  assert.throws(() => mapSessionSummaryRows([
     { task_id: "task-a", focused_seconds: 0, completed_sessions: 0, linked_session_count: 0 },
     { task_id: "task-a", focused_seconds: 0, completed_sessions: 0, linked_session_count: 0 },
   ], new Set(["task-a"])), /duplicate task summary/);

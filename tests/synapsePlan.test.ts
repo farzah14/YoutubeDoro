@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { test } from "node:test";
 
 import { synapsePlanSchema } from "../lib/integrations/synapse/plan";
@@ -17,6 +20,12 @@ const plan = {
     subtasks: [{ id: subtaskId, text: "Try an inner join", completed: false, order: 0 }],
   }],
 };
+const boundaryPlans = JSON.parse(gunzipSync(readFileSync(resolve(process.cwd(), "tests/fixtures/studyrythms-plan-contract.json.gz"))).toString("utf8")) as Record<string, {
+  sourceUserId: string;
+  snapshotAt: string;
+  courses: unknown[];
+  priorities: Array<{ id: string; title: string; subtasks: Array<{ id: string }> }>;
+}>;
 
 test("accepts a scoped plan with courses, selected priorities, and sub-tasks", () => {
   assert.equal(synapsePlanSchema.safeParse(plan).success, true);
@@ -59,6 +68,30 @@ test("accepts one priority for every starred course and every selected task", ()
     ...boundaryPlan,
     priorities: [...boundaryPlan.priorities, { ...boundaryPlan.priorities[0], id: uuid(9999), order: 400 }],
   }).success, false);
+});
+
+test("accepts UUID-backed boundary snapshots produced by Synapse's real plan builder", () => {
+  const todayOverflow = boundaryPlans.todayOverflow101;
+  const maxRealSubtasks = boundaryPlans.maxRealSubtasks1000;
+
+  for (const snapshot of [todayOverflow, maxRealSubtasks]) {
+    assert.equal(synapsePlanSchema.safeParse(snapshot).success, true);
+    assert.ok(Number.isFinite(Date.parse(snapshot.snapshotAt)));
+    assert.match(snapshot.sourceUserId, /^[0-9a-f-]{36}$/i);
+  }
+
+  const todayGroup = todayOverflow.priorities.find((priority) => priority.title === "Today's tasks");
+  assert.equal(todayGroup?.subtasks.length, 100);
+  assert.equal(todayOverflow.priorities.length, 2);
+  assert.equal(todayOverflow.priorities[1].title, "Today task 101");
+  const todayIds = todayOverflow.priorities.flatMap((priority) => [priority.id, ...priority.subtasks.map((subtask) => subtask.id)]);
+  assert.equal(todayIds.length, 102);
+  assert.equal(new Set(todayIds).size, 102);
+
+  assert.equal(maxRealSubtasks.priorities.length, 11);
+  assert.equal(maxRealSubtasks.priorities.reduce((count, priority) => count + priority.subtasks.length, 0), 1_000);
+  const childIds = maxRealSubtasks.priorities.flatMap((priority) => priority.subtasks.map((subtask) => subtask.id));
+  assert.equal(new Set(childIds).size, 1_000);
 });
 
 test("measures the actual request byte count at the inclusive plan payload boundary", async () => {

@@ -65,7 +65,7 @@ The first returned `count` is the expected total. Advance the next range start b
 2. Page active `synapse_courses` filtered by `user_id` and `active`, ordered by `course_order`, then unique `source_key`. Preserve that order for the response.
 3. If no tasks were returned, skip subtasks and session summaries and return the empty task array with the course array.
 4. Split task IDs into batches of **50** to keep `.in('task_id', ids)` URLs bounded. For each batch, page `subtasks` ordered by `task_id`, `subtask_order`, then unique `id`. Map rows with `mapSubtaskRow` and append to their parent task. A batch's pages may include more than 1,000 rows in total; consume every page. Child ordering for each task is by `subtask_order`, then `id`.
-5. Page `supabase.rpc('task_session_summaries')` ordered by unique `task_id`. Convert the three bigint values with `Number(...)`, verify each is a nonnegative safe integer, and store only rows whose `task_id` occurs in the returned task ID set. A null/duplicate task ID, duplicate summary row, or malformed count is an error, not a zero.
+5. Page `supabase.rpc('task_session_summaries')` ordered by unique `task_id`. For every row, validate the task ID, reject duplicate IDs, convert all three bigint values with `Number(...)`, and verify each is a nonnegative safe integer **before** filtering by the returned task ID set. Store only summaries for returned tasks. A malformed row for an inactive or otherwise unreturned task is still an error; do not let the visibility filter hide corrupt metrics.
 6. Map each task with the same mapper and default-zero metrics. Preserve the response shape; no client hook or UI polling interval changes are needed for this correctness fix.
 
 The page walker should be a small testable helper (for example `lib/trackerTaskRead.ts`), not copy-pasted four times. It needs to receive a query factory or callback that constructs a new ordered query for each range; do not reuse an already executed mutable Supabase query builder. Return all rows only after every page has succeeded. Sequential pages are acceptable. Avoid using `count: 'exact'` as a substitute for reading all pages: the route needs every actual task/subtask row.
@@ -84,6 +84,7 @@ The page walker should be a small testable helper (for example `lib/trackerTaskR
 | Two signed-in accounts | Each sees only its own task/session totals, including when the other account has a matching task title |
 | Configured 100-row API cap and a 1,001-row table | All 1,001 rows appear; range starts advance 0, 100, 200, … by actual returned length |
 | Empty or failing second page while exact count says more rows | Route errors; no 200 partial response |
+| Malformed or unsafe summary metric for an inactive task ID | Route errors before filtering that invisible row |
 | 401 and no Supabase configuration | Same status and body contract as current route |
 
 Tests should include a deterministic fake query/page source with 1,001 and 5,000 rows so the boundary is exercised without a live database. A local Supabase/Postgres integration test, when available, must execute the migration and verify `authenticated` versus `anon` grants and two-account RLS. Source-text tests alone cannot prove the aggregation math or pagination.

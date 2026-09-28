@@ -14,7 +14,7 @@ This file is the execution summary. The linked design specs and implementation p
 - [x] Add `task_session_summaries()` as an owner-scoped `SECURITY INVOKER` RPC with execute permission limited to `authenticated`.
 - [x] Page active tasks, active courses, subtasks, and summary rows with exact counts and unique ordering. Use pages of 500 and subtask task-ID groups of 50. Advance by actual returned row count and reject failures, inconsistent counts, duplicate IDs, and unsafe metric values.
 - [x] Keep the tracker endpoint on the signed-in Supabase client. Avoid reading raw session rows; return one complete `{ synapseCourses, tasks }` response or an error.
-- [x] Add regressions for exact pagination boundaries, 100-row API caps, failed/changed pages, 1,001 tasks, 1,001 subtasks, 51-task batching, invisible-task summaries, and empty tasks.
+- [x] Add regressions for exact pagination boundaries, 100-row API caps, failed/changed pages, 1,001 tasks, 1,001 subtasks, 51-task batching, invisible-task summaries, malformed metrics even on invisible summaries, and empty tasks.
 
 ## Work package B — enforce the advertised plan request size
 
@@ -32,7 +32,7 @@ This file is the execution summary. The linked design specs and implementation p
 
 ## Verification record
 
-- `npm test`: **198 tests passed**.
+- `npm test`: **199 tests passed**.
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run build`: passed; Next.js emitted the expected app route manifest, including `/api/tracker/tasks` and `/api/integrations/v1/plan`.
