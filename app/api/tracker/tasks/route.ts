@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/supabase/auth";
-import { mapSubtaskRow, mapTaskRow } from "@/lib/trackerModel";
+import { mapTaskRow } from "@/lib/trackerModel";
+import { readTrackerTaskData } from "@/lib/trackerTaskRead";
 import { taskCreateSchema } from "@/lib/trackerValidation";
 
 function errorResponse(message: string, status: number, details?: unknown) {
@@ -19,63 +20,11 @@ export async function GET() {
   if (!user) return errorResponse("Authentication required.", 401);
   if (!supabase) return errorResponse("Supabase is not configured.", 500);
 
-  const { data: taskRows, error: taskError } = await supabase
-    .from("tasks")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("synapse_active", true)
-    .order("task_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  if (taskError) return errorResponse(taskError.message, 500);
-
-  const { data: courseRows, error: courseError } = await supabase
-    .from("synapse_courses")
-    .select("source_key, title, course_order")
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .order("course_order", { ascending: true });
-  if (courseError) return errorResponse(courseError.message, 500);
-
-  const rows = taskRows ?? [];
-  const ids = rows.map((row) => row.id as string);
-  const subtasksByTask = new Map<string, ReturnType<typeof mapSubtaskRow>[]>();
-  const focusByTask = new Map<string, { seconds: number; completed: number; linked: number }>();
-
-  if (ids.length) {
-    const { data: subtaskRows, error: subtaskError } = await supabase
-      .from("subtasks")
-      .select("*")
-      .in("task_id", ids)
-      .order("subtask_order", { ascending: true });
-    if (subtaskError) return errorResponse(subtaskError.message, 500);
-    for (const row of subtaskRows ?? []) {
-      const taskId = row.task_id as string;
-      subtasksByTask.set(taskId, [...(subtasksByTask.get(taskId) ?? []), mapSubtaskRow(row)]);
-    }
-
-    const { data: sessionRows, error: sessionError } = await supabase
-      .from("learning_sessions")
-      .select("task_id, learning_seconds, status")
-      .eq("user_id", user.id)
-      .in("task_id", ids);
-    if (sessionError) return errorResponse(sessionError.message, 500);
-    for (const row of sessionRows ?? []) {
-      const taskId = row.task_id as string;
-      const current = focusByTask.get(taskId) ?? { seconds: 0, completed: 0, linked: 0 };
-      current.seconds += Number(row.learning_seconds) || 0;
-      if (row.status === "completed") current.completed += 1;
-      current.linked += 1;
-      focusByTask.set(taskId, current);
-    }
+  try {
+    return NextResponse.json(await readTrackerTaskData(supabase, user.id));
+  } catch {
+    return errorResponse("Could not read the complete task list.", 500);
   }
-
-  return NextResponse.json({
-    synapseCourses: (courseRows ?? []).map((row) => ({ id: row.source_key, title: row.title, order: row.course_order })),
-    tasks: rows.map((row) => {
-      const progress = focusByTask.get(row.id as string) ?? { seconds: 0, completed: 0, linked: 0 };
-      return mapTaskRow(row, subtasksByTask.get(row.id as string) ?? [], progress.seconds, progress.completed, progress.linked);
-    }),
-  });
 }
 
 export async function POST(request: Request) {
