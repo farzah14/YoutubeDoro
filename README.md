@@ -1,6 +1,6 @@
 # StudyRythms
 
-The Synapse integration accepts plans with up to 200 starred courses and 400 combined priorities. Synapse may include one synthetic priority per starred course plus up to 200 selected tasks. Each priority can contain up to 100 sub-tasks; the whole plan is limited to 1,000 sub-tasks and 512 KiB.
+The plan API accepts up to 200 imported courses and 400 total priorities. The Synapse client currently sends at most one explicitly starred course plus up to 200 study tasks. Each priority can contain up to 100 sub-tasks; the whole plan is limited to 1,000 sub-tasks and 512 KiB of UTF-8 request bytes.
 
 StudyRythms is a focus timer and study dashboard that pairs anime artwork and ambient audio with task planning and session tracking. Built with Next.js 16, React 19, Tailwind CSS v4, and Supabase.
 
@@ -97,7 +97,7 @@ StudyRythms/
 │   └── trackerApi.ts           # Client API layer for tracker endpoints
 ├── public/                     # Static assets, WebP anime sceneries, icons
 ├── supabase/                   # Database migrations and policies
-│   └── migrations/             # PostgreSQL RLS migrations (20260828000000_learning_tracker.sql)
+│   └── migrations/             # PostgreSQL schema, RLS, and integration migrations
 ├── tests/                      # Unit and contract test suite
 └── types/                      # TypeScript definitions (focus, theme, tracker, workspace)
 ```
@@ -132,7 +132,7 @@ npm install
 4. Apply the database schema:
    - In your Supabase dashboard, open the **SQL Editor**.
    - Paste and run the contents of `supabase/migrations/20260828000000_learning_tracker.sql`.
-   - This creates `tasks`, `subtasks`, `learning_sessions`, and `migration_runs` tables with Row Level Security enabled.
+   - This creates `tasks`, `subtasks`, `learning_sessions`, and `migration_runs` tables with Row Level Security enabled. Apply subsequent migration files in filename order before deploying code that depends on them.
 
 5. Configure Google-only authentication:
    - In **Authentication** -> **Providers** -> **Google**, enable Google and add the OAuth client ID and secret from Google Cloud.
@@ -158,7 +158,7 @@ Synapse reads saved StudyRythms focus sessions through a separate, user-approved
 - `SYNAPSE_REDIRECT_URI`: the exact callback registered in Synapse. Local development uses `http://localhost:5173/api/studyrythms/callback`; production uses the matching HTTPS Synapse origin.
 - `INTEGRATION_CURSOR_KEY`: at least 32 random bytes for signing initial-import cursors.
 
-The consent screen grants `sessions:read plan:write`. Synapse reads saved focus sessions, including database snapshots of active sessions, and writes a full snapshot of its starred current-priority courses plus every study task and its sub-tasks to `PUT /api/integrations/v1/plan`. Courses not starred in Synapse are not sent as current priorities. Study tasks sync regardless of their star state; their course label is included when their course is starred. When one unambiguous incomplete task matches a starred course by title, its sub-tasks appear under that course's Current priority. The provider stores these by source key, hides courses and tasks removed from the Synapse plan, and preserves linked focus sessions and native StudyRythms tasks. The most recently starred Synapse course becomes the main Current priority when its plan arrives; users can still switch to another task manually. Synapse manages imported task titles and placement; users can check imported sub-tasks in either app, with open checklists refreshing within a few seconds. Apply `supabase/migrations/20260926110000_synapse_plan_sync.sql` and `supabase/migrations/20260926120000_synapse_plan_pgcrypto_path.sql` after the previous provider migrations, then `supabase/migrations/20260928000000_synapse_checklist_completion.sql` before deploying the checklist API. The expanded permission requires each user with an older grant to reconnect and approve it again. Users can review and revoke Synapse access from StudyRythms Settings.
+The consent screen grants `sessions:read plan:write`. Synapse reads saved focus sessions, including database snapshots of active sessions, and writes a full snapshot of its starred current-priority courses plus every study task and its sub-tasks to `PUT /api/integrations/v1/plan`. Courses not starred in Synapse are not sent as current priorities. Study tasks sync regardless of their star state; their course label is included when their course is starred. When one unambiguous incomplete task matches a starred course by title, its sub-tasks appear under that course's Current priority. The provider stores these by source key, hides courses and tasks removed from the Synapse plan, and preserves linked focus sessions and native StudyRythms tasks. The most recently starred Synapse course becomes the main Current priority when its plan arrives; users can still switch to another task manually. Synapse manages imported task titles and placement; users can check imported sub-tasks in either app, with open checklists refreshing within a few seconds. Apply `supabase/migrations/20260926110000_synapse_plan_sync.sql` and `supabase/migrations/20260926120000_synapse_plan_pgcrypto_path.sql` after the previous provider migrations, then `supabase/migrations/20260928000000_synapse_checklist_completion.sql` before deploying the checklist API. Apply `supabase/migrations/20260929000000_tracker_task_session_summaries.sql` and `supabase/migrations/20260929010000_learning_session_task_owner_update.sql` in filename order before deploying the corresponding tracker reader. The tracker task endpoint pages all active tasks, courses, subtasks, and per-task focus summaries, so its counts do not silently stop at the Supabase response-row limit. The expanded permission requires each user with an older grant to reconnect and approve it again. Users can review and revoke Synapse access from StudyRythms Settings.
 
 Use a distinct client ID, client secret, secret hash, and exact callback registration for local, staging, and production deployments. Register a separate exact HTTPS callback for each deployed environment. The integration uses fixed API paths under `STUDYRYTHMS_ORIGIN`, HTTPS outside localhost, opaque short-lived tokens, and server-to-server requests. Follow the staged migration order above before enabling Synapse Connect. Deploy StudyRythms before Synapse, then configure Synapse's matching client credentials and callback. Session-read responses contain no notes, tasks, break information, or camera data; the separate plan-write endpoint accepts only course titles, priority tasks, and sub-tasks.
 

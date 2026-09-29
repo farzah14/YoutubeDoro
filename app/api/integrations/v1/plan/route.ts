@@ -1,5 +1,6 @@
 import { authenticateIntegration, errorResponse, IntegrationError } from "@/lib/integrations/synapse/http";
 import { applySynapsePlan, synapsePlanSchema } from "@/lib/integrations/synapse/plan";
+import { MAX_PLAN_PAYLOAD_BYTES, parsePlanRequestBody } from "@/lib/integrations/synapse/planPayload";
 
 const privateHeaders = { "cache-control": "private, no-store" };
 
@@ -11,17 +12,17 @@ export async function PUT(request: Request) {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return Response.json({ error: "invalid_request" }, { status: 415, headers: privateHeaders });
   }
-  if (Number(request.headers.get("content-length") ?? 0) > 524_288) {
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_PLAN_PAYLOAD_BYTES) {
     return Response.json({ error: "payload_too_large" }, { status: 413, headers: privateHeaders });
   }
-  let raw: string;
-  try { raw = await request.text(); }
-  catch { return Response.json({ error: "invalid_request" }, { status: 400, headers: privateHeaders }); }
-  if (raw.length > 524_288) return Response.json({ error: "payload_too_large" }, { status: 413, headers: privateHeaders });
-  let value: unknown;
-  try { value = JSON.parse(raw); }
-  catch { return Response.json({ error: "invalid_request" }, { status: 400, headers: privateHeaders }); }
-  const parsed = synapsePlanSchema.safeParse(value);
+  const body = await parsePlanRequestBody(request);
+  if (body.kind === "too_large") {
+    return Response.json({ error: "payload_too_large" }, { status: 413, headers: privateHeaders });
+  }
+  if (body.kind === "invalid_request") {
+    return Response.json({ error: "invalid_request" }, { status: 400, headers: privateHeaders });
+  }
+  const parsed = synapsePlanSchema.safeParse(body.value);
   if (!parsed.success) return Response.json({ error: "invalid_plan" }, { status: 400, headers: privateHeaders });
 
   try {
