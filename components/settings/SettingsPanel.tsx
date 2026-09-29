@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/supabase/client";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { KEYS } from "@/lib/constants";
-import { DEFAULT_FOCUS_PREFERENCES, migrateFocusPreferences } from "@/lib/migrations";
 import { COZY_THEMES, THEME_ORDER } from "@/lib/themeConfig";
 import { removeCustomTheme, saveCustomTheme, type CustomThemeMetadata } from "@/lib/customThemeStore";
 import { getNotificationState, playTimerAlert, requestNotificationPermission, type NotificationState } from "@/lib/browserFeatures";
@@ -13,6 +12,7 @@ import type { CozyAnimeTheme, ThemeGroup } from "@/types/theme";
 import type { ThemeSlot } from "@/types/workspace";
 import type { LearningSession } from "@/types/tracker";
 import type { TaskItem } from "@/types";
+import type { FocusPreferences } from "@/types/focus";
 import { Button } from "../ui/Button";
 import { OverlayPanel } from "../ui/OverlayPanel";
 import { DailyStats } from "../stats/DailyStats";
@@ -41,6 +41,8 @@ interface SettingsPanelProps {
   onUse24HourChange: (value: boolean) => void;
   showSeconds: boolean;
   onShowSecondsChange: (value: boolean) => void;
+  timerPreferences: FocusPreferences;
+  onTimerPreferencesChange: (preferences: FocusPreferences) => void;
   accountEmail?: string;
   tasks: TaskItem[];
   sessions: LearningSession[];
@@ -79,6 +81,8 @@ export function SettingsPanel({
   onUse24HourChange,
   showSeconds,
   onShowSecondsChange,
+  timerPreferences,
+  onTimerPreferencesChange,
   accountEmail,
   tasks,
   sessions,
@@ -92,11 +96,10 @@ export function SettingsPanel({
   const [group, setGroup] = useState<ThemeGroup | "All">("All");
   const [uploadError, setUploadError] = useState("");
   const [customMeta, setCustomMeta] = useLocalStorage<CustomThemeMetadata[]>(KEYS.customThemeMeta, []);
-  const [storedPreferences, setStoredPreferences] = useLocalStorage(KEYS.focusPreferences, DEFAULT_FOCUS_PREFERENCES);
   const [notificationState, setNotificationState] = useState<NotificationState>(() => getNotificationState());
   const [dashboardName, setDashboardName] = useLocalStorage(KEYS.dashboardName, "");
   const [greetingStyle, setGreetingStyle] = useLocalStorage<"dynamic" | "generic" | "hidden">(KEYS.greetingStyle, "dynamic");
-  const preferences = migrateFocusPreferences(storedPreferences);
+  const preferences = timerPreferences;
   const themeSlot = activeThemeSlot;
   const selectedTheme = themePreferences[themeSlot];
   const customId = customThemeIds[themeSlot];
@@ -206,6 +209,7 @@ export function SettingsPanel({
 
         <section className="settings-duration-list" aria-labelledby="timer-durations-title">
           <h4 id="timer-durations-title">Session lengths</h4>
+          <p className="settings-copy">Pomodoro uses these saved focus and break lengths. Changes during a session apply to the next interval.</p>
           <div className="settings-recipe-row">
             <span>
               <strong>Animedoro focus</strong>
@@ -224,7 +228,7 @@ export function SettingsPanel({
                   value={preferences[key]}
                   onChange={(event) => {
                     const value = Number(event.target.value);
-                    setStoredPreferences({ ...preferences, [key]: value });
+                    onTimerPreferencesChange({ ...preferences, [key]: value });
                   }}
                   aria-label={label + " minutes"}
                 />
@@ -240,7 +244,7 @@ export function SettingsPanel({
                 min="1"
                 max="480"
                 value={preferences.countdownMinutes}
-                onChange={(event) => setStoredPreferences({ ...preferences, countdownMinutes: Number(event.target.value) })}
+                onChange={(event) => onTimerPreferencesChange({ ...preferences, countdownMinutes: Number(event.target.value) })}
                 aria-label="Countdown minutes"
               />
               <small>min</small>
@@ -251,11 +255,11 @@ export function SettingsPanel({
         <section className="settings-behavior-list" aria-label="Timer behavior">
           <label className="settings-toggle settings-recipe-toggle">
             <span><strong>Auto-start breaks</strong><small>Move into the break immediately after focus ends.</small></span>
-            <input type="checkbox" checked={preferences.autoStartBreaks} onChange={(event) => setStoredPreferences({ ...preferences, autoStartBreaks: event.target.checked })} />
+            <input type="checkbox" checked={preferences.autoStartBreaks} onChange={(event) => onTimerPreferencesChange({ ...preferences, autoStartBreaks: event.target.checked })} />
           </label>
           <label className="settings-toggle settings-recipe-toggle">
             <span><strong>Browser notifications</strong><small>{notificationState === "denied" ? "Allow notifications for this site in browser settings, then return here." : notificationState === "unsupported" ? "Not supported in this browser." : "Notify when an interval completes."}</small></span>
-            <input type="checkbox" checked={preferences.notificationEnabled && notificationState === "granted"} disabled={notificationState === "unsupported" || notificationState === "denied"} onChange={async (event) => { const next = event.target.checked; const permission = next ? await requestNotificationPermission() : notificationState; setNotificationState(permission); setStoredPreferences({ ...preferences, notificationEnabled: next && permission === "granted" }); }} />
+            <input type="checkbox" checked={preferences.notificationEnabled && notificationState === "granted"} disabled={notificationState === "unsupported" || notificationState === "denied"} onChange={async (event) => { const next = event.target.checked; const permission = next ? await requestNotificationPermission() : notificationState; setNotificationState(permission); onTimerPreferencesChange({ ...preferences, notificationEnabled: next && permission === "granted" }); }} />
           </label>
           <label className="settings-toggle settings-recipe-toggle">
             <span>
@@ -265,7 +269,7 @@ export function SettingsPanel({
             <input
               type="checkbox"
               checked={preferences.attentionMonitoringEnabled}
-              onChange={(event) => setStoredPreferences({
+              onChange={(event) => onTimerPreferencesChange({
                 ...preferences,
                 attentionMonitoringEnabled: event.target.checked,
               })}
@@ -275,8 +279,8 @@ export function SettingsPanel({
 
         <section className="settings-signal" aria-labelledby="timer-signal-title">
           <h4 id="timer-signal-title">Signal</h4>
-          <label>Alert sound<select value={preferences.alertSound} onChange={(event) => setStoredPreferences({ ...preferences, alertSound: event.target.value as typeof preferences.alertSound })}><option value="soft">Soft</option><option value="level-up">Level Up</option><option value="none">No alert</option></select></label>
-          <label><span>Alert volume <output>{preferences.alertVolume}%</output></span><input type="range" min="0" max="100" value={preferences.alertVolume} onChange={(event) => setStoredPreferences({ ...preferences, alertVolume: Number(event.target.value) })} /></label>
+          <label>Alert sound<select value={preferences.alertSound} onChange={(event) => onTimerPreferencesChange({ ...preferences, alertSound: event.target.value as typeof preferences.alertSound })}><option value="soft">Soft</option><option value="level-up">Level Up</option><option value="none">No alert</option></select></label>
+          <label><span>Alert volume <output>{preferences.alertVolume}%</output></span><input type="range" min="0" max="100" value={preferences.alertVolume} onChange={(event) => onTimerPreferencesChange({ ...preferences, alertVolume: Number(event.target.value) })} /></label>
           <button type="button" className="settings-quiet-action" onClick={() => { playTimerAlert(preferences.alertSound, preferences.alertVolume); }}>Preview</button>
         </section>
 

@@ -465,6 +465,8 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
         onUse24HourChange={setUse24Hour}
         showSeconds={showSeconds}
         onShowSecondsChange={setShowSeconds}
+        timerPreferences={focusTimer.preferences}
+        onTimerPreferencesChange={focusTimer.updatePreferences}
         accountEmail={accountEmail}
         tasks={tasks}
         sessions={visibleSessions}
