@@ -213,7 +213,10 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
     return true;
   }, [activeTask, activeTaskId, finalizeSession, getLastMeasurements, recorderSession?.status, startSession, tasks]);
 
-  const handleBreakStart = useCallback(async () => startBreak(), [startBreak]);
+  const handleBreakStart = useCallback(async () => {
+    if (getLastMeasurements().learningSeconds < 1) return false;
+    return startBreak();
+  }, [getLastMeasurements, startBreak]);
   const handleBreakProgress = useCallback((seconds: number) => checkpointBreak(seconds), [checkpointBreak]);
   const handleProgress = useCallback((phase: "focus" | "break", elapsedSeconds: number, status: "idle" | "running" | "paused" | "done") => {
     const current: SessionMeasurements = getLastMeasurements();

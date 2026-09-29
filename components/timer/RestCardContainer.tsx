@@ -43,7 +43,7 @@ export function RestCardContainer({
   const [breakError, setBreakError] = useState("");
   const handleBreakStart = useCallback(async () => {
     const allowed = await onBreakStart?.();
-    if (allowed === false) setBreakError("Start a focus session before starting a break.");
+    if (allowed === false) setBreakError("Track at least 1 second of focus before starting a break.");
     else setBreakError("");
     return allowed;
   }, [onBreakStart]);

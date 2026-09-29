@@ -81,17 +81,29 @@ function HistoryRow({ session, tasks, reload, expanded, onToggle, editorId }: Hi
     }
   };
 
+  const hasDistinctTaskTitle = session.taskTitleSnapshot.trim() !== session.title.trim();
+  const breakLabel = session.breakCount === null
+    ? "Break · count unknown"
+    : `Break · ${session.breakCount} ${session.breakCount === 1 ? "break" : "breaks"}`;
+
   return (
     <article className="history-row">
       <button type="button" className="history-row__summary"
         aria-expanded={expanded} aria-controls={editorId} onClick={onToggle}>
-        <span className="history-row__identity"><strong>{session.title}</strong><small>{session.taskTitleSnapshot}</small></span>
-        <time className="history-row__time">{displayTime(session.startedAt)}</time>
-        <span className="history-row__summary-metrics">
-          <span>{formatDuration(session.learningSeconds)} focus</span>
-          <span>{formatDuration(session.breakSeconds)} break <small>{session.breakCount === null ? "count unknown" : `${session.breakCount} ${session.breakCount === 1 ? "break" : "breaks"}`}</small></span>
+        <span className="history-row__summary-main">
+          <span className="history-row__identity">
+            <strong>{session.title}</strong>
+            {hasDistinctTaskTitle && <small>{session.taskTitleSnapshot}</small>}
+          </span>
+          <time className="history-row__time">{displayTime(session.startedAt)}</time>
         </span>
-        <span className={`history-status history-status--${session.status}`}>{labelStatus(session.status)}</span>
+        <span className="history-row__summary-details">
+          <span className="history-row__summary-metrics">
+            <span className="history-row__summary-metric"><small>Focus</small><strong>{formatDuration(session.learningSeconds)}</strong></span>
+            <span className="history-row__summary-metric"><small>{breakLabel}</small><strong>{formatDuration(session.breakSeconds)}</strong></span>
+          </span>
+          <span className={`history-status history-status--${session.status}`}>{labelStatus(session.status)}</span>
+        </span>
       </button>
       {expanded && (
         <div id={editorId} className="history-row__editor">
