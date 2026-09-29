@@ -174,6 +174,70 @@ function PhasePicker({ phase, disabled, onChange }: PhasePickerProps) {
   );
 }
 
+function PomodoroDurationControls({ timer }: { timer: FocusTimer }) {
+  const [focusMinutes, setFocusMinutes] = useState(String(timer.preferences.focusMinutes));
+  const [breakMinutes, setBreakMinutes] = useState(String(timer.preferences.breakMinutes));
+
+  const saveDuration = (key: "focusMinutes" | "breakMinutes", value: string) => {
+    const parsed = Number(value);
+    if (!value.trim() || !Number.isFinite(parsed)) {
+      setFocusMinutes(String(timer.preferences.focusMinutes));
+      setBreakMinutes(String(timer.preferences.breakMinutes));
+      return;
+    }
+
+    const minutes = Math.min(120, Math.max(1, Math.round(parsed)));
+    timer.updatePreferences({ ...timer.preferences, [key]: minutes });
+  };
+
+  return (
+    <fieldset className="pomodoro-duration-controls">
+      <legend>Pomodoro session lengths</legend>
+      <label>
+        <span>Focus</span>
+        <span className="pomodoro-duration-controls__input">
+          <input
+            type="number"
+            min="1"
+            max="120"
+            step="1"
+            inputMode="numeric"
+            value={focusMinutes}
+            onChange={(event) => setFocusMinutes(event.target.value)}
+            onBlur={(event) => saveDuration("focusMinutes", event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            aria-label="Pomodoro focus minutes"
+          />
+          <small>min</small>
+        </span>
+      </label>
+      <label>
+        <span>Break</span>
+        <span className="pomodoro-duration-controls__input">
+          <input
+            type="number"
+            min="1"
+            max="120"
+            step="1"
+            inputMode="numeric"
+            value={breakMinutes}
+            onChange={(event) => setBreakMinutes(event.target.value)}
+            onBlur={(event) => saveDuration("breakMinutes", event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            aria-label="Pomodoro break minutes"
+          />
+          <small>min</small>
+        </span>
+      </label>
+      <p>One break follows each focus session. Changes save automatically.</p>
+    </fieldset>
+  );
+}
+
 const subscribeToPipSupport = () => () => {};
 
 export function LearningCard({
@@ -498,6 +562,13 @@ export function LearningCard({
         </button>
         {showPhases && <PhasePicker phase={visiblePhase} disabled={isRunning} onChange={(phase) => timer.selectPhase(phase)} />}
       </div>
+
+      {timer.preferences.mode === "pomodoro" && timer.state.status === "idle" && (
+        <PomodoroDurationControls
+          key={`${timer.preferences.focusMinutes}:${timer.preferences.breakMinutes}`}
+          timer={timer}
+        />
+      )}
 
     </section>
   );

@@ -205,7 +205,20 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
   const updatePreferences = useCallback((next: FocusPreferences) => {
     const safe = migrateFocusPreferences(next);
     setStoredPreferences(safe);
-    setState((current) => current.status === "idle" ? createTimerState(safe) : current);
+    setState((current) => {
+      if (current.status !== "idle") return current;
+      if (current.phase === "focus") {
+        return { ...createTimerState(safe), completedFocusSessions: current.completedFocusSessions };
+      }
+
+      return {
+        ...current,
+        targetSeconds: (current.mode === "52-17" ? 17 : safe.breakMinutes) * 60,
+        elapsedSeconds: 0,
+        startedAtMs: null,
+        runStartedElapsedSeconds: 0,
+      };
+    });
   }, [setStoredPreferences]);
 
   return {
