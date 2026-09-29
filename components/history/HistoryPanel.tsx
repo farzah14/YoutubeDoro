@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import styles from "./HistoryPanel.module.css";
 import { formatDuration } from "@/lib/duration";
 import { trackerApi } from "@/lib/trackerApi";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
@@ -88,19 +89,19 @@ function HistoryRow({ session, tasks, reload, expanded, onToggle, editorId }: Hi
 
   return (
     <article className="history-row">
-      <button type="button" className="history-row__summary"
+      <button type="button" className={styles.summary}
         aria-expanded={expanded} aria-controls={editorId} onClick={onToggle}>
-        <span className="history-row__summary-main">
-          <span className="history-row__identity">
+        <span className={styles.summaryMain}>
+          <span className={styles.identity}>
             <strong>{session.title}</strong>
             {hasDistinctTaskTitle && <small>{session.taskTitleSnapshot}</small>}
           </span>
-          <time className="history-row__time">{displayTime(session.startedAt)}</time>
+          <time className={styles.time}>{displayTime(session.startedAt)}</time>
         </span>
-        <span className="history-row__summary-details">
-          <span className="history-row__summary-metrics">
-            <span className="history-row__summary-metric"><small>Focus</small><strong>{formatDuration(session.learningSeconds)}</strong></span>
-            <span className="history-row__summary-metric"><small>{breakLabel}</small><strong>{formatDuration(session.breakSeconds)}</strong></span>
+        <span className={styles.summaryDetails}>
+          <span className={styles.summaryMetrics}>
+            <span className={styles.summaryMetric}><small>Focus</small><strong>{formatDuration(session.learningSeconds)}</strong></span>
+            <span className={styles.summaryMetric}><small>{breakLabel}</small><strong>{formatDuration(session.breakSeconds)}</strong></span>
           </span>
           <span className={`history-status history-status--${session.status}`}>{labelStatus(session.status)}</span>
         </span>
