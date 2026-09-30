@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TaskItem } from "@/types";
-import type { SynapseCourse, TrackerTask } from "@/types/tracker";
+import type { TrackerTask } from "@/types/tracker";
 import { TrackerApiError, trackerApi } from "@/lib/trackerApi";
 import {
   moveTaskItem,
   reorderTaskItems,
   selectActiveTask,
-  selectActiveTaskForSynapseCourses,
   setTaskCompletion,
 } from "@/lib/taskModel";
 
@@ -52,11 +51,9 @@ function taskPatch(patch: Partial<TaskItem>) {
 
 export function useCloudTasks() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [synapseCourses, setSynapseCourses] = useState<SynapseCourse[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const lastPreferredKey = useRef<string | null | undefined>(undefined);
   const requestSequence = useRef(0);
   const pendingSubtasks = useRef(new Set<string>());
   const pollAllowed = useRef(true);
@@ -69,12 +66,8 @@ export function useCloudTasks() {
       const result = await trackerApi.listTasks();
       if (sequence !== requestSequence.current) return;
       const next = result.tasks.map(toTaskItem).sort((a, b) => a.order - b.order);
-      const courses = result.synapseCourses ?? [];
       setTasks(next);
-      setSynapseCourses(courses);
-      const priorPreferredKey = lastPreferredKey.current;
-      lastPreferredKey.current = selectActiveTaskForSynapseCourses(next, null, courses, priorPreferredKey).preferredKey;
-      setActiveTaskId((current) => selectActiveTaskForSynapseCourses(next, current, courses, priorPreferredKey).task?.id ?? null);
+      setActiveTaskId((current) => selectActiveTask(next, current)?.id ?? next[0]?.id ?? null);
       setError("");
       pollAllowed.current = true;
     } catch (cause) {
@@ -247,8 +240,8 @@ export function useCloudTasks() {
 
   const resetTasks = useCallback(async () => {
     try {
-      await Promise.all(tasks.filter((task) => task.completed && !task.sourceKey?.startsWith("synapse:")).map((task) => trackerApi.updateTask(task.id, { completed: false })));
-      setTasks((current) => current.map((task) => task.sourceKey?.startsWith("synapse:") ? task : { ...task, completed: false }));
+      await Promise.all(tasks.filter((task) => task.completed).map((task) => trackerApi.updateTask(task.id, { completed: false })));
+      setTasks((current) => current.map((task) => ({ ...task, completed: false })));
       setActiveTaskId((current) => selectActiveTask(tasks, current)?.id ?? tasks[0]?.id ?? null);
       setError("");
     } catch (cause) {
@@ -260,7 +253,6 @@ export function useCloudTasks() {
 
   return {
     tasks,
-    synapseCourses,
     activeTaskId,
     activeTask,
     setActiveTaskId,

@@ -122,7 +122,7 @@ function HistoryRow({ session, tasks, reload, expanded, onToggle, editorId }: Hi
 
   return (
     <article className="history-row">
-      <button type="button" className={styles.summary}
+      <button type="button" className={`history-row__summary ${styles.summary}`}
         aria-expanded={expanded} aria-controls={editorId} onClick={onToggle}>
         <span className={styles.summaryMain}>
           <span className={styles.identity}>

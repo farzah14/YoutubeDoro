@@ -117,7 +117,6 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
   );
   const {
     tasks,
-    synapseCourses,
     activeTaskId,
     activeTask,
     setActiveTaskId,
@@ -411,7 +410,6 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
       <Modal open={openPanel === "tasks"} onClose={closeWorkspacePanel} title="Focus Priorities" className="priorities-modal">
         <TaskQueue
           tasks={tasks}
-          synapseCourses={synapseCourses}
           activeTaskId={activeTaskId}
           currentTopic={topicToday}
           onSelectTask={handleTaskSelected}

@@ -37,6 +37,6 @@ test("History is a grouped, collapsible study logbook", () => {
     "aria-expanded", "history-row__editor", "hasFilters", "history-retry"]) {
     assert.match(source, new RegExp(token), `missing ${token}`);
   }
-  assert.match(source, /Completed or stopped focus sessions will appear here\./);
+  assert.match(source, /No sessions in the last 3 days\./);
   assert.match(source, /onClick=\{\(\) => \{ void reload\(\); \}\}/);
 });

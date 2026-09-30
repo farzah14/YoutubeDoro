@@ -3,7 +3,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/supabase/auth";
 import { mapSubtaskRow } from "@/lib/trackerModel";
 import { subtaskPatchSchema, uuidSchema } from "@/lib/trackerValidation";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 function errorResponse(message: string, status: number, details?: unknown) {
   return NextResponse.json({ error: message, details }, { status });
@@ -33,19 +32,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const parsed = subtaskPatchSchema.safeParse(body);
   if (!parsed.success) return errorResponse("Invalid subtask update.", 400, parsed.error.flatten());
   const value = parsed.data;
-  if (typeof row.source_key === "string" && row.source_key.startsWith("synapse:")) {
-    if (value.completed === undefined || value.text !== undefined || value.order !== undefined) {
-      return errorResponse("Only completion can be changed for a Synapse sub-task.", 403);
-    }
-    const admin = getSupabaseAdminClient();
-    if (!admin) return errorResponse("Supabase is not configured.", 500);
-    const { data, error } = await admin.rpc("set_synapse_subtask_completion", {
-      p_user_id: user.id, p_subtask_id: id, p_completed: value.completed,
-    });
-    if (error) return errorResponse(error.message, 500);
-    if (!data) return errorResponse("Subtask not found.", 404);
-    return NextResponse.json({ subtask: mapSubtaskRow(data as Record<string, unknown>) });
-  }
   const update = {
     ...(value.text === undefined ? {} : { text: value.text }),
     ...(value.completed === undefined ? {} : { completed: value.completed }),
@@ -65,9 +51,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   const { supabase, row } = await ownedSubtask(id, user.id);
   if (!supabase) return errorResponse("Supabase is not configured.", 500);
   if (!row) return errorResponse("Subtask not found.", 404);
-  if (typeof row.source_key === "string" && row.source_key.startsWith("synapse:")) {
-    return errorResponse("Remove this sub-task in Synapse.", 403);
-  }
+
   const { error } = await supabase.from("subtasks").delete().eq("id", id).select().single();
   if (error) return errorResponse(error.message, 500);
   return NextResponse.json({ deleted: true });

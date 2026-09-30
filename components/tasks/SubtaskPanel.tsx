@@ -62,7 +62,7 @@ export function SubtaskPanel({
                   <input type="checkbox" checked={subtask.completed} onChange={() => onToggleSubtask(activeTask.id, subtask.id)} aria-label={(subtask.completed ? "Mark incomplete sub-task " : "Mark complete sub-task ") + subtask.text} />
                   <span>{subtask.text}</span>
                 </label>
-                {!subtask.sourceKey?.startsWith("synapse:") && <button
+                <button
                   type="button"
                   className="subtask-row__delete"
                   onClick={() => onDeleteSubtask(activeTask.id, subtask.id)}
@@ -70,7 +70,7 @@ export function SubtaskPanel({
                   title={"Delete sub-task " + subtask.text}
                 >
                   <TrashIcon aria-hidden="true" />
-                </button>}
+                </button>
               </li>
             ))}
           </ol>

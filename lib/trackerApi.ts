@@ -5,7 +5,6 @@ import type {
   SessionFilters,
   TrackerTask,
   TrackerSubtask,
-  SynapseCourse,
 } from "@/types/tracker";
 
 export class TrackerApiError extends Error {
@@ -39,7 +38,7 @@ export async function trackerFetch<T>(input: RequestInfo | URL, init: RequestIni
 }
 
 export const trackerApi = {
-  listTasks: () => trackerFetch<{ tasks: TrackerTask[]; synapseCourses: SynapseCourse[] }>("/api/tracker/tasks"),
+  listTasks: () => trackerFetch<{ tasks: TrackerTask[] }>("/api/tracker/tasks"),
   createTask: (input: unknown) => trackerFetch<{ task: TrackerTask }>("/api/tracker/tasks", { method: "POST", body: JSON.stringify(input) }),
   updateTask: (id: string, input: unknown) => trackerFetch<{ task: TrackerTask }>(`/api/tracker/tasks/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteTask: (id: string) => trackerFetch<{ deleted: boolean; linkedSessions: number }>(`/api/tracker/tasks/${id}`, { method: "DELETE" }),

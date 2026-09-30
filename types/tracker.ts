@@ -13,12 +13,6 @@ export interface TrackerSubtask {
   sourceKey: string | null;
 }
 
-export interface SynapseCourse {
-  id: string;
-  title: string;
-  order: number;
-}
-
 export interface TrackerTask {
   id: string;
   userId: string;
