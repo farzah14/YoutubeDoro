@@ -45,10 +45,14 @@ const getAutoplayUrl = (url: string) => {
     if (!parsed.searchParams.has("enablejsapi")) {
       parsed.searchParams.set("enablejsapi", "1");
     }
+    if (typeof window !== "undefined" && window.location?.origin) {
+      parsed.searchParams.set("origin", window.location.origin);
+    }
     return parsed.toString();
   } catch {
     const sep = url.includes("?") ? "&" : "?";
-    return url.includes("autoplay=") ? url : `${url}${sep}autoplay=1&enablejsapi=1`;
+    const originPart = typeof window !== "undefined" && window.location?.origin ? `&origin=${encodeURIComponent(window.location.origin)}` : "";
+    return url.includes("autoplay=") ? `${url}${originPart}` : `${url}${sep}autoplay=1&enablejsapi=1${originPart}`;
   }
 };
 
@@ -56,6 +60,7 @@ export interface HeardSongItem {
   id: string;
   title: string;
   artist?: string;
+  duration?: number;
   provider: MusicEmbed["provider"];
   sourceUrl: string;
   embedUrl: string;
@@ -66,6 +71,7 @@ export interface QueueSongItem {
   id: string;
   title: string;
   artist?: string;
+  duration?: number;
   provider: MusicEmbed["provider"];
   sourceUrl: string;
   embedUrl: string;
@@ -120,6 +126,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const seekLockUntilRef = useRef<number>(0);
   const playerRef = useRef<MinimalYTPlayer | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const handleNextSongRef = useRef<() => void>(() => {});
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
 
   const handleSeek = (newTime: number) => {
@@ -397,6 +404,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
     }
   };
 
+  handleNextSongRef.current = handleNextSong;
 
   const togglePlay = () => {
     const iframe = iframeRef.current;
@@ -419,20 +427,59 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
     if (activeEmbed) {
       setIsPlaying(true);
       setCurrentTime(0);
-      setDuration(0);
       lastIframeMsgTimeRef.current = 0;
       seekLockUntilRef.current = Date.now() + 1200;
+
+      const activeVidId = extractYouTubeVideoId(activeEmbed.sourceUrl) || extractYouTubeVideoId(activeEmbed.embedUrl);
+      const queuedSong = queue.find(
+        (item) =>
+          item.sourceUrl === activeEmbed.sourceUrl ||
+          item.embedUrl === activeEmbed.embedUrl ||
+          (activeVidId && (item.id === activeVidId || item.sourceUrl.includes(activeVidId) || item.embedUrl.includes(activeVidId)))
+      );
+      if (queuedSong?.duration && queuedSong.duration > 0) {
+        setDuration(queuedSong.duration);
+      } else {
+        const likedSong = googleYouTubeSongs.find((item) => item.id === activeVidId);
+        if (likedSong?.duration && likedSong.duration > 0) {
+          setDuration(likedSong.duration);
+        } else {
+          const defaultSong = DEFAULT_YOUTUBE_SONGS.find((item) => item.id === activeVidId);
+          if (defaultSong?.duration && defaultSong.duration > 0) {
+            setDuration(defaultSong.duration);
+          } else {
+            setDuration(0);
+          }
+        }
+      }
     }
-  }, [activeEmbed?.embedUrl]);
+  }, [activeEmbed?.embedUrl, queue, googleYouTubeSongs]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       try {
         const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-        if (data?.event === "onStateChange" || data?.info !== undefined) {
-          if (data.info === 1) setIsPlaying(true);
-          else if (data.info === 2 || data.info === 0) setIsPlaying(false);
+        if (!data) return;
+
+        let playerState: number | undefined;
+        if (typeof data.info === "number") {
+          playerState = data.info;
+        } else if (data.info && typeof data.info.playerState === "number") {
+          playerState = data.info.playerState;
         }
+
+        if (playerState !== undefined) {
+          if (playerState === 1) {
+            setIsPlaying(true);
+          } else if (playerState === 2) {
+            setIsPlaying(false);
+          } else if (playerState === 0) {
+            setIsPlaying(false);
+            handleNextSongRef.current();
+            return;
+          }
+        }
+
         // Handle video title and author delivered by YouTube iframe infoDelivery
         const videoData = data?.info?.videoData;
         if (videoData && typeof videoData.title === "string" && videoData.title.trim()) {
@@ -447,6 +494,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
             }
           }
         }
+
         if (data?.info) {
           if (typeof data.info.duration === "number" && data.info.duration > 0) {
             setDuration(Math.round(data.info.duration));
@@ -457,7 +505,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
               const seconds = Math.floor(data.info.currentTime);
               setCurrentTime((prev) => {
                 if (seconds >= prev) return seconds;
-                if (prev - seconds > 3) return seconds;
+                if (prev - seconds > 2) return seconds;
                 return prev;
               });
             }
@@ -476,12 +524,21 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
       if (iframe?.contentWindow) {
         try {
           iframe.contentWindow.postMessage(JSON.stringify({ event: "listening" }), "*");
+          iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "getDuration", args: [] }), "*");
+          iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "getCurrentTime", args: [] }), "*");
         } catch {}
       }
+
       const timeSinceLastIframe = Date.now() - lastIframeMsgTimeRef.current;
-      if (!isSeeking && Date.now() > seekLockUntilRef.current && timeSinceLastIframe > 2000) {
+      if (!isSeeking && Date.now() > seekLockUntilRef.current && timeSinceLastIframe > 2500) {
         setCurrentTime((prev) => {
-          if (duration > 0 && prev >= duration) return prev;
+          if (duration > 0) {
+            if (prev >= duration) {
+              handleNextSongRef.current();
+              return duration;
+            }
+            return prev + 1;
+          }
           return prev + 1;
         });
       }
@@ -559,10 +616,19 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
               key={activeEmbed.embedUrl}
               src={getAutoplayUrl(activeEmbed.embedUrl)}
               title={`${activeEmbed.provider} music player`}
-              sandbox="allow-scripts allow-same-origin allow-presentation"
               allow="autoplay; encrypted-media; picture-in-picture"
               loading="eager"
-              onLoad={() => sendVolumeToIframe(muted ? 0 : volume, muted)}
+              onLoad={() => {
+                sendVolumeToIframe(muted ? 0 : volume, muted);
+                const iframe = iframeRef.current;
+                if (iframe?.contentWindow) {
+                  try {
+                    iframe.contentWindow.postMessage(JSON.stringify({ event: "listening" }), "*");
+                    iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "getDuration", args: [] }), "*");
+                    iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "getCurrentTime", args: [] }), "*");
+                  } catch {}
+                }
+              }}
             />
           </div>
 
@@ -675,35 +741,41 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                         <span className="music-child-card__time music-child-card__time--current text-accent font-mono text-[11px] font-bold min-w-[2.2rem] text-left">
                           {formatMMSS(currentTime)}
                         </span>
-                        <input
-                          type="range"
-                          min="0"
-                          max={duration > 0 ? duration : Math.max(currentTime, 180)}
-                          value={currentTime}
-                          onMouseDown={() => setIsSeeking(true)}
-                          onTouchStart={() => setIsSeeking(true)}
-                          onChange={(e) => {
-                            const newTime = Number(e.target.value);
-                            setCurrentTime(newTime);
-                            handleSeek(newTime);
-                          }}
-                          onMouseUp={() => {
-                            setIsSeeking(false);
-                            seekLockUntilRef.current = Date.now() + 1000;
-                          }}
-                          onTouchEnd={() => {
-                            setIsSeeking(false);
-                            seekLockUntilRef.current = Date.now() + 1000;
-                          }}
-                          className="music-child-card__progress-slider music-child-card__slider flex-1 h-1.5 rounded-full cursor-pointer"
-                          style={{
-                            accentColor: "var(--accent, #f6c76d)",
-                            background: `linear-gradient(to right, var(--accent, #f6c76d) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%, rgba(255, 255, 255, 0.2) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%)`,
-                          }}
-                          aria-label="Song progress"
-                        />
+                        {(() => {
+                          const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+                          return (
+                            <input
+                              type="range"
+                              min="0"
+                              max={duration > 0 ? duration : 100}
+                              value={duration > 0 ? Math.min(currentTime, duration) : currentTime}
+                              disabled={duration <= 0}
+                              onMouseDown={() => setIsSeeking(true)}
+                              onTouchStart={() => setIsSeeking(true)}
+                              onChange={(e) => {
+                                const newTime = Number(e.target.value);
+                                setCurrentTime(newTime);
+                                handleSeek(newTime);
+                              }}
+                              onMouseUp={() => {
+                                setIsSeeking(false);
+                                seekLockUntilRef.current = Date.now() + 1000;
+                              }}
+                              onTouchEnd={() => {
+                                setIsSeeking(false);
+                                seekLockUntilRef.current = Date.now() + 1000;
+                              }}
+                              className="music-child-card__progress-slider music-child-card__slider flex-1 h-1.5 rounded-full cursor-pointer"
+                              style={{
+                                accentColor: "var(--accent, #f6c76d)",
+                                background: `linear-gradient(to right, var(--accent, #f6c76d) ${progressPercent}%, rgba(255, 255, 255, 0.2) ${progressPercent}%)`,
+                              }}
+                              aria-label="Song progress"
+                            />
+                          );
+                        })()}
                         <span className="music-child-card__time music-child-card__time--total text-text-muted font-mono text-[11px] font-semibold min-w-[2.2rem] text-right">
-                          {duration > 0 ? formatMMSS(duration) : (currentTime > 0 ? formatMMSS(Math.max(currentTime, 180)) : "--:--")}
+                          {duration > 0 ? formatMMSS(duration) : "--:--"}
                         </span>
                       </div>
 
@@ -857,6 +929,7 @@ export function LoFiPlayer() {
                   id: s.id,
                   title: s.title,
                   artist: s.artist || "YouTube Music",
+                  duration: s.duration,
                   provider: "youtube",
                   sourceUrl: s.externalUrl,
                   embedUrl: youtubeSongToMusicEmbed(s).embedUrl,
@@ -870,13 +943,14 @@ export function LoFiPlayer() {
     });
   }, [setYoutubeSongs, setQueue]);
 
-  const recordHeardTrack = (title: string, provider: MusicEmbed["provider"], sourceUrl: string, embedUrl: string, artist?: string) => {
+  const recordHeardTrack = (title: string, provider: MusicEmbed["provider"], sourceUrl: string, embedUrl: string, artist?: string, duration?: number) => {
     setHeardHistory((prev) => {
       const filtered = prev.filter((item) => item.sourceUrl !== sourceUrl);
       const nextItem: HeardSongItem = {
         id: sourceUrl,
         title,
         artist,
+        duration,
         provider,
         sourceUrl,
         embedUrl,
@@ -955,6 +1029,7 @@ export function LoFiPlayer() {
           id: s.id,
           title: s.title,
           artist: s.artist || "YouTube Music",
+          duration: s.duration,
           provider: "youtube",
           sourceUrl: s.externalUrl,
           embedUrl: youtubeSongToMusicEmbed(s).embedUrl,
@@ -1006,7 +1081,7 @@ export function LoFiPlayer() {
     setActiveSongArtist(song.artist || "YouTube Music");
     setActiveEmbed(embed);
     setEnabled(false);
-    recordHeardTrack(song.title, "youtube", song.externalUrl, embed.embedUrl, song.artist);
+    recordHeardTrack(song.title, "youtube", song.externalUrl, embed.embedUrl, song.artist, song.duration);
 
     try {
       const activeList = searchResults.some((s) => s.id === song.id)
@@ -1019,6 +1094,7 @@ export function LoFiPlayer() {
           id: s.id,
           title: s.title,
           artist: s.artist || "YouTube Music",
+          duration: s.duration,
           provider: "youtube",
           sourceUrl: s.externalUrl,
           embedUrl: youtubeSongToMusicEmbed(s).embedUrl,
@@ -1058,6 +1134,7 @@ export function LoFiPlayer() {
         id: t.id,
         title: t.title,
         artist: t.artist || "YouTube Music",
+        duration: t.duration,
         provider: "youtube",
         sourceUrl: t.externalUrl,
         embedUrl: youtubeSongToMusicEmbed(t).embedUrl,
@@ -1068,6 +1145,7 @@ export function LoFiPlayer() {
         id: t.id,
         title: t.title,
         artist: t.artist || "YouTube Music",
+        duration: t.duration,
         provider: "youtube",
         sourceUrl: t.externalUrl,
         embedUrl: youtubeSongToMusicEmbed(t).embedUrl,
@@ -1084,6 +1162,7 @@ export function LoFiPlayer() {
               id: t.id,
               title: t.title,
               artist: t.artist || "YouTube Music",
+              duration: t.duration,
               provider: "youtube",
               sourceUrl: t.externalUrl,
               embedUrl: youtubeSongToMusicEmbed(t).embedUrl,
@@ -1098,6 +1177,7 @@ export function LoFiPlayer() {
               id: t.id,
               title: t.title,
               artist: t.artist || "YouTube Music",
+              duration: t.duration,
               provider: "youtube",
               sourceUrl: t.externalUrl,
               embedUrl: youtubeSongToMusicEmbed(t).embedUrl,
@@ -1335,7 +1415,7 @@ export function LoFiPlayer() {
                         setActiveSongArtist(item.artist || "YouTube Music");
                         setActiveEmbed(embed);
                         setEnabled(false);
-                        recordHeardTrack(item.title, item.provider, item.sourceUrl, item.embedUrl, item.artist);
+                        recordHeardTrack(item.title, item.provider, item.sourceUrl, item.embedUrl, item.artist, item.duration);
                       }}
                     >
                       <span className="music-shelf__marker" aria-hidden="true" />

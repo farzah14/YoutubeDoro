@@ -138,6 +138,7 @@ export interface YouTubeSongSummary {
   id: string;
   title: string;
   artist?: string;
+  duration?: number;
   thumbnailUrl?: string;
   externalUrl: string;
   embedUrl: string;
@@ -175,6 +176,40 @@ export function parseIsoDuration(durationStr?: string): number {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
+export async function fetchVideoDurations(accessToken: string, videoIds: string[]): Promise<Record<string, number>> {
+  if (!videoIds || videoIds.length === 0) return {};
+  try {
+    const uniqueIds = Array.from(new Set(videoIds.filter((id) => typeof id === "string" && id.length > 0))).slice(0, 50);
+    if (uniqueIds.length === 0) return {};
+
+    const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+    url.searchParams.set("part", "contentDetails");
+    url.searchParams.set("id", uniqueIds.join(","));
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!res.ok) return {};
+    const data = await res.json();
+    const map: Record<string, number> = {};
+    if (Array.isArray(data.items)) {
+      for (const item of data.items) {
+        if (item && typeof item.id === "string" && typeof item.contentDetails?.duration === "string") {
+          const sec = parseIsoDuration(item.contentDetails.duration);
+          if (sec > 0) map[item.id] = sec;
+        }
+      }
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export function getYouTubeLikedMusicPlaylist(): YouTubePlaylistSummary {
   return {
     id: "LM",
@@ -190,6 +225,7 @@ export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
     id: "lTRiuFIWV54",
     title: "Lofi Study Beats - Chillhop Radio",
     artist: "Lofi Girl",
+    duration: 240,
     externalUrl: "https://music.youtube.com/watch?v=lTRiuFIWV54",
     embedUrl: "https://www.youtube-nocookie.com/embed/lTRiuFIWV54?autoplay=1&enablejsapi=1",
   },
@@ -197,6 +233,7 @@ export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
     id: "4xDzrJKXOOY",
     title: "Synthwave Coding - Chill Retrowave",
     artist: "Lofi Girl Synthwave",
+    duration: 180,
     externalUrl: "https://music.youtube.com/watch?v=4xDzrJKXOOY",
     embedUrl: "https://www.youtube-nocookie.com/embed/4xDzrJKXOOY?autoplay=1&enablejsapi=1",
   },
@@ -204,6 +241,7 @@ export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
     id: "h2zkV-l_TbY",
     title: "Cozy Coffee Shop - Warm Jazz & Rain",
     artist: "Coffee Relax Music",
+    duration: 210,
     externalUrl: "https://music.youtube.com/watch?v=h2zkV-l_TbY",
     embedUrl: "https://www.youtube-nocookie.com/embed/h2zkV-l_TbY?autoplay=1&enablejsapi=1",
   },
@@ -211,6 +249,7 @@ export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
     id: "WPni755-Krg",
     title: "Binaural Alpha Waves - Deep Focus",
     artist: "Focus Frequency Studio",
+    duration: 300,
     externalUrl: "https://music.youtube.com/watch?v=WPni755-Krg",
     embedUrl: "https://www.youtube-nocookie.com/embed/WPni755-Krg?autoplay=1&enablejsapi=1",
   },
@@ -218,6 +257,7 @@ export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
     id: "mPZkdNFkNps",
     title: "Gentle Rain & Thunder - Nature Soundscape",
     artist: "Rain Sounds Sleep",
+    duration: 240,
     externalUrl: "https://music.youtube.com/watch?v=mPZkdNFkNps",
     embedUrl: "https://www.youtube-nocookie.com/embed/mPZkdNFkNps?autoplay=1&enablejsapi=1",
   },
@@ -225,6 +265,7 @@ export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
     id: "xNN7iTA57jM",
     title: "Forest Stream & Birds - Calming Wildlife",
     artist: "Wild Earth Sounds",
+    duration: 180,
     externalUrl: "https://music.youtube.com/watch?v=xNN7iTA57jM",
     embedUrl: "https://www.youtube-nocookie.com/embed/xNN7iTA57jM?autoplay=1&enablejsapi=1",
   },
@@ -232,6 +273,7 @@ export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
     id: "jfKfPfyJRdk",
     title: "Anime Chill Piano & Rain - Peaceful Beats",
     artist: "Lofi Girl Music",
+    duration: 155,
     externalUrl: "https://music.youtube.com/watch?v=jfKfPfyJRdk",
     embedUrl: "https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1&enablejsapi=1",
   },
@@ -239,6 +281,7 @@ export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
     id: "5qap5aO4i9A",
     title: "Lofi Hip Hop Radio - Beats to Sleep/Chill to",
     artist: "Lofi Girl",
+    duration: 240,
     externalUrl: "https://music.youtube.com/watch?v=5qap5aO4i9A",
     embedUrl: "https://www.youtube-nocookie.com/embed/5qap5aO4i9A?autoplay=1&enablejsapi=1",
   },
@@ -263,6 +306,15 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
       const lmData = await lmRes.json();
       const lmItems = Array.isArray(lmData.items) ? lmData.items : [];
       if (lmItems.length > 0) {
+        const videoIds = lmItems
+          .map((item: Record<string, unknown>) => {
+            const snippet = item?.snippet as Record<string, unknown> | undefined;
+            const resourceId = snippet?.resourceId as Record<string, unknown> | undefined;
+            return typeof resourceId?.videoId === "string" ? resourceId.videoId : null;
+          })
+          .filter((vid: string | null): vid is string => typeof vid === "string" && vid.length > 0);
+        const durationMap = await fetchVideoDurations(accessToken, videoIds);
+
         const songs: YouTubeSongSummary[] = lmItems
           .filter((item: Record<string, unknown>) => {
             const snippet = item?.snippet as Record<string, unknown> | undefined;
@@ -286,6 +338,7 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
               id,
               title,
               artist,
+              duration: durationMap[id],
               thumbnailUrl,
               externalUrl: `https://music.youtube.com/watch?v=${id}`,
               embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`,
@@ -360,6 +413,9 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
       })
       .map((item: {
         id: string;
+        contentDetails?: {
+          duration?: string;
+        };
         snippet?: {
           title?: string;
           channelTitle?: string;
@@ -373,6 +429,8 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
         const title = decodeHtmlEntities(item.snippet?.title || "Untitled song");
         const artist = decodeHtmlEntities(item.snippet?.channelTitle || "");
         const thumbnailUrl = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
+        const parsedDuration = parseIsoDuration(item.contentDetails?.duration);
+        const duration = parsedDuration > 0 ? parsedDuration : undefined;
         const externalUrl = `https://music.youtube.com/watch?v=${id}`;
         const embedUrl = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`;
 
@@ -380,6 +438,7 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
           id,
           title,
           artist,
+          duration,
           thumbnailUrl,
           externalUrl,
           embedUrl,
@@ -415,43 +474,53 @@ export async function fetchGoogleYouTubePlaylistItems(accessToken: string, playl
     const data = await res.json();
     const items = Array.isArray(data.items) ? data.items : [];
 
-    return items
-      .filter((item: Record<string, unknown>) => {
-        if (!item || typeof item !== "object") return false;
-        const snippet = item.snippet as Record<string, unknown> | undefined;
-        const resourceId = snippet?.resourceId as Record<string, unknown> | undefined;
-        const videoId = resourceId?.videoId;
-        const title = snippet?.title;
-        return typeof videoId === "string" && typeof title === "string" && title !== "Private video" && title !== "Deleted video";
-      })
-      .map((item: {
-        snippet?: {
-          title?: string;
-          videoOwnerChannelTitle?: string;
-          channelTitle?: string;
-          resourceId?: { videoId?: string };
-          thumbnails?: {
-            medium?: { url?: string };
-            default?: { url?: string };
-          };
-        };
-      }) => {
-        const id = item.snippet?.resourceId?.videoId || "";
-        const title = decodeHtmlEntities(item.snippet?.title || "Untitled track");
-        const artist = decodeHtmlEntities(item.snippet?.videoOwnerChannelTitle || item.snippet?.channelTitle || "");
-        const thumbnailUrl = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
-        const externalUrl = `https://music.youtube.com/watch?v=${id}`;
-        const embedUrl = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`;
+    const validItems = items.filter((item: Record<string, unknown>) => {
+      if (!item || typeof item !== "object") return false;
+      const snippet = item.snippet as Record<string, unknown> | undefined;
+      const resourceId = snippet?.resourceId as Record<string, unknown> | undefined;
+      const videoId = resourceId?.videoId;
+      const title = snippet?.title;
+      return typeof videoId === "string" && typeof title === "string" && title !== "Private video" && title !== "Deleted video";
+    });
 
-        return {
-          id,
-          title,
-          artist,
-          thumbnailUrl,
-          externalUrl,
-          embedUrl,
+    const videoIds = validItems
+      .map((item: Record<string, unknown>) => {
+        const snippet = item?.snippet as Record<string, unknown> | undefined;
+        const resourceId = snippet?.resourceId as Record<string, unknown> | undefined;
+        return typeof resourceId?.videoId === "string" ? resourceId.videoId : null;
+      })
+      .filter((vid: string | null): vid is string => typeof vid === "string" && vid.length > 0);
+    const durationMap = await fetchVideoDurations(accessToken, videoIds);
+
+    return validItems.map((item: {
+      snippet?: {
+        title?: string;
+        videoOwnerChannelTitle?: string;
+        channelTitle?: string;
+        resourceId?: { videoId?: string };
+        thumbnails?: {
+          medium?: { url?: string };
+          default?: { url?: string };
         };
-      });
+      };
+    }) => {
+      const id = item.snippet?.resourceId?.videoId || "";
+      const title = decodeHtmlEntities(item.snippet?.title || "Untitled track");
+      const artist = decodeHtmlEntities(item.snippet?.videoOwnerChannelTitle || item.snippet?.channelTitle || "");
+      const thumbnailUrl = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
+      const externalUrl = `https://music.youtube.com/watch?v=${id}`;
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`;
+
+      return {
+        id,
+        title,
+        artist,
+        duration: durationMap[id],
+        thumbnailUrl,
+        externalUrl,
+        embedUrl,
+      };
+    });
   } catch {
     return [];
   }
@@ -536,37 +605,46 @@ export async function searchGoogleYouTubeMusic(
     const data = await res.json();
     const items = Array.isArray(data.items) ? data.items : [];
 
-    const songs: YouTubeSongSummary[] = items
-      .filter((item: Record<string, unknown>) => {
-        const idObj = item?.id as Record<string, unknown> | undefined;
-        return typeof idObj?.videoId === "string" && idObj.videoId.length > 0;
-      })
-      .map((item: {
-        id?: { videoId?: string };
-        snippet?: {
-          title?: string;
-          channelTitle?: string;
-          thumbnails?: {
-            medium?: { url?: string };
-            default?: { url?: string };
-          };
-        };
-      }) => {
-        const id = item.id?.videoId || "";
-        const title = decodeHtmlEntities(item.snippet?.title || "Untitled song");
-        const artist = decodeHtmlEntities(item.snippet?.channelTitle || "");
-        const thumbnailUrl =
-          item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
+    const validItems = items.filter((item: Record<string, unknown>) => {
+      const idObj = item?.id as Record<string, unknown> | undefined;
+      return typeof idObj?.videoId === "string" && idObj.videoId.length > 0;
+    });
 
-        return {
-          id,
-          title,
-          artist,
-          thumbnailUrl,
-          externalUrl: `https://music.youtube.com/watch?v=${id}`,
-          embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`,
+    const videoIds = validItems
+      .map((item: Record<string, unknown>) => {
+        const idObj = item?.id as Record<string, unknown> | undefined;
+        return typeof idObj?.videoId === "string" ? idObj.videoId : null;
+      })
+      .filter((vid: string | null): vid is string => typeof vid === "string" && vid.length > 0);
+    const durationMap = await fetchVideoDurations(accessToken, videoIds);
+
+    const songs: YouTubeSongSummary[] = validItems.map((item: {
+      id?: { videoId?: string };
+      snippet?: {
+        title?: string;
+        channelTitle?: string;
+        thumbnails?: {
+          medium?: { url?: string };
+          default?: { url?: string };
         };
-      });
+      };
+    }) => {
+      const id = item.id?.videoId || "";
+      const title = decodeHtmlEntities(item.snippet?.title || "Untitled song");
+      const artist = decodeHtmlEntities(item.snippet?.channelTitle || "");
+      const thumbnailUrl =
+        item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
+
+      return {
+        id,
+        title,
+        artist,
+        duration: durationMap[id],
+        thumbnailUrl,
+        externalUrl: `https://music.youtube.com/watch?v=${id}`,
+        embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`,
+      };
+    });
 
     return { songs };
   } catch (err) {
