@@ -117,7 +117,7 @@ test("Focus Timer presents a customizable Pomodoro and fixed Animedoro duration"
   assert.match(settingsPanelSource, /value=\{preferences\[key\]\}/);
   assert.match(settingsPanelSource, /Animedoro focus/);
   assert.match(settingsPanelSource, /50 min/);
-  assert.match(settingsPanelSource, /Fixed study interval before an Anime Break/);
+  assert.doesNotMatch(settingsPanelSource, /Fixed study interval before an Anime Break/);
 });
 
 test("Settings does not expose a quote setting", () => {

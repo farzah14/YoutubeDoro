@@ -211,7 +211,6 @@ export function SettingsPanel({
           <div className="settings-recipe-row">
             <span>
               <strong>Animedoro focus</strong>
-              <small>Fixed study interval before an Anime Break.</small>
             </span>
             <output className="settings-number-field">50 min</output>
           </div>

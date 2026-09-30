@@ -14,7 +14,7 @@ test("Music exposes a simplified accessible station list", () => {
   assert.doesNotMatch(source, /music-shelf__channel/);
   assert.doesNotMatch(source, /music-shelf__frequency/);
   assert.doesNotMatch(source, /const band =/);
-  assert.match(source, /ON AIR/);
+  assert.doesNotMatch(source, /ON AIR/);
   assert.doesNotMatch(source, />Broadcast desk</);
   assert.match(source, /music-shelf__now-playing/);
   assert.match(source, /aria-pressed=\{selected\}/);
@@ -55,9 +55,14 @@ test("Music renders a child card with song title, volume control, and playback t
   assert.match(source, /music-child-card__title/);
   assert.match(source, /music-child-card__volume/);
   assert.match(source, /music-child-card__btn--play/);
+  assert.match(source, /music-child-card__btn--skip/);
   assert.match(source, /togglePlay/);
+  assert.match(source, /handleNextSong/);
+  assert.match(source, /SkipForwardIcon/);
   assert.match(stylesSource, /\.music-child-card\s*\{/);
   assert.match(stylesSource, /\.music-child-card__header\s*\{/);
   assert.match(stylesSource, /\.music-child-card__volume\s*\{/);
+  assert.match(stylesSource, /\.music-child-card__btn--skip\s*\{/);
+  assert.match(stylesSource, /accent-color:\s*var\(--accent/);
 });
 

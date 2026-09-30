@@ -32,7 +32,7 @@ import {
   type YouTubePlaylistSummary,
   type YouTubeSongSummary,
 } from "@/lib/youtubeMusicApi";
-import { MusicIcon, PauseIcon, PlayIcon, SpotifyIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
+import { MusicIcon, PauseIcon, PlayIcon, SkipForwardIcon, SpotifyIcon, SquareIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
 
@@ -59,22 +59,114 @@ const getAutoplayUrl = (url: string) => {
   }
 };
 
+export interface HeardSongItem {
+  id: string;
+  title: string;
+  artist?: string;
+  provider: MusicEmbed["provider"];
+  sourceUrl: string;
+  embedUrl: string;
+  playedAt: number;
+}
+
+export interface QueueSongItem {
+  id: string;
+  title: string;
+  artist?: string;
+  provider: MusicEmbed["provider"];
+  sourceUrl: string;
+  embedUrl: string;
+}
+
+export const QUEUE_STORAGE_KEY = "ytdoro:music:queue";
+
 interface MusicEngineProps {
   hidden?: boolean;
 }
 
 export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const [enabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
-  const [stationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
+  const [stationId, setStationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
   const [volume, setVolume] = useLocalStorage(KEYS.lofiVolume, DEFAULT_LOFI_VOLUME);
   const [muted, setMuted] = useLocalStorage(KEYS.lofiMuted, false);
   const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
   const [isMinimized, setIsMinimized] = useLocalStorage("ytdoro:music:player-minimized", true);
-  const [activeSongTitle] = useLocalStorage<string>("ytdoro:music:active-title", "");
+  const [activeSongTitle, setActiveSongTitle] = useLocalStorage<string>("ytdoro:music:active-title", "");
+  const [activeSongArtist, setActiveSongArtist] = useLocalStorage<string>("ytdoro:music:active-artist", "");
+  const [savedEmbeds] = useLocalStorage<MusicEmbed[]>(KEYS.savedMusicEmbeds, []);
+  const [heardHistory] = useLocalStorage<HeardSongItem[]>(KEYS.heardMusicHistory, []);
   const [isPlaying, setIsPlaying] = useState(true);
   const playerRef = useRef<MinimalYTPlayer | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
+
+  const handleNextSong = () => {
+    if (activeEmbed) {
+      try {
+        const rawQueue = window.localStorage.getItem(QUEUE_STORAGE_KEY);
+        if (rawQueue) {
+          const queue: QueueSongItem[] = JSON.parse(rawQueue);
+          if (queue.length > 1) {
+            const currentIdx = queue.findIndex(
+              (item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl
+            );
+            const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % queue.length : 0;
+            const nextSong = queue[nextIdx];
+            if (nextSong) {
+              setActiveSongTitle(nextSong.title);
+              setActiveSongArtist(nextSong.artist || "");
+              setActiveEmbed({
+                provider: nextSong.provider,
+                sourceUrl: nextSong.sourceUrl,
+                embedUrl: nextSong.embedUrl,
+              });
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      if (savedEmbeds.length > 1) {
+        const idx = savedEmbeds.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl);
+        const nextIdx = idx >= 0 ? (idx + 1) % savedEmbeds.length : 0;
+        const nextEmbed = savedEmbeds[nextIdx];
+        setActiveEmbed(nextEmbed);
+        return;
+      }
+
+      if (heardHistory.length > 1) {
+        const idx = heardHistory.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl);
+        const nextIdx = idx >= 0 ? (idx + 1) % heardHistory.length : 0;
+        const nextItem = heardHistory[nextIdx];
+        setActiveEmbed({
+          provider: nextItem.provider,
+          sourceUrl: nextItem.sourceUrl,
+          embedUrl: nextItem.embedUrl,
+        });
+        setActiveSongTitle(nextItem.title);
+        setActiveSongArtist(nextItem.artist || "");
+        return;
+      }
+
+      const iframe = iframeRef.current;
+      if (iframe?.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage(
+            JSON.stringify({
+              event: "command",
+              func: "nextVideo",
+              args: [],
+            }),
+            "*"
+          );
+        } catch {}
+      }
+    } else if (enabled) {
+      const currentIdx = RADIO_STATIONS.findIndex((item) => item.id === stationId);
+      const nextIdx = (currentIdx + 1) % RADIO_STATIONS.length;
+      setStationId(RADIO_STATIONS[nextIdx].id);
+    }
+  };
 
   const togglePlay = () => {
     const iframe = iframeRef.current;
@@ -197,11 +289,14 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           {!hidden && (
             <>
               {isMinimized ? (
-                <div className="music-child-card" aria-label="Music player">
-                  {/* Header Row: Provider Icon, Pulse, Title, Play/Pause Button, Expand Button, Close Button */}
-                  <div className="music-child-card__header">
-                    <div className="music-child-card__info">
-                      <span className="music-child-card__icon" aria-hidden="true">
+                <div
+                  className="music-child-card flex flex-col gap-2.5 p-3 rounded-xl bg-slate-900/95 border border-white/20 shadow-2xl"
+                  aria-label="Music player"
+                >
+                  {/* Header Row: Provider Icon, Pulse, Title, Play/Pause Button, Skip Button, Stop Button */}
+                  <div className="music-child-card__header flex items-center justify-between gap-2.5">
+                    <div className="music-child-card__info flex items-center gap-1.5 min-w-0 flex-1">
+                      <span className="music-child-card__icon flex items-center justify-center shrink-0" aria-hidden="true">
                         {activeEmbed.provider === "spotify" ? (
                           <SpotifyIcon className="w-4 h-4 text-emerald-500" />
                         ) : (
@@ -214,14 +309,14 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                         title={isPlaying ? "Playing" : "Paused"}
                       />
                       <span
-                        className="music-child-card__title truncate"
+                        className="music-child-card__title truncate text-xs font-bold text-foreground max-w-[9.5rem]"
                         title={activeSongTitle || activeEmbed.provider}
                       >
                         {activeSongTitle || activeEmbed.provider}
                       </span>
                     </div>
 
-                    <div className="music-child-card__actions">
+                    <div className="music-child-card__actions flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
                         className="music-child-card__btn music-child-card__btn--play"
@@ -230,7 +325,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                         title={isPlaying ? "Pause" : "Play"}
                       >
                         {isPlaying ? (
-                          <PauseIcon className="w-3.5 h-3.5" />
+                          <PauseIcon className="w-3.5 h-3.5 fill-current" />
                         ) : (
                           <PlayIcon className="w-3.5 h-3.5 fill-current" />
                         )}
@@ -238,31 +333,31 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
 
                       <button
                         type="button"
-                        className="music-child-card__btn music-child-card__btn--expand"
-                        onClick={() => setIsMinimized(false)}
-                        aria-label="Expand video player"
-                        title="Expand video"
+                        className="music-child-card__btn music-child-card__btn--skip"
+                        onClick={handleNextSong}
+                        aria-label="Next song"
+                        title="Next song"
                       >
-                        ⛶
+                        <SkipForwardIcon className="w-3.5 h-3.5 fill-current" />
                       </button>
 
                       <button
                         type="button"
-                        className="music-child-card__btn music-child-card__btn--close"
+                        className="music-child-card__btn music-child-card__btn--stop music-child-card__btn--close"
                         onClick={() => setActiveEmbed(null)}
                         aria-label="Stop music"
                         title="Stop music"
                       >
-                        ×
+                        <SquareIcon className="w-3 h-3 fill-current" />
                       </button>
                     </div>
                   </div>
 
                   {/* Volume Row: Mute Toggle, Range Slider, Percentage */}
-                  <div className="music-child-card__volume" aria-label="Music volume control">
+                  <div className="music-child-card__volume flex items-center gap-2 w-full" aria-label="Music volume control">
                     <button
                       type="button"
-                      className="music-child-card__mute"
+                      className="music-child-card__mute shrink-0 text-accent transition-colors"
                       onClick={() => {
                         const nextMuted = !muted;
                         setMuted(nextMuted);
@@ -272,9 +367,9 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                       title={muted ? "Unmute" : "Mute"}
                     >
                       {muted || volume === 0 ? (
-                        <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
+                        <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-accent" />
                       ) : (
-                        <Volume2Icon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
+                        <Volume2Icon className="w-3.5 h-3.5 text-accent hover:text-accent-hover" />
                       )}
                     </button>
                     <input
@@ -288,10 +383,14 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                         if (muted) setMuted(false);
                         sendVolumeToIframe(nextVol, false);
                       }}
-                      className="music-child-card__slider"
+                      className="music-child-card__slider flex-1 h-1.5 rounded-full cursor-pointer"
+                      style={{
+                        accentColor: "var(--accent, #f6c76d)",
+                        background: `linear-gradient(to right, var(--accent, #f6c76d) ${muted ? 0 : volume}%, rgba(255, 255, 255, 0.2) ${muted ? 0 : volume}%)`,
+                      }}
                       aria-label="YouTube Music Volume"
                     />
-                    <span className="music-child-card__vol-text">
+                    <span className="music-child-card__vol-text text-accent font-mono text-[11px] font-bold min-w-[2.2rem] text-right">
                       {muted ? "0%" : `${volume}%`}
                     </span>
                   </div>
@@ -343,16 +442,6 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
 }
 
 type MusicTab = "stations" | "my-music";
-
-export interface HeardSongItem {
-  id: string;
-  title: string;
-  artist?: string;
-  provider: MusicEmbed["provider"];
-  sourceUrl: string;
-  embedUrl: string;
-  playedAt: number;
-}
 
 export function LoFiPlayer() {
   const [enabled, setEnabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
@@ -534,6 +623,19 @@ export function LoFiPlayer() {
     }
 
     setYoutubeSongs(result.songs);
+    if (result.songs.length > 0) {
+      try {
+        const queueItems: QueueSongItem[] = result.songs.map((s) => ({
+          id: s.id,
+          title: s.title,
+          artist: s.artist || "YouTube Music",
+          provider: "youtube",
+          sourceUrl: s.externalUrl,
+          embedUrl: youtubeSongToMusicEmbed(s).embedUrl,
+        }));
+        window.localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queueItems));
+      } catch {}
+    }
     if (result.songs.length === 0) {
       setYoutubeStatus("No liked songs found on your YouTube account.");
     }
@@ -579,6 +681,21 @@ export function LoFiPlayer() {
     setActiveEmbed(embed);
     setEnabled(false);
     recordHeardTrack(song.title, "youtube", song.externalUrl, embed.embedUrl, song.artist);
+
+    try {
+      const activeList = searchResults.some((s) => s.id === song.id) ? searchResults : youtubeSongs;
+      if (activeList.length > 0) {
+        const queueItems: QueueSongItem[] = activeList.map((s) => ({
+          id: s.id,
+          title: s.title,
+          artist: s.artist || "YouTube Music",
+          provider: "youtube",
+          sourceUrl: s.externalUrl,
+          embedUrl: youtubeSongToMusicEmbed(s).embedUrl,
+        }));
+        window.localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queueItems));
+      }
+    } catch {}
   };
 
   const handleToggleExpandPlaylist = async (playlistId: string) => {
@@ -636,7 +753,6 @@ export function LoFiPlayer() {
           <h3>{activeSongTitle || (activeEmbed ? activeEmbed.provider : station.name)}</h3>
           <p className="music-shelf__now-playing">{activeSongArtist || (activeEmbed ? "External provider" : station.genre)}</p>
         </div>
-        <span className="music-shelf__state">{activeEmbed ? "ON AIR / Playing" : enabled ? "ON AIR" : "Standby"}</span>
       </header>
 
       <div className="music-shelf__tabs" role="tablist" aria-label="Music sources">

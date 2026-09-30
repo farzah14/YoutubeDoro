@@ -383,7 +383,7 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
         onTimerModeChange={focusTimer.setMode}
         onFullscreen={handleFullscreen}
       />
-      <MusicEngine hidden={openPanel === "music"} />
+      <MusicEngine hidden={Boolean(openPanel)} />
 
       {/* ── Modals & Drawers ── */}
       <Modal open={openPanel === "rest"} onClose={closeBreakPanel} title="Break tools">
