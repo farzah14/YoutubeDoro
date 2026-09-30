@@ -39,3 +39,12 @@ test("Music uses the red underline only for source tabs", () => {
   assert.doesNotMatch(stylesSource, /\.music-shelf__tab\.is-active,\s*\.music-shelf__track\.is-active/);
   assert.match(stylesSource, /\.music-shelf__track\.is-active\s*\{[\s\S]*border-color:\s*var\(--manga-rule\)/);
 });
+
+test("Music hides the floating volume bar and badge when the music modal is open", () => {
+  assert.match(source, /interface MusicEngineProps\s*\{\s*hidden\?: boolean;/);
+  assert.match(source, /export function MusicEngine\(\{ hidden = false \}: MusicEngineProps/);
+  assert.match(source, /music-provider-player--hidden/);
+  assert.match(stylesSource, /\.music-provider-player--hidden[\s\S]*visibility:\s*hidden/);
+  assert.match(stylesSource, /\.music-provider-player--hidden[\s\S]*opacity:\s*0/);
+});
+

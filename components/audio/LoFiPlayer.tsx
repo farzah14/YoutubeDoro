@@ -59,7 +59,11 @@ const getAutoplayUrl = (url: string) => {
   }
 };
 
-export function MusicEngine() {
+interface MusicEngineProps {
+  hidden?: boolean;
+}
+
+export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const [enabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
   const [stationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
   const [volume, setVolume] = useLocalStorage(KEYS.lofiVolume, DEFAULT_LOFI_VOLUME);
@@ -130,8 +134,9 @@ export function MusicEngine() {
       </div>
       {activeEmbed && (
         <aside
-          className={`music-provider-player ${isMinimized ? "music-provider-player--minimized" : "music-provider-player--expanded"}`}
+          className={`music-provider-player ${isMinimized ? "music-provider-player--minimized" : "music-provider-player--expanded"}${hidden ? " music-provider-player--hidden" : ""}`}
           aria-label={`${activeEmbed.provider} player`}
+          aria-hidden={hidden}
         >
           <div className="music-provider-player__iframe-wrap">
             <iframe

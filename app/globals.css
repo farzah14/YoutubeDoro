@@ -3408,6 +3408,13 @@ textarea:focus-visible,
   transition: all 200ms ease;
 }
 
+.music-provider-player--hidden,
+body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .music-provider-player--expanded {
   height: 11rem;
   width: min(24rem, calc(100vw - 2rem));
