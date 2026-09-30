@@ -32,8 +32,19 @@ export function parseMusicProviderUrl(input: string): MusicEmbed | null {
   if (["www.youtube.com", "youtube.com", "music.youtube.com", "youtu.be"].includes(url.hostname)) {
     const candidate = url.hostname === "youtu.be" ? url.pathname.slice(1) : url.searchParams.get("v");
     const id = cleanId(candidate, /^[A-Za-z0-9_-]{11}$/);
-    if (!id) return null;
-    return { provider: "youtube", sourceUrl: url.href, embedUrl: `https://www.youtube-nocookie.com/embed/${id}` };
+    const listCandidate = url.searchParams.get("list");
+    const listId = cleanId(listCandidate, /^[A-Za-z0-9_-]{10,64}$/);
+
+    if (id && listId) {
+      return { provider: "youtube", sourceUrl: url.href, embedUrl: `https://www.youtube-nocookie.com/embed/${id}?list=${listId}` };
+    }
+    if (id) {
+      return { provider: "youtube", sourceUrl: url.href, embedUrl: `https://www.youtube-nocookie.com/embed/${id}` };
+    }
+    if (listId) {
+      return { provider: "youtube", sourceUrl: url.href, embedUrl: `https://www.youtube-nocookie.com/embed/videoseries?list=${listId}` };
+    }
+    return null;
   }
 
   if (url.hostname === "soundcloud.com" && /^\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/?$/.test(url.pathname)) {

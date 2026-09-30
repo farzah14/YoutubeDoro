@@ -7,6 +7,9 @@ test("parses allowlisted music providers into safe embed URLs", () => {
     ["https://open.spotify.com/playlist/37i9dQZF1DX8Uebhn9wzrS", "spotify", "open.spotify.com/embed/playlist/"],
     ["https://music.apple.com/us/album/focus/1697473056", "apple-music", "embed.music.apple.com/us/album/"],
     ["https://www.youtube.com/watch?v=jfKfPfyJRdk", "youtube", "youtube-nocookie.com/embed/jfKfPfyJRdk"],
+    ["https://music.youtube.com/playlist?list=RDCLAK5uy_kmPRjNuA", "youtube", "youtube-nocookie.com/embed/videoseries\\?list=RDCLAK5uy_kmPRjNuA"],
+    ["https://www.youtube.com/playlist?list=PL4fGSI1pDJn6jXS_PEO3268YbebiYsUce", "youtube", "youtube-nocookie.com/embed/videoseries\\?list=PL4fGSI1pDJn6jXS_PEO3268YbebiYsUce"],
+    ["https://music.youtube.com/watch?v=jfKfPfyJRdk&list=RDCLAK5uy_kmPRjNuA", "youtube", "youtube-nocookie.com/embed/jfKfPfyJRdk\\?list=RDCLAK5uy_kmPRjNuA"],
     ["https://soundcloud.com/lofi_girl/lofi-hiphop-radio", "soundcloud", "w.soundcloud.com/player/"],
     ["https://music.amazon.com/playlists/B0D1234567", "amazon-music", "music.amazon.com/embed/playlists/B0D1234567"],
   ] as const;

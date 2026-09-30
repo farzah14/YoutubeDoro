@@ -37,7 +37,10 @@ export function AuthScreen({ initialError, next = "/" }: AuthScreenProps) {
     callback.searchParams.set("next", next);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callback.toString() },
+      options: {
+        redirectTo: callback.toString(),
+        scopes: "https://www.googleapis.com/auth/youtube.readonly",
+      },
     });
     if (oauthError) {
       setBusy(false);

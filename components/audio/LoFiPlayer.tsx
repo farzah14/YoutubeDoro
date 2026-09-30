@@ -7,7 +7,25 @@ import { KEYS } from "@/lib/constants";
 import { DEFAULT_LOFI_VOLUME, DEFAULT_STATION_ID, RADIO_STATIONS } from "@/lib/audioStreams";
 import { parseMusicProviderUrl, type MusicEmbed } from "@/lib/musicProviders";
 import type { YouTubeComponentProps } from "@/types";
-import { MusicIcon, TrashIcon, Volume2Icon, VolumeXIcon } from "../icons";
+import {
+  createSpotifyAuthUrl,
+  disconnectSpotify,
+  fetchSpotifyPlaylists,
+  fetchSpotifyUserProfile,
+  getStoredSpotifyToken,
+  playlistToMusicEmbed,
+  SPOTIFY_STORAGE_KEYS,
+  type SpotifyPlaylistSummary,
+  type SpotifyTokenData,
+} from "@/lib/spotifyApi";
+import {
+  fetchGoogleYouTubePlaylists,
+  getGoogleProviderToken,
+  requestGoogleYouTubeAccess,
+  youtubePlaylistToMusicEmbed,
+  type YouTubePlaylistSummary,
+} from "@/lib/youtubeMusicApi";
+import { MusicIcon, SpotifyIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
 
@@ -78,6 +96,96 @@ export function LoFiPlayer() {
   const [error, setError] = useState("");
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
 
+  // Spotify state
+  const [spotifyToken, setSpotifyToken] = useState<SpotifyTokenData | null>(null);
+  const [spotifyUser, setSpotifyUser] = useState<string>("");
+  const [spotifyPlaylists, setSpotifyPlaylists] = useState<SpotifyPlaylistSummary[]>([]);
+  const [loadingSpotify, setLoadingSpotify] = useState(false);
+  const [customClientId, setCustomClientId] = useState("");
+  const [showSpotifySetup, setShowSpotifySetup] = useState(false);
+
+  // YouTube / Google state
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [youtubePlaylists, setYoutubePlaylists] = useState<YouTubePlaylistSummary[]>([]);
+  const [loadingYouTube, setLoadingYouTube] = useState(false);
+  const [youtubeStatus, setYoutubeStatus] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = getStoredSpotifyToken();
+    setSpotifyToken(token);
+    const user = window.localStorage.getItem(SPOTIFY_STORAGE_KEYS.userName) || "";
+    setSpotifyUser(user);
+    const savedClientId = window.localStorage.getItem(SPOTIFY_STORAGE_KEYS.clientId) || "";
+    setCustomClientId(savedClientId);
+
+    void getGoogleProviderToken().then((t) => setGoogleToken(t));
+  }, []);
+
+  const handleConnectSpotify = async () => {
+    setError("");
+    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || customClientId.trim();
+    if (!clientId) {
+      setShowSpotifySetup(true);
+      setError("Please provide a Spotify Client ID to connect your account.");
+      return;
+    }
+    const redirectUri = `${window.location.origin}/auth/spotify-callback`;
+    const authUrl = await createSpotifyAuthUrl(clientId, redirectUri);
+    window.location.href = authUrl;
+  };
+
+  const handleLoadSpotifyPlaylists = async () => {
+    if (!spotifyToken?.accessToken) return;
+    setLoadingSpotify(true);
+    setError("");
+    const lists = await fetchSpotifyPlaylists(spotifyToken.accessToken);
+    setSpotifyPlaylists(lists);
+    setLoadingSpotify(false);
+    if (lists.length === 0) {
+      setError("No Spotify playlists found or access token expired. Reconnect Spotify if needed.");
+    }
+  };
+
+  const handleDisconnectSpotify = () => {
+    disconnectSpotify();
+    setSpotifyToken(null);
+    setSpotifyUser("");
+    setSpotifyPlaylists([]);
+  };
+
+  const handleSelectSpotifyPlaylist = (playlist: SpotifyPlaylistSummary) => {
+    const embed = playlistToMusicEmbed(playlist);
+    setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
+    setActiveEmbed(embed);
+    setEnabled(false);
+  };
+
+  const handleSyncYouTube = async () => {
+    setLoadingYouTube(true);
+    setYoutubeStatus("");
+    const token = googleToken || await getGoogleProviderToken();
+    if (!token) {
+      setLoadingYouTube(false);
+      setYoutubeStatus("Redirecting to Google to connect YouTube Music…");
+      await requestGoogleYouTubeAccess();
+      return;
+    }
+    const lists = await fetchGoogleYouTubePlaylists(token);
+    setYoutubePlaylists(lists);
+    setLoadingYouTube(false);
+    if (lists.length === 0) {
+      setYoutubeStatus("No YouTube playlists found or permissions expired. Click again to reconnect.");
+    }
+  };
+
+  const handleSelectYouTubePlaylist = (playlist: YouTubePlaylistSummary) => {
+    const embed = youtubePlaylistToMusicEmbed(playlist);
+    setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
+    setActiveEmbed(embed);
+    setEnabled(false);
+  };
+
   const saveProvider = (event: FormEvent) => {
     event.preventDefault();
     const parsed = parseMusicProviderUrl(url);
@@ -138,6 +246,121 @@ export function LoFiPlayer() {
 
       {tab === "my-music" && (
         <div className="music-provider-list music-shelf__provider">
+          <div className="music-accounts-grid">
+            <div className="music-account-card">
+              <div className="music-account-card__header">
+                <div className="music-account-card__identity">
+                  <span className="music-account-card__icon text-red-500" aria-hidden="true"><YouTubeIcon /></span>
+                  <div>
+                    <strong>YouTube Music</strong>
+                    <small>{googleToken ? "Google Linked" : "Connect Google"}</small>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="music-account-card__action"
+                  onClick={() => { void handleSyncYouTube(); }}
+                  disabled={loadingYouTube}
+                >
+                  {loadingYouTube ? "Syncing…" : googleToken ? "Sync Playlists" : "Connect"}
+                </button>
+              </div>
+              {youtubeStatus && <p className="audio-panel__hint mt-1 text-xs">{youtubeStatus}</p>}
+              {youtubePlaylists.length > 0 && (
+                <div className="music-playlist-list mt-2" aria-label="YouTube Music Playlists">
+                  {youtubePlaylists.map((pl) => (
+                    <button
+                      key={pl.id}
+                      type="button"
+                      className="music-playlist-item"
+                      onClick={() => handleSelectYouTubePlaylist(pl)}
+                    >
+                      <span className="music-playlist-item__title">{pl.title}</span>
+                      <small className="music-playlist-item__meta">{pl.itemCount} tracks</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="music-account-card">
+              <div className="music-account-card__header">
+                <div className="music-account-card__identity">
+                  <span className="music-account-card__icon text-emerald-500" aria-hidden="true"><SpotifyIcon /></span>
+                  <div>
+                    <strong>Spotify</strong>
+                    <small>{spotifyToken ? (spotifyUser || "Connected") : "Connect Account"}</small>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {spotifyToken ? (
+                    <>
+                      <button
+                        type="button"
+                        className="music-account-card__action"
+                        onClick={() => { void handleLoadSpotifyPlaylists(); }}
+                        disabled={loadingSpotify}
+                      >
+                        {loadingSpotify ? "Loading…" : "Sync"}
+                      </button>
+                      <button
+                        type="button"
+                        className="music-account-card__disconnect"
+                        onClick={handleDisconnectSpotify}
+                      >
+                        Disconnect
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="music-account-card__action"
+                      onClick={() => { void handleConnectSpotify(); }}
+                    >
+                      Connect
+                    </button>
+                  )}
+                </div>
+              </div>
+              {showSpotifySetup && !spotifyToken && (
+                <div className="music-account-config mt-2 pt-2 border-t border-border-subtle flex flex-col gap-1.5">
+                  <small className="text-text-muted">Spotify Client ID (from developer.spotify.com):</small>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="Paste Client ID"
+                      value={customClientId}
+                      onChange={(e) => setCustomClientId(e.target.value)}
+                      className="text-xs px-2 py-1 bg-surface-secondary border border-border-subtle flex-1 text-foreground"
+                    />
+                    <button
+                      type="button"
+                      className="music-account-card__action"
+                      onClick={() => { void handleConnectSpotify(); }}
+                    >
+                      Authorize
+                    </button>
+                  </div>
+                </div>
+              )}
+              {spotifyPlaylists.length > 0 && (
+                <div className="music-playlist-list mt-2" aria-label="Spotify Playlists">
+                  {spotifyPlaylists.map((pl) => (
+                    <button
+                      key={pl.id}
+                      type="button"
+                      className="music-playlist-item"
+                      onClick={() => handleSelectSpotifyPlaylist(pl)}
+                    >
+                      <span className="music-playlist-item__title">{pl.name}</span>
+                      <small className="music-playlist-item__meta">{pl.totalTracks} tracks</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <form onSubmit={saveProvider}>
             <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste a provider URL" aria-label="Music provider URL" />
             <button type="submit">Save</button>
