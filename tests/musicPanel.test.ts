@@ -96,6 +96,26 @@ test("Music child card previous and next playback buttons both change songs", ()
   assert.match(source, /nextVideo/);
 });
 
+test("Music prioritizes Google account YouTube songs and queue for playback controls", () => {
+  assert.match(source, /export const GOOGLE_YOUTUBE_SONGS_KEY = "ytdoro:music:google-youtube-songs";/);
+  assert.match(source, /export const QUEUE_STORAGE_KEY = "ytdoro:music:queue";/);
+  assert.match(source, /extractYouTubeVideoId/);
+  assert.match(source, /googleYouTubeSongs/);
+  // Ensures handlePreviousSong and handleNextSong check googleYouTubeSongs before iframe/radio fallback
+  assert.match(source, /if \(googleYouTubeSongs\.length > 0\)/);
+  // Verifies radio stations fallback is not inside activeEmbed block
+  assert.doesNotMatch(source, /\/\/ Fallback: cycle backwards through RADIO_STATIONS/);
+  assert.doesNotMatch(source, /\/\/ Fallback: cycle forward through RADIO_STATIONS/);
+});
+
+test("Music engine synchronizes song title and artist dynamically from YouTube iframe messages", () => {
+  assert.match(source, /decodeHtmlEntities/);
+  assert.match(source, /videoData/);
+  assert.match(source, /data\?\.info\?\.videoData/);
+  assert.match(source, /setActiveSongTitle\(cleanTitle\)/);
+});
+
+
 
 
 

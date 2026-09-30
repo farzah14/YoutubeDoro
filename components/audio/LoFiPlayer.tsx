@@ -20,6 +20,7 @@ import {
   type SpotifyTokenData,
 } from "@/lib/spotifyApi";
 import {
+  decodeHtmlEntities,
   fetchGoogleYouTubeLikedVideos,
   fetchGoogleYouTubePlaylistItems,
   fetchGoogleYouTubePlaylists,
@@ -81,6 +82,14 @@ export interface QueueSongItem {
 }
 
 export const QUEUE_STORAGE_KEY = "ytdoro:music:queue";
+export const GOOGLE_YOUTUBE_SONGS_KEY = "ytdoro:music:google-youtube-songs";
+
+export function extractYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+  const match = url.match(/(?:v=|\/embed\/|\/watch\?v=|youtu\.be\/|\/v\/|list=[a-zA-Z0-9_-]+&v=)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
 
 interface MusicEngineProps {
   hidden?: boolean;
@@ -98,6 +107,8 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const [activeSongArtist, setActiveSongArtist] = useLocalStorage<string>("ytdoro:music:active-artist", "");
   const [savedEmbeds] = useLocalStorage<MusicEmbed[]>(KEYS.savedMusicEmbeds, []);
   const [heardHistory] = useLocalStorage<HeardSongItem[]>(KEYS.heardMusicHistory, []);
+  const [queue] = useLocalStorage<QueueSongItem[]>(QUEUE_STORAGE_KEY, []);
+  const [googleYouTubeSongs] = useLocalStorage<YouTubeSongSummary[]>(GOOGLE_YOUTUBE_SONGS_KEY, []);
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -136,31 +147,54 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
 
   const handlePreviousSong = () => {
     if (activeEmbed) {
-      try {
-        const rawQueue = window.localStorage.getItem(QUEUE_STORAGE_KEY);
-        if (rawQueue) {
-          const queue: QueueSongItem[] = JSON.parse(rawQueue);
-          if (queue.length > 1) {
-            const currentIdx = queue.findIndex(
-              (item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl || (activeSongTitle && item.title === activeSongTitle)
-            );
-            const prevIdx = currentIdx > 0 ? currentIdx - 1 : queue.length - 1;
-            const prevSong = queue[prevIdx];
-            if (prevSong) {
-              setActiveSongTitle(prevSong.title);
-              setActiveSongArtist(prevSong.artist || "");
-              setActiveEmbed({
-                provider: prevSong.provider,
-                sourceUrl: prevSong.sourceUrl,
-                embedUrl: prevSong.embedUrl,
-              });
-              setCurrentTime(0);
-              return;
-            }
-          }
-        }
-      } catch {}
+      const activeVidId = extractYouTubeVideoId(activeEmbed.sourceUrl) || extractYouTubeVideoId(activeEmbed.embedUrl);
 
+      // 1. Try active queue
+      if (queue.length > 1) {
+        const currentIdx = queue.findIndex(
+          (item) =>
+            item.sourceUrl === activeEmbed.sourceUrl ||
+            item.embedUrl === activeEmbed.embedUrl ||
+            (activeVidId && (item.id === activeVidId || item.sourceUrl.includes(activeVidId) || item.embedUrl.includes(activeVidId))) ||
+            (activeSongTitle && item.title.trim().toLowerCase() === activeSongTitle.trim().toLowerCase())
+        );
+        const prevIdx = currentIdx > 0 ? currentIdx - 1 : queue.length - 1;
+        const prevSong = queue[prevIdx];
+        if (prevSong) {
+          setActiveSongTitle(prevSong.title);
+          setActiveSongArtist(prevSong.artist || "YouTube Music");
+          setActiveEmbed({
+            provider: prevSong.provider,
+            sourceUrl: prevSong.sourceUrl,
+            embedUrl: prevSong.embedUrl,
+          });
+          setCurrentTime(0);
+          return;
+        }
+      }
+
+      // 2. Try Google Account YouTube Songs (Liked songs / playlist items)
+      if (googleYouTubeSongs.length > 0) {
+        const currentIdx = googleYouTubeSongs.findIndex(
+          (item) =>
+            item.id === activeVidId ||
+            item.externalUrl === activeEmbed.sourceUrl ||
+            item.embedUrl === activeEmbed.embedUrl ||
+            (activeVidId && (item.externalUrl.includes(activeVidId) || item.embedUrl.includes(activeVidId))) ||
+            (activeSongTitle && item.title.trim().toLowerCase() === activeSongTitle.trim().toLowerCase())
+        );
+        const prevIdx = currentIdx > 0 ? currentIdx - 1 : (googleYouTubeSongs.length > 1 ? googleYouTubeSongs.length - 1 : 0);
+        const prevSong = googleYouTubeSongs[prevIdx];
+        if (prevSong) {
+          setActiveSongTitle(prevSong.title);
+          setActiveSongArtist(prevSong.artist || "YouTube Music");
+          setActiveEmbed(youtubeSongToMusicEmbed(prevSong));
+          setCurrentTime(0);
+          return;
+        }
+      }
+
+      // 3. Try Saved Embeds
       if (savedEmbeds.length > 1) {
         const idx = savedEmbeds.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl);
         const prevIdx = idx > 0 ? idx - 1 : savedEmbeds.length - 1;
@@ -170,6 +204,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         return;
       }
 
+      // 4. Try Heard History
       if (heardHistory.length > 1) {
         const idx = heardHistory.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl || (activeSongTitle && item.title === activeSongTitle));
         const prevIdx = idx > 0 ? idx - 1 : heardHistory.length - 1;
@@ -185,6 +220,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         return;
       }
 
+      // 5. Send previousVideo command to iframe (e.g. YouTube playlist)
       const iframe = iframeRef.current;
       if (iframe?.contentWindow) {
         try {
@@ -198,19 +234,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           );
         } catch {}
       }
-
-      // Fallback: cycle backwards through RADIO_STATIONS
-      const currentStationIdx = RADIO_STATIONS.findIndex((item) => activeEmbed.sourceUrl.includes(item.videoId));
-      const prevStationIdx = currentStationIdx > 0 ? currentStationIdx - 1 : RADIO_STATIONS.length - 1;
-      const prevStation = RADIO_STATIONS[prevStationIdx];
-      setActiveSongTitle(prevStation.name);
-      setActiveSongArtist("Lofi Radio");
-      setActiveEmbed({
-        provider: "youtube",
-        sourceUrl: `https://www.youtube.com/watch?v=${prevStation.videoId}`,
-        embedUrl: `https://www.youtube.com/embed/${prevStation.videoId}?autoplay=1&enablejsapi=1`,
-      });
-      setCurrentTime(0);
+      return;
     } else if (enabled) {
       const currentIdx = RADIO_STATIONS.findIndex((item) => item.id === stationId);
       const prevIdx = currentIdx > 0 ? currentIdx - 1 : RADIO_STATIONS.length - 1;
@@ -221,31 +245,54 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
 
   const handleNextSong = () => {
     if (activeEmbed) {
-      try {
-        const rawQueue = window.localStorage.getItem(QUEUE_STORAGE_KEY);
-        if (rawQueue) {
-          const queue: QueueSongItem[] = JSON.parse(rawQueue);
-          if (queue.length > 1) {
-            const currentIdx = queue.findIndex(
-              (item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl || (activeSongTitle && item.title === activeSongTitle)
-            );
-            const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % queue.length : 0;
-            const nextSong = queue[nextIdx];
-            if (nextSong) {
-              setActiveSongTitle(nextSong.title);
-              setActiveSongArtist(nextSong.artist || "");
-              setActiveEmbed({
-                provider: nextSong.provider,
-                sourceUrl: nextSong.sourceUrl,
-                embedUrl: nextSong.embedUrl,
-              });
-              setCurrentTime(0);
-              return;
-            }
-          }
-        }
-      } catch {}
+      const activeVidId = extractYouTubeVideoId(activeEmbed.sourceUrl) || extractYouTubeVideoId(activeEmbed.embedUrl);
 
+      // 1. Try active queue
+      if (queue.length > 1) {
+        const currentIdx = queue.findIndex(
+          (item) =>
+            item.sourceUrl === activeEmbed.sourceUrl ||
+            item.embedUrl === activeEmbed.embedUrl ||
+            (activeVidId && (item.id === activeVidId || item.sourceUrl.includes(activeVidId) || item.embedUrl.includes(activeVidId))) ||
+            (activeSongTitle && item.title.trim().toLowerCase() === activeSongTitle.trim().toLowerCase())
+        );
+        const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % queue.length : 0;
+        const nextSong = queue[nextIdx];
+        if (nextSong) {
+          setActiveSongTitle(nextSong.title);
+          setActiveSongArtist(nextSong.artist || "YouTube Music");
+          setActiveEmbed({
+            provider: nextSong.provider,
+            sourceUrl: nextSong.sourceUrl,
+            embedUrl: nextSong.embedUrl,
+          });
+          setCurrentTime(0);
+          return;
+        }
+      }
+
+      // 2. Try Google Account YouTube Songs (Liked songs / playlist items)
+      if (googleYouTubeSongs.length > 0) {
+        const currentIdx = googleYouTubeSongs.findIndex(
+          (item) =>
+            item.id === activeVidId ||
+            item.externalUrl === activeEmbed.sourceUrl ||
+            item.embedUrl === activeEmbed.embedUrl ||
+            (activeVidId && (item.externalUrl.includes(activeVidId) || item.embedUrl.includes(activeVidId))) ||
+            (activeSongTitle && item.title.trim().toLowerCase() === activeSongTitle.trim().toLowerCase())
+        );
+        const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % googleYouTubeSongs.length : 0;
+        const nextSong = googleYouTubeSongs[nextIdx];
+        if (nextSong) {
+          setActiveSongTitle(nextSong.title);
+          setActiveSongArtist(nextSong.artist || "YouTube Music");
+          setActiveEmbed(youtubeSongToMusicEmbed(nextSong));
+          setCurrentTime(0);
+          return;
+        }
+      }
+
+      // 3. Try Saved Embeds
       if (savedEmbeds.length > 1) {
         const idx = savedEmbeds.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl);
         const nextIdx = idx >= 0 ? (idx + 1) % savedEmbeds.length : 0;
@@ -255,6 +302,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         return;
       }
 
+      // 4. Try Heard History
       if (heardHistory.length > 1) {
         const idx = heardHistory.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl || (activeSongTitle && item.title === activeSongTitle));
         const nextIdx = idx >= 0 ? (idx + 1) % heardHistory.length : 0;
@@ -270,6 +318,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         return;
       }
 
+      // 5. Send nextVideo command to iframe (e.g. YouTube playlist)
       const iframe = iframeRef.current;
       if (iframe?.contentWindow) {
         try {
@@ -283,19 +332,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           );
         } catch {}
       }
-
-      // Fallback: cycle forward through RADIO_STATIONS
-      const currentStationIdx = RADIO_STATIONS.findIndex((item) => activeEmbed.sourceUrl.includes(item.videoId));
-      const nextStationIdx = currentStationIdx >= 0 ? (currentStationIdx + 1) % RADIO_STATIONS.length : 0;
-      const nextStation = RADIO_STATIONS[nextStationIdx];
-      setActiveSongTitle(nextStation.name);
-      setActiveSongArtist("Lofi Radio");
-      setActiveEmbed({
-        provider: "youtube",
-        sourceUrl: `https://www.youtube.com/watch?v=${nextStation.videoId}`,
-        embedUrl: `https://www.youtube.com/embed/${nextStation.videoId}?autoplay=1&enablejsapi=1`,
-      });
-      setCurrentTime(0);
+      return;
     } else if (enabled) {
       const currentIdx = RADIO_STATIONS.findIndex((item) => item.id === stationId);
       const nextIdx = (currentIdx + 1) % RADIO_STATIONS.length;
@@ -342,6 +379,20 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           if (data.info === 1) setIsPlaying(true);
           else if (data.info === 2 || data.info === 0) setIsPlaying(false);
         }
+        // Handle video title and author delivered by YouTube iframe infoDelivery
+        const videoData = data?.info?.videoData;
+        if (videoData && typeof videoData.title === "string" && videoData.title.trim()) {
+          const cleanTitle = decodeHtmlEntities(videoData.title.trim());
+          if (cleanTitle) {
+            setActiveSongTitle(cleanTitle);
+          }
+          if (typeof videoData.author === "string" && videoData.author.trim()) {
+            const cleanAuthor = decodeHtmlEntities(videoData.author.trim());
+            if (cleanAuthor) {
+              setActiveSongArtist(cleanAuthor);
+            }
+          }
+        }
         if (data?.info) {
           if (typeof data.info.duration === "number" && data.info.duration > 0) {
             setDuration(Math.round(data.info.duration));
@@ -354,7 +405,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [isSeeking]);
+  }, [isSeeking, setActiveSongTitle, setActiveSongArtist]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -707,6 +758,7 @@ export function LoFiPlayer() {
   const [savedEmbeds, setSavedEmbeds] = useLocalStorage<MusicEmbed[]>(KEYS.savedMusicEmbeds, []);
   const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
   const [heardHistory, setHeardHistory] = useLocalStorage<HeardSongItem[]>(KEYS.heardMusicHistory, []);
+  const [queue, setQueue] = useLocalStorage<QueueSongItem[]>(QUEUE_STORAGE_KEY, []);
   const [tab, setTab] = useState<MusicTab>("stations");
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
@@ -726,7 +778,7 @@ export function LoFiPlayer() {
   // YouTube / Google state
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [youtubePlaylists, setYoutubePlaylists] = useState<YouTubePlaylistSummary[]>([]);
-  const [youtubeSongs, setYoutubeSongs] = useState<YouTubeSongSummary[]>([]);
+  const [youtubeSongs, setYoutubeSongs] = useLocalStorage<YouTubeSongSummary[]>(GOOGLE_YOUTUBE_SONGS_KEY, []);
   const [ytSubView, setYtSubView] = useState<"liked" | "search" | "playlists" | "history">("liked");
   const [loadingYouTube, setLoadingYouTube] = useState(false);
   const [loadingSongs, setLoadingSongs] = useState(false);
@@ -752,11 +804,26 @@ export function LoFiPlayer() {
       setGoogleToken(t);
       if (t) {
         void fetchGoogleYouTubeLikedVideos(t).then((res) => {
-          if (res.songs.length > 0) setYoutubeSongs(res.songs);
+          if (res.songs.length > 0) {
+            setYoutubeSongs(res.songs);
+            setQueue((curr) => {
+              if (!curr || curr.length === 0) {
+                return res.songs.map((s) => ({
+                  id: s.id,
+                  title: s.title,
+                  artist: s.artist || "YouTube Music",
+                  provider: "youtube",
+                  sourceUrl: s.externalUrl,
+                  embedUrl: youtubeSongToMusicEmbed(s).embedUrl,
+                }));
+              }
+              return curr;
+            });
+          }
         });
       }
     });
-  }, []);
+  }, [setYoutubeSongs, setQueue]);
 
   const recordHeardTrack = (title: string, provider: MusicEmbed["provider"], sourceUrl: string, embedUrl: string, artist?: string) => {
     setHeardHistory((prev) => {
@@ -889,7 +956,7 @@ export function LoFiPlayer() {
           sourceUrl: s.externalUrl,
           embedUrl: youtubeSongToMusicEmbed(s).embedUrl,
         }));
-        window.localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queueItems));
+        setQueue(queueItems);
       } catch {}
     }
     if (result.songs.length === 0) {
@@ -939,7 +1006,11 @@ export function LoFiPlayer() {
     recordHeardTrack(song.title, "youtube", song.externalUrl, embed.embedUrl, song.artist);
 
     try {
-      const activeList = searchResults.some((s) => s.id === song.id) ? searchResults : youtubeSongs;
+      const activeList = searchResults.some((s) => s.id === song.id)
+        ? searchResults
+        : (expandedPlaylistId && playlistTracks[expandedPlaylistId]?.some((s) => s.id === song.id))
+        ? playlistTracks[expandedPlaylistId]
+        : youtubeSongs;
       if (activeList.length > 0) {
         const queueItems: QueueSongItem[] = activeList.map((s) => ({
           id: s.id,
@@ -949,7 +1020,7 @@ export function LoFiPlayer() {
           sourceUrl: s.externalUrl,
           embedUrl: youtubeSongToMusicEmbed(s).embedUrl,
         }));
-        window.localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queueItems));
+        setQueue(queueItems);
       }
     } catch {}
   };
@@ -970,7 +1041,7 @@ export function LoFiPlayer() {
     }
   };
 
-  const handleSelectYouTubePlaylist = (playlist: YouTubePlaylistSummary) => {
+  const handleSelectYouTubePlaylist = async (playlist: YouTubePlaylistSummary) => {
     const embed = youtubePlaylistToMusicEmbed(playlist);
     setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
     setActiveSongTitle(playlist.title);
@@ -978,6 +1049,61 @@ export function LoFiPlayer() {
     setActiveEmbed(embed);
     setEnabled(false);
     recordHeardTrack(playlist.title, "youtube", playlist.externalUrl, embed.embedUrl);
+
+    if (playlistTracks[playlist.id]?.length > 0) {
+      const q: QueueSongItem[] = playlistTracks[playlist.id].map((t) => ({
+        id: t.id,
+        title: t.title,
+        artist: t.artist || "YouTube Music",
+        provider: "youtube",
+        sourceUrl: t.externalUrl,
+        embedUrl: youtubeSongToMusicEmbed(t).embedUrl,
+      }));
+      setQueue(q);
+    } else if (playlist.id === "LM" && youtubeSongs.length > 0) {
+      const q: QueueSongItem[] = youtubeSongs.map((t) => ({
+        id: t.id,
+        title: t.title,
+        artist: t.artist || "YouTube Music",
+        provider: "youtube",
+        sourceUrl: t.externalUrl,
+        embedUrl: youtubeSongToMusicEmbed(t).embedUrl,
+      }));
+      setQueue(q);
+    } else {
+      const token = googleToken || await getGoogleProviderToken();
+      if (token) {
+        if (playlist.id === "LM") {
+          const res = await fetchGoogleYouTubeLikedVideos(token);
+          if (res.songs.length > 0) {
+            setYoutubeSongs(res.songs);
+            const q: QueueSongItem[] = res.songs.map((t) => ({
+              id: t.id,
+              title: t.title,
+              artist: t.artist || "YouTube Music",
+              provider: "youtube",
+              sourceUrl: t.externalUrl,
+              embedUrl: youtubeSongToMusicEmbed(t).embedUrl,
+            }));
+            setQueue(q);
+          }
+        } else {
+          const tracks = await fetchGoogleYouTubePlaylistItems(token, playlist.id);
+          if (tracks.length > 0) {
+            setPlaylistTracks((prev) => ({ ...prev, [playlist.id]: tracks }));
+            const q: QueueSongItem[] = tracks.map((t) => ({
+              id: t.id,
+              title: t.title,
+              artist: t.artist || "YouTube Music",
+              provider: "youtube",
+              sourceUrl: t.externalUrl,
+              embedUrl: youtubeSongToMusicEmbed(t).embedUrl,
+            }));
+            setQueue(q);
+          }
+        }
+      }
+    }
   };
 
   const saveProvider = (event: FormEvent) => {
@@ -988,6 +1114,8 @@ export function LoFiPlayer() {
       return;
     }
     setSavedEmbeds((items) => items.some((item) => item.sourceUrl === parsed.sourceUrl) ? items : [...items, parsed]);
+    setActiveSongTitle(parsed.provider === "youtube" ? "YouTube Music" : `${parsed.provider} Track`);
+    setActiveSongArtist(parsed.provider);
     setActiveEmbed(parsed);
     setEnabled(false);
     setUrl("");
@@ -1362,6 +1490,8 @@ export function LoFiPlayer() {
                           className="music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors"
                           onClick={() => {
                             const embed: MusicEmbed = { provider: item.provider, sourceUrl: item.sourceUrl, embedUrl: item.embedUrl };
+                            setActiveSongTitle(item.title);
+                            setActiveSongArtist(item.artist || "");
                             setActiveEmbed(embed);
                             setEnabled(false);
                             recordHeardTrack(item.title, item.provider, item.sourceUrl, item.embedUrl, item.artist);
@@ -1474,7 +1604,7 @@ export function LoFiPlayer() {
           </div>
           {savedEmbeds.map((item) => (
             <div key={item.sourceUrl} className="music-provider-row">
-              <button type="button" onClick={() => { setActiveEmbed(item); setEnabled(false); }}><strong>{item.provider}</strong><small>{item.sourceUrl}</small></button>
+              <button type="button" onClick={() => { setActiveEmbed(item); setActiveSongTitle(item.provider === "youtube" ? "YouTube Music" : `${item.provider} Track`); setActiveSongArtist(item.provider); setEnabled(false); }}><strong>{item.provider}</strong><small>{item.sourceUrl}</small></button>
               <button type="button" onClick={() => { setSavedEmbeds((items) => items.filter((saved) => saved.sourceUrl !== item.sourceUrl)); if (activeEmbed?.sourceUrl === item.sourceUrl) setActiveEmbed(null); }} aria-label={`Remove ${item.provider} link`}><TrashIcon /></button>
             </div>
           ))}
