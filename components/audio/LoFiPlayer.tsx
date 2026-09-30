@@ -135,6 +135,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
       {activeEmbed && (
         <aside
           className={`music-provider-player ${isMinimized ? "music-provider-player--minimized" : "music-provider-player--expanded"}${hidden ? " music-provider-player--hidden" : ""}`}
+          style={hidden ? { opacity: 0, pointerEvents: "none", visibility: "hidden" } : undefined}
           aria-label={`${activeEmbed.provider} player`}
           aria-hidden={hidden}
         >
@@ -151,96 +152,100 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
             />
           </div>
 
-          {/* Volume Control Bar positioned directly ABOVE the YouTube Music icon */}
-          <div className="music-provider-volume-bar" aria-label="Music volume control">
-            <button
-              type="button"
-              className="music-provider-volume-bar__mute"
-              onClick={() => setMuted(!muted)}
-              aria-label={muted ? "Unmute YouTube Music" : "Mute YouTube Music"}
-              title={muted ? "Unmute" : "Mute"}
-            >
-              {muted || volume === 0 ? (
-                <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
-              ) : (
-                <Volume2Icon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
-              )}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={muted ? 0 : volume}
-              onChange={(e) => {
-                setVolume(Number(e.target.value));
-                if (muted) setMuted(false);
-              }}
-              className="music-provider-volume-bar__slider"
-              aria-label="YouTube Music Volume"
-            />
-            <span className="music-provider-volume-bar__text">
-              {muted ? "0%" : `${volume}%`}
-            </span>
-          </div>
-
-          {isMinimized ? (
-            <div className="music-provider-badge">
-              <button
-                type="button"
-                className="music-provider-badge__icon-btn"
-                onClick={() => setIsMinimized(false)}
-                title={`Click to expand: ${activeSongTitle || activeEmbed.provider}`}
-                aria-label={`Expand ${activeEmbed.provider} player`}
-              >
-                <span className="music-provider-badge__icon" aria-hidden="true">
-                  {activeEmbed.provider === "spotify" ? (
-                    <SpotifyIcon className="w-4 h-4 text-emerald-500" />
+          {!hidden && (
+            <>
+              {/* Volume Control Bar positioned directly ABOVE the YouTube Music icon */}
+              <div className="music-provider-volume-bar" aria-label="Music volume control">
+                <button
+                  type="button"
+                  className="music-provider-volume-bar__mute"
+                  onClick={() => setMuted(!muted)}
+                  aria-label={muted ? "Unmute YouTube Music" : "Mute YouTube Music"}
+                  title={muted ? "Unmute" : "Mute"}
+                >
+                  {muted || volume === 0 ? (
+                    <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
                   ) : (
-                    <YouTubeIcon className="w-4 h-4 text-red-500" />
+                    <Volume2Icon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
                   )}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={muted ? 0 : volume}
+                  onChange={(e) => {
+                    setVolume(Number(e.target.value));
+                    if (muted) setMuted(false);
+                  }}
+                  className="music-provider-volume-bar__slider"
+                  aria-label="YouTube Music Volume"
+                />
+                <span className="music-provider-volume-bar__text">
+                  {muted ? "0%" : `${volume}%`}
                 </span>
-                <span className="music-provider-badge__pulse" aria-hidden="true" />
-                <span className="music-provider-badge__label">{activeSongTitle || activeEmbed.provider}</span>
-              </button>
-              <button
-                type="button"
-                className="music-provider-badge__close"
-                onClick={() => setActiveEmbed(null)}
-                title="Stop music"
-                aria-label="Stop music"
-              >
-                ×
-              </button>
-            </div>
-          ) : (
-            <div className="music-provider-player__bar">
-              <div className="music-provider-player__title">
-                {activeEmbed.provider === "spotify" ? (
-                  <SpotifyIcon className="w-3.5 h-3.5 text-emerald-500" />
-                ) : (
-                  <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
-                )}
-                <span className="truncate max-w-[15rem]">{activeSongTitle || `${activeEmbed.provider} player`}</span>
               </div>
-              <div className="music-provider-player__actions">
-                <button
-                  type="button"
-                  onClick={() => setIsMinimized(true)}
-                  title="Minimize to icon only"
-                  aria-label="Minimize to icon only"
-                >
-                  −
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveEmbed(null)}
-                  title="Stop music"
-                  aria-label="Stop music"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
+
+              {isMinimized ? (
+                <div className="music-provider-badge">
+                  <button
+                    type="button"
+                    className="music-provider-badge__icon-btn"
+                    onClick={() => setIsMinimized(false)}
+                    title={`Click to expand: ${activeSongTitle || activeEmbed.provider}`}
+                    aria-label={`Expand ${activeEmbed.provider} player`}
+                  >
+                    <span className="music-provider-badge__icon" aria-hidden="true">
+                      {activeEmbed.provider === "spotify" ? (
+                        <SpotifyIcon className="w-4 h-4 text-emerald-500" />
+                      ) : (
+                        <YouTubeIcon className="w-4 h-4 text-red-500" />
+                      )}
+                    </span>
+                    <span className="music-provider-badge__pulse" aria-hidden="true" />
+                    <span className="music-provider-badge__label">{activeSongTitle || activeEmbed.provider}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="music-provider-badge__close"
+                    onClick={() => setActiveEmbed(null)}
+                    title="Stop music"
+                    aria-label="Stop music"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="music-provider-player__bar">
+                  <div className="music-provider-player__title">
+                    {activeEmbed.provider === "spotify" ? (
+                      <SpotifyIcon className="w-3.5 h-3.5 text-emerald-500" />
+                    ) : (
+                      <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
+                    )}
+                    <span className="truncate max-w-[15rem]">{activeSongTitle || `${activeEmbed.provider} player`}</span>
+                  </div>
+                  <div className="music-provider-player__actions">
+                    <button
+                      type="button"
+                      onClick={() => setIsMinimized(true)}
+                      title="Minimize to icon only"
+                      aria-label="Minimize to icon only"
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveEmbed(null)}
+                      title="Stop music"
+                      aria-label="Stop music"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </aside>
       )}

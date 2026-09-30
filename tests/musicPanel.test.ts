@@ -44,6 +44,8 @@ test("Music hides the floating volume bar and badge when the music modal is open
   assert.match(source, /interface MusicEngineProps\s*\{\s*hidden\?: boolean;/);
   assert.match(source, /export function MusicEngine\(\{ hidden = false \}: MusicEngineProps/);
   assert.match(source, /music-provider-player--hidden/);
+  assert.match(source, /style=\{hidden \? \{ opacity: 0, pointerEvents: "none", visibility: "hidden" \} : undefined\}/);
+  assert.match(source, /\{!hidden && \(/);
   assert.match(stylesSource, /\.music-provider-player--hidden[\s\S]*visibility:\s*hidden/);
   assert.match(stylesSource, /\.music-provider-player--hidden[\s\S]*opacity:\s*0/);
 });
