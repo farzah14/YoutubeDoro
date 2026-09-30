@@ -442,7 +442,7 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
             sessions={visibleSessions}
             today={today}
           />
-          <WeeklyHeatmap sessions={visibleSessions} />
+          <WeeklyHeatmap sessions={visibleSessions} today={today} />
         </div>
       </Modal>
 
