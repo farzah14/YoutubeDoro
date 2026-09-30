@@ -62,13 +62,48 @@ const getAutoplayUrl = (url: string) => {
 export function MusicEngine() {
   const [enabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
   const [stationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
-  const [volume] = useLocalStorage(KEYS.lofiVolume, DEFAULT_LOFI_VOLUME);
-  const [muted] = useLocalStorage(KEYS.lofiMuted, false);
+  const [volume, setVolume] = useLocalStorage(KEYS.lofiVolume, DEFAULT_LOFI_VOLUME);
+  const [muted, setMuted] = useLocalStorage(KEYS.lofiMuted, false);
   const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
   const [isMinimized, setIsMinimized] = useLocalStorage("ytdoro:music:player-minimized", true);
   const [activeSongTitle] = useLocalStorage<string>("ytdoro:music:active-title", "");
   const playerRef = useRef<MinimalYTPlayer | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
+
+  const sendVolumeToIframe = (vol: number, isMuted: boolean) => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow) return;
+    try {
+      iframe.contentWindow.postMessage(
+        JSON.stringify({
+          event: "command",
+          func: "setVolume",
+          args: [isMuted ? 0 : vol],
+        }),
+        "*"
+      );
+      iframe.contentWindow.postMessage(
+        JSON.stringify({
+          event: "command",
+          func: isMuted ? "mute" : "unMute",
+          args: [],
+        }),
+        "*"
+      );
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!activeEmbed) return;
+    sendVolumeToIframe(muted ? 0 : volume, muted);
+    const t1 = setTimeout(() => sendVolumeToIframe(muted ? 0 : volume, muted), 500);
+    const t2 = setTimeout(() => sendVolumeToIframe(muted ? 0 : volume, muted), 1200);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [activeEmbed?.embedUrl, volume, muted]);
 
   useEffect(() => {
     const player = playerRef.current;
@@ -100,13 +135,47 @@ export function MusicEngine() {
         >
           <div className="music-provider-player__iframe-wrap">
             <iframe
+              ref={iframeRef}
               key={activeEmbed.embedUrl}
               src={getAutoplayUrl(activeEmbed.embedUrl)}
               title={`${activeEmbed.provider} music player`}
               sandbox="allow-scripts allow-same-origin allow-presentation"
               allow="autoplay; encrypted-media; picture-in-picture"
               loading="eager"
+              onLoad={() => sendVolumeToIframe(muted ? 0 : volume, muted)}
             />
+          </div>
+
+          {/* Volume Control Bar positioned directly ABOVE the YouTube Music icon */}
+          <div className="music-provider-volume-bar" aria-label="Music volume control">
+            <button
+              type="button"
+              className="music-provider-volume-bar__mute"
+              onClick={() => setMuted(!muted)}
+              aria-label={muted ? "Unmute YouTube Music" : "Mute YouTube Music"}
+              title={muted ? "Unmute" : "Mute"}
+            >
+              {muted || volume === 0 ? (
+                <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
+              ) : (
+                <Volume2Icon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
+              )}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={muted ? 0 : volume}
+              onChange={(e) => {
+                setVolume(Number(e.target.value));
+                if (muted) setMuted(false);
+              }}
+              className="music-provider-volume-bar__slider"
+              aria-label="YouTube Music Volume"
+            />
+            <span className="music-provider-volume-bar__text">
+              {muted ? "0%" : `${volume}%`}
+            </span>
           </div>
 
           {isMinimized ? (

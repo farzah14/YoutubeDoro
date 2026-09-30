@@ -3497,6 +3497,78 @@ textarea:focus-visible,
   border: 0;
 }
 
+.music-provider-volume-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 0.22rem 0.65rem 0.22rem 0.5rem;
+  margin-bottom: 0.4rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  width: max-content;
+  min-width: 13.5rem;
+  color: var(--fg);
+}
+
+.music-provider-volume-bar__mute {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.music-provider-volume-bar__slider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.music-provider-volume-bar__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent, #e2a44f);
+  box-shadow: 0 0 6px var(--accent, #e2a44f);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.music-provider-volume-bar__slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.music-provider-volume-bar__slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent, #e2a44f);
+  box-shadow: 0 0 6px var(--accent, #e2a44f);
+  cursor: pointer;
+  border: 0;
+}
+
+.music-provider-volume-bar__text {
+  font-size: 0.68rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 2.2rem;
+  text-align: right;
+}
+
 .music-provider-badge {
   display: flex;
   align-items: center;
@@ -3545,6 +3617,10 @@ textarea:focus-visible,
 .music-provider-badge__label {
   text-transform: capitalize;
   letter-spacing: 0.02em;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .music-provider-badge__close {
