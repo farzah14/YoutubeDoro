@@ -423,8 +423,16 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
     } catch {}
   };
 
+  const currentEmbedUrlRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (activeEmbed) {
+    if (!activeEmbed?.embedUrl) {
+      currentEmbedUrlRef.current = null;
+      return;
+    }
+
+    if (activeEmbed.embedUrl !== currentEmbedUrlRef.current) {
+      currentEmbedUrlRef.current = activeEmbed.embedUrl;
       setIsPlaying(true);
       setCurrentTime(0);
       lastIframeMsgTimeRef.current = 0;
@@ -437,23 +445,17 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           item.embedUrl === activeEmbed.embedUrl ||
           (activeVidId && (item.id === activeVidId || item.sourceUrl.includes(activeVidId) || item.embedUrl.includes(activeVidId)))
       );
-      if (queuedSong?.duration && queuedSong.duration > 0) {
-        setDuration(queuedSong.duration);
+      const likedSong = googleYouTubeSongs.find((item) => item.id === activeVidId);
+      const defaultSong = DEFAULT_YOUTUBE_SONGS.find((item) => item.id === activeVidId);
+
+      const knownDuration = queuedSong?.duration || likedSong?.duration || defaultSong?.duration;
+      if (knownDuration && knownDuration > 0) {
+        setDuration(knownDuration);
       } else {
-        const likedSong = googleYouTubeSongs.find((item) => item.id === activeVidId);
-        if (likedSong?.duration && likedSong.duration > 0) {
-          setDuration(likedSong.duration);
-        } else {
-          const defaultSong = DEFAULT_YOUTUBE_SONGS.find((item) => item.id === activeVidId);
-          if (defaultSong?.duration && defaultSong.duration > 0) {
-            setDuration(defaultSong.duration);
-          } else {
-            setDuration(0);
-          }
-        }
+        setDuration(180);
       }
     }
-  }, [activeEmbed?.embedUrl, queue, googleYouTubeSongs]);
+  }, [activeEmbed?.embedUrl]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -530,14 +532,12 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
       }
 
       const timeSinceLastIframe = Date.now() - lastIframeMsgTimeRef.current;
-      if (!isSeeking && Date.now() > seekLockUntilRef.current && timeSinceLastIframe > 2500) {
+      if (!isSeeking && Date.now() > seekLockUntilRef.current && timeSinceLastIframe > 1500) {
         setCurrentTime((prev) => {
-          if (duration > 0) {
-            if (prev >= duration) {
-              handleNextSongRef.current();
-              return duration;
-            }
-            return prev + 1;
+          const effectiveDuration = duration > 0 ? duration : 180;
+          if (prev >= effectiveDuration) {
+            handleNextSongRef.current();
+            return effectiveDuration;
           }
           return prev + 1;
         });
@@ -742,14 +742,14 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                           {formatMMSS(currentTime)}
                         </span>
                         {(() => {
-                          const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+                          const effectiveDuration = duration > 0 ? duration : 180;
+                          const progressPercent = Math.min(100, Math.max(0, (currentTime / effectiveDuration) * 100));
                           return (
                             <input
                               type="range"
                               min="0"
-                              max={duration > 0 ? duration : 100}
-                              value={duration > 0 ? Math.min(currentTime, duration) : currentTime}
-                              disabled={duration <= 0}
+                              max={effectiveDuration}
+                              value={Math.min(currentTime, effectiveDuration)}
                               onMouseDown={() => setIsSeeking(true)}
                               onTouchStart={() => setIsSeeking(true)}
                               onChange={(e) => {
@@ -775,7 +775,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                           );
                         })()}
                         <span className="music-child-card__time music-child-card__time--total text-text-muted font-mono text-[11px] font-semibold min-w-[2.2rem] text-right">
-                          {duration > 0 ? formatMMSS(duration) : "--:--"}
+                          {formatMMSS(duration > 0 ? duration : 180)}
                         </span>
                       </div>
 
