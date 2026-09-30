@@ -32,7 +32,7 @@ import {
   type YouTubePlaylistSummary,
   type YouTubeSongSummary,
 } from "@/lib/youtubeMusicApi";
-import { MusicIcon, SpotifyIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
+import { MusicIcon, PauseIcon, PlayIcon, SpotifyIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
 
@@ -71,9 +71,51 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
   const [isMinimized, setIsMinimized] = useLocalStorage("ytdoro:music:player-minimized", true);
   const [activeSongTitle] = useLocalStorage<string>("ytdoro:music:active-title", "");
+  const [isPlaying, setIsPlaying] = useState(true);
   const playerRef = useRef<MinimalYTPlayer | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
+
+  const togglePlay = () => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow) return;
+    try {
+      const nextPlaying = !isPlaying;
+      if (activeEmbed?.provider === "spotify") {
+        iframe.contentWindow.postMessage({ command: nextPlaying ? "play" : "pause" }, "*");
+      } else {
+        iframe.contentWindow.postMessage(
+          JSON.stringify({
+            event: "command",
+            func: nextPlaying ? "playVideo" : "pauseVideo",
+            args: [],
+          }),
+          "*"
+        );
+      }
+      setIsPlaying(nextPlaying);
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (activeEmbed) {
+      setIsPlaying(true);
+    }
+  }, [activeEmbed?.embedUrl]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        if (data?.event === "onStateChange" || data?.info !== undefined) {
+          if (data.info === 1) setIsPlaying(true);
+          else if (data.info === 2 || data.info === 0) setIsPlaying(false);
+        }
+      } catch {}
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const sendVolumeToIframe = (vol: number, isMuted: boolean) => {
     const iframe = iframeRef.current;
@@ -154,66 +196,105 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
 
           {!hidden && (
             <>
-              {/* Volume Control Bar positioned directly ABOVE the YouTube Music icon */}
-              <div className="music-provider-volume-bar" aria-label="Music volume control">
-                <button
-                  type="button"
-                  className="music-provider-volume-bar__mute"
-                  onClick={() => setMuted(!muted)}
-                  aria-label={muted ? "Unmute YouTube Music" : "Mute YouTube Music"}
-                  title={muted ? "Unmute" : "Mute"}
-                >
-                  {muted || volume === 0 ? (
-                    <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
-                  ) : (
-                    <Volume2Icon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
-                  )}
-                </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={muted ? 0 : volume}
-                  onChange={(e) => {
-                    setVolume(Number(e.target.value));
-                    if (muted) setMuted(false);
-                  }}
-                  className="music-provider-volume-bar__slider"
-                  aria-label="YouTube Music Volume"
-                />
-                <span className="music-provider-volume-bar__text">
-                  {muted ? "0%" : `${volume}%`}
-                </span>
-              </div>
-
               {isMinimized ? (
-                <div className="music-provider-badge">
-                  <button
-                    type="button"
-                    className="music-provider-badge__icon-btn"
-                    onClick={() => setIsMinimized(false)}
-                    title={`Click to expand: ${activeSongTitle || activeEmbed.provider}`}
-                    aria-label={`Expand ${activeEmbed.provider} player`}
-                  >
-                    <span className="music-provider-badge__icon" aria-hidden="true">
-                      {activeEmbed.provider === "spotify" ? (
-                        <SpotifyIcon className="w-4 h-4 text-emerald-500" />
+                <div className="music-child-card" aria-label="Music player">
+                  {/* Header Row: Provider Icon, Pulse, Title, Play/Pause Button, Expand Button, Close Button */}
+                  <div className="music-child-card__header">
+                    <div className="music-child-card__info">
+                      <span className="music-child-card__icon" aria-hidden="true">
+                        {activeEmbed.provider === "spotify" ? (
+                          <SpotifyIcon className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <YouTubeIcon className="w-4 h-4 text-red-500" />
+                        )}
+                      </span>
+                      <span
+                        className={`music-child-card__pulse ${isPlaying ? "is-playing" : ""}`}
+                        aria-hidden="true"
+                        title={isPlaying ? "Playing" : "Paused"}
+                      />
+                      <span
+                        className="music-child-card__title truncate"
+                        title={activeSongTitle || activeEmbed.provider}
+                      >
+                        {activeSongTitle || activeEmbed.provider}
+                      </span>
+                    </div>
+
+                    <div className="music-child-card__actions">
+                      <button
+                        type="button"
+                        className="music-child-card__btn music-child-card__btn--play"
+                        onClick={togglePlay}
+                        aria-label={isPlaying ? "Pause music" : "Play music"}
+                        title={isPlaying ? "Pause" : "Play"}
+                      >
+                        {isPlaying ? (
+                          <PauseIcon className="w-3.5 h-3.5" />
+                        ) : (
+                          <PlayIcon className="w-3.5 h-3.5 fill-current" />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="music-child-card__btn music-child-card__btn--expand"
+                        onClick={() => setIsMinimized(false)}
+                        aria-label="Expand video player"
+                        title="Expand video"
+                      >
+                        ⛶
+                      </button>
+
+                      <button
+                        type="button"
+                        className="music-child-card__btn music-child-card__btn--close"
+                        onClick={() => setActiveEmbed(null)}
+                        aria-label="Stop music"
+                        title="Stop music"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Volume Row: Mute Toggle, Range Slider, Percentage */}
+                  <div className="music-child-card__volume" aria-label="Music volume control">
+                    <button
+                      type="button"
+                      className="music-child-card__mute"
+                      onClick={() => {
+                        const nextMuted = !muted;
+                        setMuted(nextMuted);
+                        sendVolumeToIframe(volume, nextMuted);
+                      }}
+                      aria-label={muted ? "Unmute YouTube Music" : "Mute YouTube Music"}
+                      title={muted ? "Unmute" : "Mute"}
+                    >
+                      {muted || volume === 0 ? (
+                        <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
                       ) : (
-                        <YouTubeIcon className="w-4 h-4 text-red-500" />
+                        <Volume2Icon className="w-3.5 h-3.5 text-text-muted hover:text-foreground" />
                       )}
+                    </button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={muted ? 0 : volume}
+                      onChange={(e) => {
+                        const nextVol = Number(e.target.value);
+                        setVolume(nextVol);
+                        if (muted) setMuted(false);
+                        sendVolumeToIframe(nextVol, false);
+                      }}
+                      className="music-child-card__slider"
+                      aria-label="YouTube Music Volume"
+                    />
+                    <span className="music-child-card__vol-text">
+                      {muted ? "0%" : `${volume}%`}
                     </span>
-                    <span className="music-provider-badge__pulse" aria-hidden="true" />
-                    <span className="music-provider-badge__label">{activeSongTitle || activeEmbed.provider}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="music-provider-badge__close"
-                    onClick={() => setActiveEmbed(null)}
-                    title="Stop music"
-                    aria-label="Stop music"
-                  >
-                    ×
-                  </button>
+                  </div>
                 </div>
               ) : (
                 <div className="music-provider-player__bar">
@@ -223,14 +304,22 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                     ) : (
                       <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
                     )}
-                    <span className="truncate max-w-[15rem]">{activeSongTitle || `${activeEmbed.provider} player`}</span>
+                    <span className="truncate max-w-[13rem]">{activeSongTitle || `${activeEmbed.provider} player`}</span>
                   </div>
                   <div className="music-provider-player__actions">
                     <button
                       type="button"
+                      onClick={togglePlay}
+                      title={isPlaying ? "Pause" : "Play"}
+                      aria-label={isPlaying ? "Pause" : "Play"}
+                    >
+                      {isPlaying ? <PauseIcon className="w-3 h-3" /> : <PlayIcon className="w-3 h-3 fill-current" />}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setIsMinimized(true)}
-                      title="Minimize to icon only"
-                      aria-label="Minimize to icon only"
+                      title="Minimize to card"
+                      aria-label="Minimize to card"
                     >
                       −
                     </button>

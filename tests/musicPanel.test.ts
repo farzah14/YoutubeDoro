@@ -50,3 +50,14 @@ test("Music hides the floating volume bar and badge when the music modal is open
   assert.match(stylesSource, /\.music-provider-player--hidden[\s\S]*opacity:\s*0/);
 });
 
+test("Music renders a child card with song title, volume control, and playback toggle", () => {
+  assert.match(source, /music-child-card/);
+  assert.match(source, /music-child-card__title/);
+  assert.match(source, /music-child-card__volume/);
+  assert.match(source, /music-child-card__btn--play/);
+  assert.match(source, /togglePlay/);
+  assert.match(stylesSource, /\.music-child-card\s*\{/);
+  assert.match(stylesSource, /\.music-child-card__header\s*\{/);
+  assert.match(stylesSource, /\.music-child-card__volume\s*\{/);
+});
+
