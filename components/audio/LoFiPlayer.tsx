@@ -19,12 +19,16 @@ import {
   type SpotifyTokenData,
 } from "@/lib/spotifyApi";
 import {
+  fetchGoogleYouTubeLikedVideos,
+  fetchGoogleYouTubePlaylistItems,
   fetchGoogleYouTubePlaylists,
   fetchGoogleYouTubePlaylistsResult,
   getGoogleProviderToken,
   requestGoogleYouTubeAccess,
   youtubePlaylistToMusicEmbed,
+  youtubeSongToMusicEmbed,
   type YouTubePlaylistSummary,
+  type YouTubeSongSummary,
 } from "@/lib/youtubeMusicApi";
 import { MusicIcon, SpotifyIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
 
@@ -85,6 +89,16 @@ export function MusicEngine() {
 
 type MusicTab = "stations" | "my-music";
 
+export interface HeardSongItem {
+  id: string;
+  title: string;
+  artist?: string;
+  provider: MusicEmbed["provider"];
+  sourceUrl: string;
+  embedUrl: string;
+  playedAt: number;
+}
+
 export function LoFiPlayer() {
   const [enabled, setEnabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
   const [stationId, setStationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
@@ -92,6 +106,7 @@ export function LoFiPlayer() {
   const [muted, setMuted] = useLocalStorage(KEYS.lofiMuted, false);
   const [savedEmbeds, setSavedEmbeds] = useLocalStorage<MusicEmbed[]>(KEYS.savedMusicEmbeds, []);
   const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
+  const [heardHistory, setHeardHistory] = useLocalStorage<HeardSongItem[]>(KEYS.heardMusicHistory, []);
   const [tab, setTab] = useState<MusicTab>("stations");
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
@@ -108,8 +123,14 @@ export function LoFiPlayer() {
   // YouTube / Google state
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [youtubePlaylists, setYoutubePlaylists] = useState<YouTubePlaylistSummary[]>([]);
+  const [youtubeSongs, setYoutubeSongs] = useState<YouTubeSongSummary[]>([]);
+  const [ytSubView, setYtSubView] = useState<"liked" | "playlists" | "history">("liked");
   const [loadingYouTube, setLoadingYouTube] = useState(false);
+  const [loadingSongs, setLoadingSongs] = useState(false);
   const [youtubeStatus, setYoutubeStatus] = useState<string>("");
+  const [expandedPlaylistId, setExpandedPlaylistId] = useState<string | null>(null);
+  const [playlistTracks, setPlaylistTracks] = useState<Record<string, YouTubeSongSummary[]>>({});
+  const [loadingPlaylistTracks, setLoadingPlaylistTracks] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -120,8 +141,31 @@ export function LoFiPlayer() {
     const savedClientId = window.localStorage.getItem(SPOTIFY_STORAGE_KEYS.clientId) || "";
     setCustomClientId(savedClientId);
 
-    void getGoogleProviderToken().then((t) => setGoogleToken(t));
+    void getGoogleProviderToken().then((t) => {
+      setGoogleToken(t);
+      if (t) {
+        void fetchGoogleYouTubeLikedVideos(t).then((res) => {
+          if (res.songs.length > 0) setYoutubeSongs(res.songs);
+        });
+      }
+    });
   }, []);
+
+  const recordHeardTrack = (title: string, provider: MusicEmbed["provider"], sourceUrl: string, embedUrl: string, artist?: string) => {
+    setHeardHistory((prev) => {
+      const filtered = prev.filter((item) => item.sourceUrl !== sourceUrl);
+      const nextItem: HeardSongItem = {
+        id: sourceUrl,
+        title,
+        artist,
+        provider,
+        sourceUrl,
+        embedUrl,
+        playedAt: Date.now(),
+      };
+      return [nextItem, ...filtered].slice(0, 50);
+    });
+  };
 
   const handleConnectSpotify = async () => {
     setError("");
@@ -160,6 +204,7 @@ export function LoFiPlayer() {
     setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
     setActiveEmbed(embed);
     setEnabled(false);
+    recordHeardTrack(playlist.name, "spotify", playlist.externalUrl, playlist.embedUrl);
   };
 
   const handleSyncYouTube = async (forceReconnect = false) => {
@@ -200,11 +245,66 @@ export function LoFiPlayer() {
     }
   };
 
+  const handleSyncLikedSongs = async () => {
+    setLoadingSongs(true);
+    setYoutubeStatus("");
+    const token = googleToken || await getGoogleProviderToken();
+    if (!token) {
+      setLoadingSongs(false);
+      setYoutubeStatus("Redirecting to Google to connect YouTube Music…");
+      await requestGoogleYouTubeAccess();
+      return;
+    }
+
+    const result = await fetchGoogleYouTubeLikedVideos(token);
+    setLoadingSongs(false);
+
+    if (result.error) {
+      if (result.error === "API_DISABLED") {
+        setYoutubeStatus("YouTube Data API v3 is not enabled in your Google Cloud Project. Enable it or paste links below.");
+      } else {
+        setGoogleToken(null);
+        setYoutubeStatus("Google session needs YouTube permission. Click Reconnect below.");
+      }
+      return;
+    }
+
+    setYoutubeSongs(result.songs);
+    if (result.songs.length === 0) {
+      setYoutubeStatus("No liked songs found on your YouTube account.");
+    }
+  };
+
+  const handlePlaySong = (song: YouTubeSongSummary) => {
+    const embed = youtubeSongToMusicEmbed(song);
+    setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
+    setActiveEmbed(embed);
+    setEnabled(false);
+    recordHeardTrack(song.title, "youtube", song.externalUrl, song.embedUrl, song.artist);
+  };
+
+  const handleToggleExpandPlaylist = async (playlistId: string) => {
+    if (expandedPlaylistId === playlistId) {
+      setExpandedPlaylistId(null);
+      return;
+    }
+    setExpandedPlaylistId(playlistId);
+    if (!playlistTracks[playlistId]) {
+      const token = googleToken || await getGoogleProviderToken();
+      if (!token) return;
+      setLoadingPlaylistTracks(playlistId);
+      const tracks = await fetchGoogleYouTubePlaylistItems(token, playlistId);
+      setPlaylistTracks((prev) => ({ ...prev, [playlistId]: tracks }));
+      setLoadingPlaylistTracks(null);
+    }
+  };
+
   const handleSelectYouTubePlaylist = (playlist: YouTubePlaylistSummary) => {
     const embed = youtubePlaylistToMusicEmbed(playlist);
     setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
     setActiveEmbed(embed);
     setEnabled(false);
+    recordHeardTrack(playlist.title, "youtube", playlist.externalUrl, playlist.embedUrl);
   };
 
   const saveProvider = (event: FormEvent) => {
@@ -281,16 +381,6 @@ export function LoFiPlayer() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {googleToken ? (
-                    <button
-                      type="button"
-                      className="music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer disabled:opacity-50"
-                      onClick={() => { void handleSyncYouTube(false); }}
-                      disabled={loadingYouTube}
-                    >
-                      {loadingYouTube ? "Syncing…" : "Sync Playlists"}
-                    </button>
-                  ) : null}
                   <button
                     type="button"
                     className={googleToken ? "music-account-card__disconnect text-[11px] text-text-muted hover:text-foreground underline cursor-pointer" : "music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer"}
@@ -301,6 +391,33 @@ export function LoFiPlayer() {
                   </button>
                 </div>
               </div>
+
+              {googleToken && (
+                <div className="flex items-center gap-1 mt-2.5 pt-2 border-t border-border-subtle/60 text-xs">
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "liked" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
+                    onClick={() => { setYtSubView("liked"); if (youtubeSongs.length === 0) void handleSyncLikedSongs(); }}
+                  >
+                    Liked Songs
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "playlists" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
+                    onClick={() => { setYtSubView("playlists"); if (youtubePlaylists.length === 0) void handleSyncYouTube(false); }}
+                  >
+                    Playlists
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "history" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
+                    onClick={() => setYtSubView("history")}
+                  >
+                    History {heardHistory.length > 0 ? `(${heardHistory.length})` : ""}
+                  </button>
+                </div>
+              )}
+
               {youtubeStatus && (
                 <div className="mt-2 pt-2 border-t border-border-subtle/60 flex items-center justify-between gap-2">
                   <p className="text-[11px] text-text-muted leading-tight flex-1">{youtubeStatus}</p>
@@ -315,19 +432,158 @@ export function LoFiPlayer() {
                   )}
                 </div>
               )}
-              {youtubePlaylists.length > 0 && (
-                <div className="music-playlist-list mt-2.5 flex flex-col gap-1.5 max-h-36 overflow-y-auto" aria-label="YouTube Music Playlists">
-                  {youtubePlaylists.map((pl) => (
+
+              {/* Sub-view: Liked Songs */}
+              {googleToken && ytSubView === "liked" && (
+                <div className="mt-2.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">Songs You Liked ({youtubeSongs.length})</span>
                     <button
-                      key={pl.id}
                       type="button"
-                      className="music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors"
-                      onClick={() => handleSelectYouTubePlaylist(pl)}
+                      className="text-[10px] text-accent font-semibold hover:underline cursor-pointer"
+                      onClick={() => { void handleSyncLikedSongs(); }}
+                      disabled={loadingSongs}
                     >
-                      <span className="music-playlist-item__title text-xs text-foreground truncate max-w-[14rem]">{pl.title}</span>
-                      <small className="music-playlist-item__meta text-[10px] text-text-muted font-mono shrink-0 ml-2">{pl.itemCount} tracks</small>
+                      {loadingSongs ? "Loading…" : "Sync Songs"}
                     </button>
-                  ))}
+                  </div>
+                  {youtubeSongs.length > 0 ? (
+                    <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="Liked Songs">
+                      {youtubeSongs.map((song) => (
+                        <button
+                          key={song.id}
+                          type="button"
+                          className="music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors"
+                          onClick={() => handlePlaySong(song)}
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <span className="music-playlist-item__title text-xs text-foreground block truncate">{song.title}</span>
+                            {song.artist && <small className="text-[10px] text-text-muted block truncate">{song.artist}</small>}
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-accent shrink-0">Play</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : !loadingSongs ? (
+                    <p className="text-[11px] text-text-muted py-2 text-center">Click "Sync Songs" to load the songs you liked on YouTube.</p>
+                  ) : (
+                    <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Loading your liked songs…</p>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-view: Playlists */}
+              {googleToken && ytSubView === "playlists" && (
+                <div className="mt-2.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">Playlists ({youtubePlaylists.length})</span>
+                    <button
+                      type="button"
+                      className="text-[10px] text-accent font-semibold hover:underline cursor-pointer"
+                      onClick={() => { void handleSyncYouTube(false); }}
+                      disabled={loadingYouTube}
+                    >
+                      {loadingYouTube ? "Loading…" : "Sync Playlists"}
+                    </button>
+                  </div>
+                  {youtubePlaylists.length > 0 ? (
+                    <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="YouTube Music Playlists">
+                      {youtubePlaylists.map((pl) => {
+                        const isExpanded = expandedPlaylistId === pl.id;
+                        const tracks = playlistTracks[pl.id] || [];
+                        const isLoadingTracks = loadingPlaylistTracks === pl.id;
+                        return (
+                          <div key={pl.id} className="border border-border-subtle rounded-md bg-surface-primary/30 p-1.5 flex flex-col gap-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                className="text-left min-w-0 flex-1 cursor-pointer"
+                                onClick={() => handleSelectYouTubePlaylist(pl)}
+                              >
+                                <span className="music-playlist-item__title text-xs font-medium text-foreground block truncate">{pl.title}</span>
+                                <small className="music-playlist-item__meta text-[10px] text-text-muted font-mono">{pl.itemCount} tracks • Play All</small>
+                              </button>
+                              <button
+                                type="button"
+                                className="text-[10px] px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-text-muted hover:text-foreground shrink-0 cursor-pointer"
+                                onClick={() => { void handleToggleExpandPlaylist(pl.id); }}
+                              >
+                                {isExpanded ? "Hide Songs" : "Songs"}
+                              </button>
+                            </div>
+                            {isExpanded && (
+                              <div className="mt-1 pl-2 border-l border-border-subtle flex flex-col gap-1">
+                                {isLoadingTracks ? (
+                                  <p className="text-[10px] text-text-muted py-1 animate-pulse">Loading tracks…</p>
+                                ) : tracks.length > 0 ? (
+                                  tracks.map((track) => (
+                                    <button
+                                      key={track.id}
+                                      type="button"
+                                      className="flex items-center justify-between p-1 rounded hover:bg-surface-hover text-left cursor-pointer"
+                                      onClick={() => handlePlaySong(track)}
+                                    >
+                                      <span className="text-[11px] text-foreground truncate max-w-[13rem]">{track.title}</span>
+                                      <span className="text-[9px] text-accent font-bold">Play</span>
+                                    </button>
+                                  ))
+                                ) : (
+                                  <p className="text-[10px] text-text-muted py-1">No tracks found.</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : !loadingYouTube ? (
+                    <p className="text-[11px] text-text-muted py-2 text-center">Click "Sync Playlists" to load your YouTube playlists.</p>
+                  ) : (
+                    <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Loading playlists…</p>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-view: Song Heard History */}
+              {googleToken && ytSubView === "history" && (
+                <div className="mt-2.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">Recently Heard ({heardHistory.length})</span>
+                    {heardHistory.length > 0 && (
+                      <button
+                        type="button"
+                        className="text-[10px] text-text-muted hover:text-rose-400 font-semibold cursor-pointer"
+                        onClick={() => setHeardHistory([])}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {heardHistory.length > 0 ? (
+                    <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="Heard History">
+                      {heardHistory.map((item) => (
+                        <button
+                          key={item.id + item.playedAt}
+                          type="button"
+                          className="music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors"
+                          onClick={() => {
+                            const embed: MusicEmbed = { provider: item.provider, sourceUrl: item.sourceUrl, embedUrl: item.embedUrl };
+                            setActiveEmbed(embed);
+                            setEnabled(false);
+                            recordHeardTrack(item.title, item.provider, item.sourceUrl, item.embedUrl, item.artist);
+                          }}
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <span className="music-playlist-item__title text-xs text-foreground block truncate">{item.title}</span>
+                            <small className="text-[10px] text-text-muted block truncate font-mono uppercase">{item.provider} • {new Date(item.playedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-accent shrink-0">Replay</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-text-muted py-2 text-center">No songs heard yet. Play any song or playlist to start your history!</p>
+                  )}
                 </div>
               )}
             </div>

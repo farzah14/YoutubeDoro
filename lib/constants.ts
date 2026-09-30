@@ -6,6 +6,7 @@ export const KEYS = {
   lofiMuted: "ytdoro:lofi:muted",
   savedMusicEmbeds: "ytdoro:parity:v1:saved-music-embeds",
   activeMusicEmbed: "ytdoro:parity:v1:active-music-embed",
+  heardMusicHistory: "ytdoro:parity:v1:heard-music-history",
   soundscapeMix: "ytdoro:parity:v1:soundscape-mix",
   soundscapePaused: "ytdoro:parity:v1:soundscape-paused",
   savedBreakVideos: "ytdoro:savedBreakVideos",
