@@ -1,11 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  getYouTubeLikedMusicPlaylist,
   youtubePlaylistToMusicEmbed,
   youtubeSongToMusicEmbed,
   type YouTubePlaylistSummary,
   type YouTubeSongSummary,
 } from "../lib/youtubeMusicApi.ts";
+
+test("getYouTubeLikedMusicPlaylist returns official YouTube Music Liked Music LM playlist", () => {
+  const lm = getYouTubeLikedMusicPlaylist();
+  assert.equal(lm.id, "LM");
+  assert.match(lm.title, /Musik yang Disukai/);
+  assert.equal(lm.externalUrl, "https://music.youtube.com/playlist?list=LM");
+  assert.equal(lm.embedUrl, "https://www.youtube-nocookie.com/embed/videoseries?list=LM");
+
+  const embed = youtubePlaylistToMusicEmbed(lm);
+  assert.equal(embed.provider, "youtube");
+  assert.equal(embed.sourceUrl, "https://music.youtube.com/playlist?list=LM");
+  assert.equal(embed.embedUrl, "https://www.youtube-nocookie.com/embed/videoseries?list=LM");
+});
 
 test("youtubeSongToMusicEmbed converts a YouTube song summary into a valid MusicEmbed", () => {
   const song: YouTubeSongSummary = {

@@ -165,10 +165,73 @@ export interface FetchYouTubeSongsResult {
   errorMessage?: string;
 }
 
-export async function fetchGoogleYouTubeLikedVideos(accessToken: string): Promise<FetchYouTubeSongsResult> {
+export function getYouTubeLikedMusicPlaylist(): YouTubePlaylistSummary {
+  return {
+    id: "LM",
+    title: "Musik yang Disukai (Liked Music)",
+    itemCount: 0,
+    externalUrl: "https://music.youtube.com/playlist?list=LM",
+    embedUrl: "https://www.youtube-nocookie.com/embed/videoseries?list=LM",
+  };
+}
+
+export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOnly = true): Promise<FetchYouTubeSongsResult> {
+  // Step 1: Attempt to load the official YouTube Music "Liked Music" playlist (ID: LM)
+  try {
+    const lmUrl = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
+    lmUrl.searchParams.set("part", "snippet");
+    lmUrl.searchParams.set("playlistId", "LM");
+    lmUrl.searchParams.set("maxResults", "50");
+
+    const lmRes = await fetch(lmUrl.toString(), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (lmRes.ok) {
+      const lmData = await lmRes.json();
+      const lmItems = Array.isArray(lmData.items) ? lmData.items : [];
+      if (lmItems.length > 0) {
+        const songs: YouTubeSongSummary[] = lmItems
+          .filter((item: Record<string, unknown>) => {
+            const snippet = item?.snippet as Record<string, unknown> | undefined;
+            const resourceId = snippet?.resourceId as Record<string, unknown> | undefined;
+            return typeof resourceId?.videoId === "string";
+          })
+          .map((item: {
+            snippet?: {
+              title?: string;
+              videoOwnerChannelTitle?: string;
+              channelTitle?: string;
+              resourceId?: { videoId?: string };
+              thumbnails?: { medium?: { url?: string }; default?: { url?: string } };
+            };
+          }) => {
+            const id = item.snippet?.resourceId?.videoId || "";
+            const title = item.snippet?.title || "Untitled track";
+            const artist = item.snippet?.videoOwnerChannelTitle || item.snippet?.channelTitle || "";
+            const thumbnailUrl = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
+            return {
+              id,
+              title,
+              artist,
+              thumbnailUrl,
+              externalUrl: `https://music.youtube.com/watch?v=${id}`,
+              embedUrl: `https://www.youtube-nocookie.com/embed/${id}`,
+            };
+          });
+
+        return { songs };
+      }
+    }
+  } catch {}
+
+  // Step 2: Fallback to videos.list(myRating=like) with strict Music category filtering
   try {
     const url = new URL("https://www.googleapis.com/youtube/v3/videos");
-    url.searchParams.set("part", "snippet,contentDetails");
+    url.searchParams.set("part", "snippet,contentDetails,topicDetails");
     url.searchParams.set("myRating", "like");
     url.searchParams.set("maxResults", "50");
 
@@ -203,7 +266,23 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string): Promis
     const items = Array.isArray(data.items) ? data.items : [];
 
     const songs: YouTubeSongSummary[] = items
-      .filter((item: Record<string, unknown>) => item && typeof item.id === "string")
+      .filter((item: Record<string, unknown>) => {
+        if (!item || typeof item.id !== "string") return false;
+        if (!musicOnly) return true;
+
+        const snippet = item.snippet as Record<string, unknown> | undefined;
+        const topicDetails = item.topicDetails as Record<string, unknown> | undefined;
+        const categoryId = snippet?.categoryId;
+        const channelTitle = typeof snippet?.channelTitle === "string" ? snippet.channelTitle : "";
+        const topicCategories = Array.isArray(topicDetails?.topicCategories) ? (topicDetails.topicCategories as string[]) : [];
+
+        // Category 10 = Music on YouTube
+        const isMusicCategory = categoryId === "10";
+        const hasMusicTopic = topicCategories.some((cat) => typeof cat === "string" && cat.toLowerCase().includes("music"));
+        const isTopicChannel = channelTitle.endsWith(" - Topic") || channelTitle.toLowerCase().includes("records") || channelTitle.toLowerCase().includes("vevo");
+
+        return isMusicCategory || hasMusicTopic || isTopicChannel;
+      })
       .map((item: {
         id: string;
         snippet?: {

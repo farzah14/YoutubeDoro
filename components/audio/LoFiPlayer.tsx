@@ -24,6 +24,7 @@ import {
   fetchGoogleYouTubePlaylists,
   fetchGoogleYouTubePlaylistsResult,
   getGoogleProviderToken,
+  getYouTubeLikedMusicPlaylist,
   requestGoogleYouTubeAccess,
   youtubePlaylistToMusicEmbed,
   youtubeSongToMusicEmbed,
@@ -503,7 +504,10 @@ export function LoFiPlayer() {
               {googleToken && ytSubView === "liked" && (
                 <div className="mt-2.5">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">Songs You Liked ({youtubeSongs.length})</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">YouTube Music Songs ({youtubeSongs.length})</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-secondary border border-border-subtle text-text-muted font-medium">Music Only</span>
+                    </div>
                     <button
                       type="button"
                       className="text-[10px] text-accent font-semibold hover:underline cursor-pointer"
@@ -531,9 +535,9 @@ export function LoFiPlayer() {
                       ))}
                     </div>
                   ) : !loadingSongs ? (
-                    <p className="text-[11px] text-text-muted py-2 text-center">Click "Sync Songs" to load the songs you liked on YouTube.</p>
+                    <p className="text-[11px] text-text-muted py-2 text-center">Click &quot;Sync Songs&quot; to load your YouTube Music liked songs.</p>
                   ) : (
-                    <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Loading your liked songs…</p>
+                    <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Loading your YouTube Music songs…</p>
                   )}
                 </div>
               )}
@@ -541,6 +545,26 @@ export function LoFiPlayer() {
               {/* Sub-view: Playlists */}
               {googleToken && ytSubView === "playlists" && (
                 <div className="mt-2.5">
+                  {/* Featured YouTube Music Auto-Playlist: Musik yang Disukai */}
+                  <div className="border border-red-500/30 bg-red-500/10 rounded-md p-2 mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-6 h-6 rounded flex items-center justify-center bg-red-500/20 text-red-500 shrink-0" aria-hidden="true">
+                        <YouTubeIcon className="w-3.5 h-3.5" />
+                      </span>
+                      <div className="min-w-0">
+                        <strong className="text-xs font-semibold text-foreground block truncate">Musik yang Disukai</strong>
+                        <span className="text-[10px] text-text-muted block truncate">Official YouTube Music Liked Auto-Playlist</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-[10px] font-bold px-2.5 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors shrink-0 cursor-pointer"
+                      onClick={() => handleSelectYouTubePlaylist(getYouTubeLikedMusicPlaylist())}
+                    >
+                      Play
+                    </button>
+                  </div>
+
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">Playlists ({youtubePlaylists.length})</span>
                     <button
