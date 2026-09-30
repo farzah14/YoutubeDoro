@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  decodeHtmlEntities,
   getYouTubeLikedMusicPlaylist,
   youtubePlaylistToMusicEmbed,
   youtubeSongToMusicEmbed,
@@ -27,7 +28,7 @@ test("youtubeSongToMusicEmbed converts a YouTube song summary into a valid Music
     title: "lofi hip hop radio - beats to relax/study to",
     artist: "Lofi Girl",
     externalUrl: "https://music.youtube.com/watch?v=jfKfPfyJRdk",
-    embedUrl: "https://www.youtube-nocookie.com/embed/jfKfPfyJRdk",
+    embedUrl: "https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1&enablejsapi=1",
   };
 
   const embed = youtubeSongToMusicEmbed(song);
@@ -49,4 +50,11 @@ test("youtubePlaylistToMusicEmbed converts a playlist into videoseries embed", (
   assert.equal(embed.provider, "youtube");
   assert.equal(embed.sourceUrl, playlist.externalUrl);
   assert.equal(embed.embedUrl, playlist.embedUrl);
+});
+
+test("decodeHtmlEntities correctly decodes entities in song titles and artists", () => {
+  assert.equal(decodeHtmlEntities("Tom &amp; Jerry"), "Tom & Jerry");
+  assert.equal(decodeHtmlEntities("Don&#39;t Stop"), "Don't Stop");
+  assert.equal(decodeHtmlEntities("&quot;Hello&quot;"), '"Hello"');
+  assert.equal(decodeHtmlEntities("Rock &lt;Pop&gt;"), "Rock <Pop>");
 });

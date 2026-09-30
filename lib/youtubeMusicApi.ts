@@ -210,8 +210,8 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
             };
           }) => {
             const id = item.snippet?.resourceId?.videoId || "";
-            const title = item.snippet?.title || "Untitled track";
-            const artist = item.snippet?.videoOwnerChannelTitle || item.snippet?.channelTitle || "";
+            const title = decodeHtmlEntities(item.snippet?.title || "Untitled track");
+            const artist = decodeHtmlEntities(item.snippet?.videoOwnerChannelTitle || item.snippet?.channelTitle || "");
             const thumbnailUrl = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
             return {
               id,
@@ -219,7 +219,7 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
               artist,
               thumbnailUrl,
               externalUrl: `https://music.youtube.com/watch?v=${id}`,
-              embedUrl: `https://www.youtube-nocookie.com/embed/${id}`,
+              embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`,
             };
           });
 
@@ -295,11 +295,11 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
         };
       }) => {
         const id = item.id;
-        const title = item.snippet?.title || "Untitled song";
-        const artist = item.snippet?.channelTitle || "";
+        const title = decodeHtmlEntities(item.snippet?.title || "Untitled song");
+        const artist = decodeHtmlEntities(item.snippet?.channelTitle || "");
         const thumbnailUrl = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
         const externalUrl = `https://music.youtube.com/watch?v=${id}`;
-        const embedUrl = `https://www.youtube-nocookie.com/embed/${id}`;
+        const embedUrl = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`;
 
         return {
           id,
@@ -362,11 +362,11 @@ export async function fetchGoogleYouTubePlaylistItems(accessToken: string, playl
         };
       }) => {
         const id = item.snippet?.resourceId?.videoId || "";
-        const title = item.snippet?.title || "Untitled track";
-        const artist = item.snippet?.videoOwnerChannelTitle || item.snippet?.channelTitle || "";
+        const title = decodeHtmlEntities(item.snippet?.title || "Untitled track");
+        const artist = decodeHtmlEntities(item.snippet?.videoOwnerChannelTitle || item.snippet?.channelTitle || "");
         const thumbnailUrl = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
         const externalUrl = `https://music.youtube.com/watch?v=${id}`;
-        const embedUrl = `https://www.youtube-nocookie.com/embed/${id}`;
+        const embedUrl = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`;
 
         return {
           id,
@@ -379,5 +379,126 @@ export async function fetchGoogleYouTubePlaylistItems(accessToken: string, playl
       });
   } catch {
     return [];
+  }
+}
+
+export function decodeHtmlEntities(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+}
+
+export interface SearchYouTubeSongsResult {
+  songs: YouTubeSongSummary[];
+  error?: "EXPIRED_TOKEN" | "INSUFFICIENT_SCOPE" | "API_DISABLED" | "FETCH_ERROR";
+  errorMessage?: string;
+}
+
+export async function searchGoogleYouTubeMusic(
+  query: string,
+  accessToken: string
+): Promise<SearchYouTubeSongsResult> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return { songs: [] };
+  }
+
+  try {
+    const url = new URL("https://www.googleapis.com/youtube/v3/search");
+    url.searchParams.set("part", "snippet");
+    url.searchParams.set("q", trimmed);
+    url.searchParams.set("type", "video");
+    url.searchParams.set("videoCategoryId", "10"); // Music Category on YouTube
+    url.searchParams.set("maxResults", "25");
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      const errorJson = await res.json().catch(() => null);
+      const rawMessage =
+        errorJson &&
+        typeof errorJson === "object" &&
+        "error" in errorJson &&
+        typeof (errorJson as Record<string, unknown>).error === "object" &&
+        (errorJson.error as Record<string, unknown>)?.message
+          ? String((errorJson.error as Record<string, unknown>).message)
+          : res.statusText;
+
+      let errorType: SearchYouTubeSongsResult["error"] = "FETCH_ERROR";
+      if (res.status === 401) {
+        errorType = "EXPIRED_TOKEN";
+      } else if (
+        rawMessage.toLowerCase().includes("not enabled") ||
+        rawMessage.toLowerCase().includes("has not been used")
+      ) {
+        errorType = "API_DISABLED";
+      } else if (
+        res.status === 403 ||
+        rawMessage.toLowerCase().includes("insufficient") ||
+        rawMessage.toLowerCase().includes("permission")
+      ) {
+        errorType = "INSUFFICIENT_SCOPE";
+      }
+
+      return {
+        songs: [],
+        error: errorType,
+        errorMessage: rawMessage,
+      };
+    }
+
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    const songs: YouTubeSongSummary[] = items
+      .filter((item: Record<string, unknown>) => {
+        const idObj = item?.id as Record<string, unknown> | undefined;
+        return typeof idObj?.videoId === "string" && idObj.videoId.length > 0;
+      })
+      .map((item: {
+        id?: { videoId?: string };
+        snippet?: {
+          title?: string;
+          channelTitle?: string;
+          thumbnails?: {
+            medium?: { url?: string };
+            default?: { url?: string };
+          };
+        };
+      }) => {
+        const id = item.id?.videoId || "";
+        const title = decodeHtmlEntities(item.snippet?.title || "Untitled song");
+        const artist = decodeHtmlEntities(item.snippet?.channelTitle || "");
+        const thumbnailUrl =
+          item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url;
+
+        return {
+          id,
+          title,
+          artist,
+          thumbnailUrl,
+          externalUrl: `https://music.youtube.com/watch?v=${id}`,
+          embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1`,
+        };
+      });
+
+    return { songs };
+  } catch (err) {
+    return {
+      songs: [],
+      error: "FETCH_ERROR",
+      errorMessage: err instanceof Error ? err.message : "Network error contacting YouTube API",
+    };
   }
 }

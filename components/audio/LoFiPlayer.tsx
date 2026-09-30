@@ -26,6 +26,7 @@ import {
   getGoogleProviderToken,
   getYouTubeLikedMusicPlaylist,
   requestGoogleYouTubeAccess,
+  searchGoogleYouTubeMusic,
   youtubePlaylistToMusicEmbed,
   youtubeSongToMusicEmbed,
   type YouTubePlaylistSummary,
@@ -41,6 +42,23 @@ interface MinimalYTPlayer {
   setVolume: (volume: number) => void;
 }
 
+const getAutoplayUrl = (url: string) => {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    if (!parsed.searchParams.has("autoplay")) {
+      parsed.searchParams.set("autoplay", "1");
+    }
+    if (!parsed.searchParams.has("enablejsapi")) {
+      parsed.searchParams.set("enablejsapi", "1");
+    }
+    return parsed.toString();
+  } catch {
+    const sep = url.includes("?") ? "&" : "?";
+    return url.includes("autoplay=") ? url : `${url}${sep}autoplay=1&enablejsapi=1`;
+  }
+};
+
 export function MusicEngine() {
   const [enabled] = useLocalStorage(KEYS.isLoFiEnabled, false);
   const [stationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
@@ -48,6 +66,7 @@ export function MusicEngine() {
   const [muted] = useLocalStorage(KEYS.lofiMuted, false);
   const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
   const [isMinimized, setIsMinimized] = useLocalStorage("ytdoro:music:player-minimized", true);
+  const [activeSongTitle] = useLocalStorage<string>("ytdoro:music:active-title", "");
   const playerRef = useRef<MinimalYTPlayer | null>(null);
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
 
@@ -81,7 +100,8 @@ export function MusicEngine() {
         >
           <div className="music-provider-player__iframe-wrap">
             <iframe
-              src={activeEmbed.embedUrl}
+              key={activeEmbed.embedUrl}
+              src={getAutoplayUrl(activeEmbed.embedUrl)}
               title={`${activeEmbed.provider} music player`}
               sandbox="allow-scripts allow-same-origin allow-presentation"
               allow="autoplay; encrypted-media; picture-in-picture"
@@ -95,7 +115,7 @@ export function MusicEngine() {
                 type="button"
                 className="music-provider-badge__icon-btn"
                 onClick={() => setIsMinimized(false)}
-                title={`Click to expand ${activeEmbed.provider} player`}
+                title={`Click to expand: ${activeSongTitle || activeEmbed.provider}`}
                 aria-label={`Expand ${activeEmbed.provider} player`}
               >
                 <span className="music-provider-badge__icon" aria-hidden="true">
@@ -106,7 +126,7 @@ export function MusicEngine() {
                   )}
                 </span>
                 <span className="music-provider-badge__pulse" aria-hidden="true" />
-                <span className="music-provider-badge__label">{activeEmbed.provider}</span>
+                <span className="music-provider-badge__label">{activeSongTitle || activeEmbed.provider}</span>
               </button>
               <button
                 type="button"
@@ -126,7 +146,7 @@ export function MusicEngine() {
                 ) : (
                   <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
                 )}
-                <span>{activeEmbed.provider} player</span>
+                <span className="truncate max-w-[15rem]">{activeSongTitle || `${activeEmbed.provider} player`}</span>
               </div>
               <div className="music-provider-player__actions">
                 <button
@@ -187,17 +207,24 @@ export function LoFiPlayer() {
   const [customClientId, setCustomClientId] = useState("");
   const [showSpotifySetup, setShowSpotifySetup] = useState(false);
 
+  const [activeSongTitle, setActiveSongTitle] = useLocalStorage<string>("ytdoro:music:active-title", "");
+  const [activeSongArtist, setActiveSongArtist] = useLocalStorage<string>("ytdoro:music:active-artist", "");
+
   // YouTube / Google state
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [youtubePlaylists, setYoutubePlaylists] = useState<YouTubePlaylistSummary[]>([]);
   const [youtubeSongs, setYoutubeSongs] = useState<YouTubeSongSummary[]>([]);
-  const [ytSubView, setYtSubView] = useState<"liked" | "playlists" | "history">("liked");
+  const [ytSubView, setYtSubView] = useState<"liked" | "search" | "playlists" | "history">("liked");
   const [loadingYouTube, setLoadingYouTube] = useState(false);
   const [loadingSongs, setLoadingSongs] = useState(false);
   const [youtubeStatus, setYoutubeStatus] = useState<string>("");
   const [expandedPlaylistId, setExpandedPlaylistId] = useState<string | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<Record<string, YouTubeSongSummary[]>>({});
   const [loadingPlaylistTracks, setLoadingPlaylistTracks] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<YouTubeSongSummary[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -269,6 +296,8 @@ export function LoFiPlayer() {
   const handleSelectSpotifyPlaylist = (playlist: SpotifyPlaylistSummary) => {
     const embed = playlistToMusicEmbed(playlist);
     setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
+    setActiveSongTitle(playlist.name);
+    setActiveSongArtist("Spotify");
     setActiveEmbed(embed);
     setEnabled(false);
     recordHeardTrack(playlist.name, "spotify", playlist.externalUrl, playlist.embedUrl);
@@ -342,12 +371,46 @@ export function LoFiPlayer() {
     }
   };
 
+  const executeSearch = async (queryText: string) => {
+    const trimmed = queryText.trim();
+    if (!trimmed) return;
+    setIsSearching(true);
+    setSearchError("");
+    const token = googleToken || (await getGoogleProviderToken());
+    if (!token) {
+      setIsSearching(false);
+      setSearchError("Google account required to search YouTube Music. Connect Google above.");
+      return;
+    }
+    const result = await searchGoogleYouTubeMusic(trimmed, token);
+    setIsSearching(false);
+    if (result.error) {
+      if (result.error === "API_DISABLED") {
+        setSearchError("YouTube Data API v3 is not enabled in your Google Cloud Project.");
+      } else {
+        setSearchError(result.errorMessage || "Search request failed. Please try again.");
+      }
+      return;
+    }
+    setSearchResults(result.songs);
+    if (result.songs.length === 0) {
+      setSearchError(`No songs found matching "${trimmed}".`);
+    }
+  };
+
+  const handleSearchSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    void executeSearch(searchQuery);
+  };
+
   const handlePlaySong = (song: YouTubeSongSummary) => {
     const embed = youtubeSongToMusicEmbed(song);
     setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
+    setActiveSongTitle(song.title);
+    setActiveSongArtist(song.artist || "YouTube Music");
     setActiveEmbed(embed);
     setEnabled(false);
-    recordHeardTrack(song.title, "youtube", song.externalUrl, song.embedUrl, song.artist);
+    recordHeardTrack(song.title, "youtube", song.externalUrl, embed.embedUrl, song.artist);
   };
 
   const handleToggleExpandPlaylist = async (playlistId: string) => {
@@ -369,9 +432,11 @@ export function LoFiPlayer() {
   const handleSelectYouTubePlaylist = (playlist: YouTubePlaylistSummary) => {
     const embed = youtubePlaylistToMusicEmbed(playlist);
     setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
+    setActiveSongTitle(playlist.title);
+    setActiveSongArtist("YouTube Music");
     setActiveEmbed(embed);
     setEnabled(false);
-    recordHeardTrack(playlist.title, "youtube", playlist.externalUrl, playlist.embedUrl);
+    recordHeardTrack(playlist.title, "youtube", playlist.externalUrl, embed.embedUrl);
   };
 
   const saveProvider = (event: FormEvent) => {
@@ -391,6 +456,8 @@ export function LoFiPlayer() {
   const selectStation = (id: string) => {
     setStationId(id);
     setActiveEmbed(null);
+    setActiveSongTitle("");
+    setActiveSongArtist("");
     setEnabled(true);
   };
 
@@ -398,10 +465,10 @@ export function LoFiPlayer() {
     <div className="audio-panel music-panel music-shelf">
       <header className="music-shelf__header">
         <div>
-          <h3>{activeEmbed ? activeEmbed.provider : station.name}</h3>
-          <p className="music-shelf__now-playing">{activeEmbed ? "External provider" : station.genre}</p>
+          <h3>{activeSongTitle || (activeEmbed ? activeEmbed.provider : station.name)}</h3>
+          <p className="music-shelf__now-playing">{activeSongArtist || (activeEmbed ? "External provider" : station.genre)}</p>
         </div>
-        <span className="music-shelf__state">{activeEmbed ? "ON AIR / Provider" : enabled ? "ON AIR" : "Standby"}</span>
+        <span className="music-shelf__state">{activeEmbed ? "ON AIR / Playing" : enabled ? "ON AIR" : "Standby"}</span>
       </header>
 
       <div className="music-shelf__tabs" role="tablist" aria-label="Music sources">
@@ -470,6 +537,13 @@ export function LoFiPlayer() {
                   </button>
                   <button
                     type="button"
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "search" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
+                    onClick={() => setYtSubView("search")}
+                  >
+                    Search
+                  </button>
+                  <button
+                    type="button"
                     className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "playlists" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
                     onClick={() => { setYtSubView("playlists"); if (youtubePlaylists.length === 0) void handleSyncYouTube(false); }}
                   >
@@ -519,25 +593,115 @@ export function LoFiPlayer() {
                   </div>
                   {youtubeSongs.length > 0 ? (
                     <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="Liked Songs">
-                      {youtubeSongs.map((song) => (
-                        <button
-                          key={song.id}
-                          type="button"
-                          className="music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors"
-                          onClick={() => handlePlaySong(song)}
-                        >
-                          <div className="min-w-0 flex-1 pr-2">
-                            <span className="music-playlist-item__title text-xs text-foreground block truncate">{song.title}</span>
-                            {song.artist && <small className="text-[10px] text-text-muted block truncate">{song.artist}</small>}
-                          </div>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-accent shrink-0">Play</span>
-                        </button>
-                      ))}
+                      {youtubeSongs.map((song) => {
+                        const isCurrentPlaying = activeEmbed?.sourceUrl === song.externalUrl;
+                        return (
+                          <button
+                            key={song.id}
+                            type="button"
+                            className={`music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors ${isCurrentPlaying ? "border-accent ring-1 ring-accent/30" : ""}`}
+                            onClick={() => handlePlaySong(song)}
+                          >
+                            <div className="min-w-0 flex-1 pr-2">
+                              <span className="music-playlist-item__title text-xs text-foreground block truncate">{song.title}</span>
+                              {song.artist && <small className="text-[10px] text-text-muted block truncate">{song.artist}</small>}
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-accent shrink-0">
+                              {isCurrentPlaying ? "Playing" : "Play"}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : !loadingSongs ? (
                     <p className="text-[11px] text-text-muted py-2 text-center">Click &quot;Sync Songs&quot; to load your YouTube Music liked songs.</p>
                   ) : (
                     <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Loading your YouTube Music songs…</p>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-view: Search */}
+              {googleToken && ytSubView === "search" && (
+                <div className="mt-2.5">
+                  <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5 mb-2">
+                    <input
+                      type="search"
+                      placeholder="Search songs, artists on YouTube Music…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="flex-1 bg-surface-primary border border-border-subtle rounded-md px-2.5 py-1 text-xs text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSearching || !searchQuery.trim()}
+                      className="px-3 py-1 rounded-md bg-accent text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer shrink-0 transition-opacity"
+                    >
+                      {isSearching ? "Searching…" : "Search"}
+                    </button>
+                  </form>
+
+                  {searchResults.length === 0 && !isSearching && (
+                    <div className="flex flex-col gap-2 py-2">
+                      <span className="text-[10px] text-text-muted uppercase font-bold tracking-wider">Quick Suggestions</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {["Lofi Hip Hop Study", "Anime Chill Piano", "Midnight Focus Lofi", "Indie Chill Vibes", "Coffee Shop Ambient"].map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            className="text-[11px] px-2 py-0.5 rounded-full bg-surface-primary border border-border-subtle text-text-muted hover:text-foreground hover:border-accent cursor-pointer transition-colors"
+                            onClick={() => {
+                              setSearchQuery(tag);
+                              void executeSearch(tag);
+                            }}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {searchError && (
+                    <p className="text-[11px] text-red-400 py-1.5 text-center">{searchError}</p>
+                  )}
+
+                  {isSearching && (
+                    <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Searching YouTube Music…</p>
+                  )}
+
+                  {searchResults.length > 0 && (
+                    <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="Search Results">
+                      {searchResults.map((song) => {
+                        const isCurrentPlaying = activeEmbed?.sourceUrl === song.externalUrl;
+                        return (
+                          <button
+                            key={song.id}
+                            type="button"
+                            className={`music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors ${isCurrentPlaying ? "border-accent ring-1 ring-accent/30" : ""}`}
+                            onClick={() => handlePlaySong(song)}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                              {song.thumbnailUrl && (
+                                <img
+                                  src={song.thumbnailUrl}
+                                  alt=""
+                                  className="w-8 h-8 rounded object-cover shrink-0 bg-surface-secondary"
+                                  loading="lazy"
+                                />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <span className="music-playlist-item__title text-xs text-foreground block truncate">{song.title}</span>
+                                {song.artist && <small className="text-[10px] text-text-muted block truncate">{song.artist}</small>}
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-accent shrink-0">
+                              {isCurrentPlaying ? "Playing" : "Play"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}

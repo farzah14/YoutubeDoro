@@ -3404,7 +3404,7 @@ textarea:focus-visible,
   position: fixed;
   bottom: 5.8rem;
   left: 1rem;
-  z-index: 45;
+  z-index: 70;
   transition: all 200ms ease;
 }
 
@@ -3482,17 +3482,18 @@ textarea:focus-visible,
 }
 
 .music-provider-player--minimized .music-provider-player__iframe-wrap {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 320px;
+  height: 180px;
   pointer-events: none;
   overflow: hidden;
 }
 
 .music-provider-player--minimized iframe {
-  width: 1px;
-  height: 1px;
+  width: 320px;
+  height: 180px;
   border: 0;
 }
 
