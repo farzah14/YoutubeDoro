@@ -1155,350 +1155,243 @@ export function LoFiPlayer() {
       )}
 
       {tab === "my-music" && (
-        <div className="music-provider-list music-shelf__provider">
-          <div className="music-accounts-grid flex flex-col gap-2.5 mb-3">
-            {/* YouTube Music Card */}
-            <div className="music-account-card border border-border-subtle rounded-lg bg-surface-secondary/70 p-3">
-              <div className="music-account-card__header flex items-center justify-between gap-3">
-                <div className="music-account-card__identity flex items-center gap-2.5 min-w-0">
-                  <span className="music-account-card__icon shrink-0 flex items-center justify-center w-7 h-7 text-red-500" aria-hidden="true">
-                    <YouTubeIcon className="w-5 h-5" />
-                  </span>
-                  <div className="flex flex-col text-left">
-                    <strong className="text-xs font-semibold text-foreground leading-tight block">YouTube Music</strong>
-                    <small className="text-[11px] text-text-muted leading-tight block mt-0.5">{googleToken ? "Google Linked" : "Connect Google"}</small>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    className={googleToken ? "music-account-card__disconnect text-[11px] text-text-muted hover:text-foreground underline cursor-pointer" : "music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer"}
-                    onClick={() => { void handleSyncYouTube(true); }}
-                    disabled={loadingYouTube}
-                  >
-                    {googleToken ? "Reconnect" : "Connect"}
-                  </button>
-                </div>
-              </div>
+        <div className="music-shelf__body">
+          <div className="music-shelf__controls">
+            <button
+              type="button"
+              className="music-shelf__primary"
+              onClick={() => {
+                if (activeEmbed?.provider === "youtube") {
+                  setActiveEmbed(null);
+                } else {
+                  const defaultList = youtubeSongs.length > 0 ? youtubeSongs : DEFAULT_YOUTUBE_SONGS;
+                  if (defaultList[0]) handlePlaySong(defaultList[0]);
+                }
+              }}
+            >
+              <MusicIcon />
+              {activeEmbed?.provider === "youtube" ? "Pause music" : "Play music"}
+            </button>
+            <button
+              type="button"
+              className="music-shelf__mute"
+              onClick={() => setMuted(!muted)}
+              aria-label={muted ? "Unmute music" : "Mute music"}
+            >
+              {muted ? <VolumeXIcon /> : <Volume2Icon />}
+            </button>
+          </div>
 
-              {googleToken && (
-                <div className="flex items-center gap-1 mt-2.5 pt-2 border-t border-border-subtle/60 text-xs">
-                  <button
-                    type="button"
-                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "liked" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
-                    onClick={() => { setYtSubView("liked"); if (youtubeSongs.length === 0) void handleSyncLikedSongs(); }}
-                  >
-                    Liked Songs
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "search" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
-                    onClick={() => setYtSubView("search")}
-                  >
-                    Search
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "playlists" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
-                    onClick={() => { setYtSubView("playlists"); if (youtubePlaylists.length === 0) void handleSyncYouTube(false); }}
-                  >
-                    Playlists
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "history" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
-                    onClick={() => setYtSubView("history")}
-                  >
-                    History {heardHistory.length > 0 ? `(${heardHistory.length})` : ""}
-                  </button>
-                </div>
-              )}
+          <label className="music-shelf__volume">
+            <span>Volume <output>{muted ? 0 : volume}%</output></span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={muted ? 0 : volume}
+              onChange={(event) => {
+                setVolume(Number(event.target.value));
+                setMuted(false);
+              }}
+            />
+          </label>
 
-              {youtubeStatus && (
-                <div className="mt-2 pt-2 border-t border-border-subtle/60 flex items-center justify-between gap-2">
-                  <p className="text-[11px] text-text-muted leading-tight flex-1">{youtubeStatus}</p>
-                  {!googleToken && (
-                    <button
-                      type="button"
-                      className="text-[11px] font-bold text-accent shrink-0 hover:underline cursor-pointer"
-                      onClick={() => { void handleSyncYouTube(true); }}
-                    >
-                      Grant Permission
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Sub-view: Liked Songs */}
-              {googleToken && ytSubView === "liked" && (
-                <div className="mt-2.5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">YouTube Music Songs ({youtubeSongs.length})</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-secondary border border-border-subtle text-text-muted font-medium">Music Only</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="text-[10px] text-accent font-semibold hover:underline cursor-pointer"
-                      onClick={() => { void handleSyncLikedSongs(); }}
-                      disabled={loadingSongs}
-                    >
-                      {loadingSongs ? "Loading…" : "Sync Songs"}
-                    </button>
-                  </div>
-                  {youtubeSongs.length > 0 ? (
-                    <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="Liked Songs">
-                      {youtubeSongs.map((song) => {
-                        const isCurrentPlaying = activeEmbed?.sourceUrl === song.externalUrl;
-                        return (
-                          <button
-                            key={song.id}
-                            type="button"
-                            className={`music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors ${isCurrentPlaying ? "border-accent ring-1 ring-accent/30" : ""}`}
-                            onClick={() => handlePlaySong(song)}
-                          >
-                            <div className="min-w-0 flex-1 pr-2">
-                              <span className="music-playlist-item__title text-xs text-foreground block truncate">{song.title}</span>
-                              {song.artist && <small className="text-[10px] text-text-muted block truncate">{song.artist}</small>}
-                            </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-accent shrink-0">
-                              {isCurrentPlaying ? "Playing" : "Play"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : !loadingSongs ? (
-                    <p className="text-[11px] text-text-muted py-2 text-center">Click &quot;Sync Songs&quot; to load your YouTube Music liked songs.</p>
-                  ) : (
-                    <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Loading your YouTube Music songs…</p>
-                  )}
-                </div>
-              )}
-
-              {/* Sub-view: Search */}
-              {googleToken && ytSubView === "search" && (
-                <div className="mt-2.5">
-                  <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5 mb-2">
-                    <input
-                      type="search"
-                      placeholder="Search songs, artists on YouTube Music…"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="flex-1 bg-surface-primary border border-border-subtle rounded-md px-2.5 py-1 text-xs text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isSearching || !searchQuery.trim()}
-                      className="px-3 py-1 rounded-md bg-accent text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer shrink-0 transition-opacity"
-                    >
-                      {isSearching ? "Searching…" : "Search"}
-                    </button>
-                  </form>
-
-                  {searchResults.length === 0 && !isSearching && (
-                    <div className="flex flex-col gap-2 py-2">
-                      <span className="text-[10px] text-text-muted uppercase font-bold tracking-wider">Quick Suggestions</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {["Lofi Hip Hop Study", "Anime Chill Piano", "Midnight Focus Lofi", "Indie Chill Vibes", "Coffee Shop Ambient"].map((tag) => (
-                          <button
-                            key={tag}
-                            type="button"
-                            className="text-[11px] px-2 py-0.5 rounded-full bg-surface-primary border border-border-subtle text-text-muted hover:text-foreground hover:border-accent cursor-pointer transition-colors"
-                            onClick={() => {
-                              setSearchQuery(tag);
-                              void executeSearch(tag);
-                            }}
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {searchError && (
-                    <p className="text-[11px] text-red-400 py-1.5 text-center">{searchError}</p>
-                  )}
-
-                  {isSearching && (
-                    <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Searching YouTube Music…</p>
-                  )}
-
-                  {searchResults.length > 0 && (
-                    <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="Search Results">
-                      {searchResults.map((song) => {
-                        const isCurrentPlaying = activeEmbed?.sourceUrl === song.externalUrl;
-                        return (
-                          <button
-                            key={song.id}
-                            type="button"
-                            className={`music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors ${isCurrentPlaying ? "border-accent ring-1 ring-accent/30" : ""}`}
-                            onClick={() => handlePlaySong(song)}
-                          >
-                            <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
-                              {song.thumbnailUrl && (
-                                <img
-                                  src={song.thumbnailUrl}
-                                  alt=""
-                                  className="w-8 h-8 rounded object-cover shrink-0 bg-surface-secondary"
-                                  loading="lazy"
-                                />
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <span className="music-playlist-item__title text-xs text-foreground block truncate">{song.title}</span>
-                                {song.artist && <small className="text-[10px] text-text-muted block truncate">{song.artist}</small>}
-                              </div>
-                            </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-accent shrink-0">
-                              {isCurrentPlaying ? "Playing" : "Play"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Sub-view: Playlists */}
-              {googleToken && ytSubView === "playlists" && (
-                <div className="mt-2.5">
-                  {/* Featured YouTube Music Auto-Playlist: Musik yang Disukai */}
-                  <div className="border border-red-500/30 bg-red-500/10 rounded-md p-2 mb-2 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-6 h-6 rounded flex items-center justify-center bg-red-500/20 text-red-500 shrink-0" aria-hidden="true">
-                        <YouTubeIcon className="w-3.5 h-3.5" />
-                      </span>
-                      <div className="min-w-0">
-                        <strong className="text-xs font-semibold text-foreground block truncate">Musik yang Disukai</strong>
-                        <span className="text-[10px] text-text-muted block truncate">Official YouTube Music Liked Auto-Playlist</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="text-[10px] font-bold px-2.5 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors shrink-0 cursor-pointer"
-                      onClick={() => handleSelectYouTubePlaylist(getYouTubeLikedMusicPlaylist())}
-                    >
-                      Play
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">Playlists ({youtubePlaylists.length})</span>
-                    <button
-                      type="button"
-                      className="text-[10px] text-accent font-semibold hover:underline cursor-pointer"
-                      onClick={() => { void handleSyncYouTube(false); }}
-                      disabled={loadingYouTube}
-                    >
-                      {loadingYouTube ? "Loading…" : "Sync Playlists"}
-                    </button>
-                  </div>
-                  {youtubePlaylists.length > 0 ? (
-                    <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="YouTube Music Playlists">
-                      {youtubePlaylists.map((pl) => {
-                        const isExpanded = expandedPlaylistId === pl.id;
-                        const tracks = playlistTracks[pl.id] || [];
-                        const isLoadingTracks = loadingPlaylistTracks === pl.id;
-                        return (
-                          <div key={pl.id} className="border border-border-subtle rounded-md bg-surface-primary/30 p-1.5 flex flex-col gap-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <button
-                                type="button"
-                                className="text-left min-w-0 flex-1 cursor-pointer"
-                                onClick={() => handleSelectYouTubePlaylist(pl)}
-                              >
-                                <span className="music-playlist-item__title text-xs font-medium text-foreground block truncate">{pl.title}</span>
-                                <small className="music-playlist-item__meta text-[10px] text-text-muted font-mono">{pl.itemCount} tracks • Play All</small>
-                              </button>
-                              <button
-                                type="button"
-                                className="text-[10px] px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-text-muted hover:text-foreground shrink-0 cursor-pointer"
-                                onClick={() => { void handleToggleExpandPlaylist(pl.id); }}
-                              >
-                                {isExpanded ? "Hide Songs" : "Songs"}
-                              </button>
-                            </div>
-                            {isExpanded && (
-                              <div className="mt-1 pl-2 border-l border-border-subtle flex flex-col gap-1">
-                                {isLoadingTracks ? (
-                                  <p className="text-[10px] text-text-muted py-1 animate-pulse">Loading tracks…</p>
-                                ) : tracks.length > 0 ? (
-                                  tracks.map((track) => (
-                                    <button
-                                      key={track.id}
-                                      type="button"
-                                      className="flex items-center justify-between p-1 rounded hover:bg-surface-hover text-left cursor-pointer"
-                                      onClick={() => handlePlaySong(track)}
-                                    >
-                                      <span className="text-[11px] text-foreground truncate max-w-[13rem]">{track.title}</span>
-                                      <span className="text-[9px] text-accent font-bold">Play</span>
-                                    </button>
-                                  ))
-                                ) : (
-                                  <p className="text-[10px] text-text-muted py-1">No tracks found.</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : !loadingYouTube ? (
-                    <p className="text-[11px] text-text-muted py-2 text-center">Click "Sync Playlists" to load your YouTube playlists.</p>
-                  ) : (
-                    <p className="text-[11px] text-text-muted py-2 text-center animate-pulse">Loading playlists…</p>
-                  )}
-                </div>
-              )}
-
-              {/* Sub-view: Song Heard History */}
-              {googleToken && ytSubView === "history" && (
-                <div className="mt-2.5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">Recently Heard ({heardHistory.length})</span>
-                    {heardHistory.length > 0 && (
-                      <button
-                        type="button"
-                        className="text-[10px] text-text-muted hover:text-rose-400 font-semibold cursor-pointer"
-                        onClick={() => setHeardHistory([])}
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                  {heardHistory.length > 0 ? (
-                    <div className="music-playlist-list flex flex-col gap-1 max-h-48 overflow-y-auto" aria-label="Heard History">
-                      {heardHistory.map((item) => (
-                        <button
-                          key={item.id + item.playedAt}
-                          type="button"
-                          className="music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors"
-                          onClick={() => {
-                            const embed: MusicEmbed = { provider: item.provider, sourceUrl: item.sourceUrl, embedUrl: item.embedUrl };
-                            setActiveSongTitle(item.title);
-                            setActiveSongArtist(item.artist || "");
-                            setActiveEmbed(embed);
-                            setEnabled(false);
-                            recordHeardTrack(item.title, item.provider, item.sourceUrl, item.embedUrl, item.artist);
-                          }}
-                        >
-                          <div className="min-w-0 flex-1 pr-2">
-                            <span className="music-playlist-item__title text-xs text-foreground block truncate">{item.title}</span>
-                            <small className="text-[10px] text-text-muted block truncate font-mono uppercase">{item.provider} • {new Date(item.playedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small>
-                          </div>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-hover border border-border-subtle text-accent shrink-0">Replay</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-text-muted py-2 text-center">No songs heard yet. Play any song or playlist to start your history!</p>
-                  )}
-                </div>
-              )}
+          <div className="flex items-center justify-between py-1 text-xs">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <YouTubeIcon className="w-3.5 h-3.5 text-red-500 shrink-0" />
+              <span className="font-semibold text-foreground text-xs truncate">
+                {googleToken ? "YouTube Music" : "YouTube Music (Default)"}
+              </span>
             </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {googleToken && ytSubView === "liked" && (
+                <button
+                  type="button"
+                  className="text-[11px] text-accent font-semibold hover:underline cursor-pointer"
+                  onClick={() => { void handleSyncLikedSongs(); }}
+                  disabled={loadingSongs}
+                >
+                  {loadingSongs ? "Syncing…" : "Sync"}
+                </button>
+              )}
+              <button
+                type="button"
+                className="text-[11px] text-accent font-semibold hover:underline cursor-pointer"
+                onClick={() => { void handleSyncYouTube(true); }}
+                disabled={loadingYouTube}
+              >
+                {googleToken ? (loadingYouTube ? "Loading…" : "Reconnect") : "Connect Google"}
+              </button>
+            </div>
+          </div>
 
+          {googleToken && (
+            <div className="flex items-center gap-1 py-1 text-xs">
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "liked" ? "bg-accent text-white" : "text-text-muted hover:text-foreground"}`}
+                onClick={() => { setYtSubView("liked"); if (youtubeSongs.length === 0) void handleSyncLikedSongs(); }}
+              >
+                Liked Songs
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "search" ? "bg-accent text-white" : "text-text-muted hover:text-foreground"}`}
+                onClick={() => setYtSubView("search")}
+              >
+                Search
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "playlists" ? "bg-accent text-white" : "text-text-muted hover:text-foreground"}`}
+                onClick={() => { setYtSubView("playlists"); if (youtubePlaylists.length === 0) void handleSyncYouTube(false); }}
+              >
+                Playlists
+              </button>
+              <button
+                type="button"
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "history" ? "bg-accent text-white" : "text-text-muted hover:text-foreground"}`}
+                onClick={() => setYtSubView("history")}
+              >
+                History {heardHistory.length > 0 ? `(${heardHistory.length})` : ""}
+              </button>
+            </div>
+          )}
+
+          {googleToken && ytSubView === "search" && (
+            <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5 my-1">
+              <input
+                type="search"
+                placeholder="Search songs on YouTube Music…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-surface-primary border border-border-subtle rounded px-2.5 py-1 text-xs text-foreground placeholder:text-text-muted focus:outline-none focus:border-accent"
+              />
+              <button
+                type="submit"
+                disabled={isSearching || !searchQuery.trim()}
+                className="px-3 py-1 rounded bg-accent text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer shrink-0"
+              >
+                {isSearching ? "…" : "Search"}
+              </button>
+            </form>
+          )}
+
+          {youtubeStatus && (
+            <p className="text-[11px] text-text-muted py-1">{youtubeStatus}</p>
+          )}
+
+          {/* Song list matching Stations design */}
+          <div className="music-shelf__list" aria-label="YouTube Music songs">
+            {(() => {
+              if (googleToken && ytSubView === "playlists") {
+                if (youtubePlaylists.length === 0) {
+                  return (
+                    <div className="py-4 text-center text-xs text-text-muted">
+                      {loadingYouTube ? "Loading playlists…" : "No playlists found. Click Reconnect to sync."}
+                    </div>
+                  );
+                }
+                return youtubePlaylists.map((pl) => {
+                  const selected = activeEmbed?.embedUrl === youtubePlaylistToMusicEmbed(pl).embedUrl;
+                  return (
+                    <button
+                      key={pl.id}
+                      type="button"
+                      aria-pressed={selected}
+                      className={selected ? "music-shelf__track is-active" : "music-shelf__track"}
+                      onClick={() => handleSelectYouTubePlaylist(pl)}
+                    >
+                      <span className="music-shelf__marker" aria-hidden="true" />
+                      <span className="music-shelf__track-copy">
+                        <strong>{pl.title}</strong>
+                        <small>{pl.itemCount} tracks • YouTube Music</small>
+                      </span>
+                      <span className="music-shelf__track-state">{selected ? "Selected" : "Choose"}</span>
+                    </button>
+                  );
+                });
+              }
+
+              if (googleToken && ytSubView === "history") {
+                if (heardHistory.length === 0) {
+                  return (
+                    <div className="py-4 text-center text-xs text-text-muted">
+                      No songs heard yet. Play any song to start your history!
+                    </div>
+                  );
+                }
+                return heardHistory.map((item) => {
+                  const selected = activeEmbed?.sourceUrl === item.sourceUrl;
+                  return (
+                    <button
+                      key={item.id + item.playedAt}
+                      type="button"
+                      aria-pressed={selected}
+                      className={selected ? "music-shelf__track is-active" : "music-shelf__track"}
+                      onClick={() => {
+                        const embed: MusicEmbed = { provider: item.provider, sourceUrl: item.sourceUrl, embedUrl: item.embedUrl };
+                        setActiveSongTitle(item.title);
+                        setActiveSongArtist(item.artist || "YouTube Music");
+                        setActiveEmbed(embed);
+                        setEnabled(false);
+                        recordHeardTrack(item.title, item.provider, item.sourceUrl, item.embedUrl, item.artist);
+                      }}
+                    >
+                      <span className="music-shelf__marker" aria-hidden="true" />
+                      <span className="music-shelf__track-copy">
+                        <strong>{item.title}</strong>
+                        <small>{item.artist || "YouTube Music"}</small>
+                      </span>
+                      <span className="music-shelf__track-state">{selected ? "Selected" : "Choose"}</span>
+                    </button>
+                  );
+                });
+              }
+
+              if (googleToken && ytSubView === "search" && searchResults.length > 0) {
+                return searchResults.map((song) => {
+                  const selected = activeEmbed?.sourceUrl === song.externalUrl;
+                  return (
+                    <button
+                      key={song.id}
+                      type="button"
+                      aria-pressed={selected}
+                      className={selected ? "music-shelf__track is-active" : "music-shelf__track"}
+                      onClick={() => handlePlaySong(song)}
+                    >
+                      <span className="music-shelf__marker" aria-hidden="true" />
+                      <span className="music-shelf__track-copy">
+                        <strong>{song.title}</strong>
+                        <small>{song.artist || "YouTube Music"}</small>
+                      </span>
+                      <span className="music-shelf__track-state">{selected ? "Selected" : "Choose"}</span>
+                    </button>
+                  );
+                });
+              }
+
+              const songList = youtubeSongs.length > 0 ? youtubeSongs : DEFAULT_YOUTUBE_SONGS;
+              return songList.map((song) => {
+                const selected = activeEmbed?.sourceUrl === song.externalUrl;
+                return (
+                  <button
+                    key={song.id}
+                    type="button"
+                    aria-pressed={selected}
+                    className={selected ? "music-shelf__track is-active" : "music-shelf__track"}
+                    onClick={() => handlePlaySong(song)}
+                  >
+                    <span className="music-shelf__marker" aria-hidden="true" />
+                    <span className="music-shelf__track-copy">
+                      <strong>{song.title}</strong>
+                      <small>{song.artist || "YouTube Music"}</small>
+                    </span>
+                    <span className="music-shelf__track-state">{selected ? "Selected" : "Choose"}</span>
+                  </button>
+                );
+              });
+            })()}
           </div>
         </div>
       )}
