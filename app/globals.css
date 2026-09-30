@@ -3651,26 +3651,28 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent !important;
+  border: 0 !important;
   border-radius: 0;
-  padding: 0.65rem 0.85rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: none !important;
+  padding: 0.25rem 0.4rem;
   width: min(22.5rem, calc(100vw - 2rem));
   color: var(--fg);
-  transition: transform 150ms ease, border-color 150ms ease, padding 150ms ease;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  transition: transform 150ms ease, padding 150ms ease;
 }
 
 .music-child-card--minimized {
   gap: 0;
-  padding: 0.45rem 0.75rem;
+  padding: 0.15rem 0.35rem;
   width: max-content;
   max-width: min(22.5rem, calc(100vw - 2rem));
 }
 
 .music-child-card:hover {
-  border-color: rgba(255, 255, 255, 0.38);
+  border-color: transparent !important;
 }
+
 
 .music-child-card__header {
   display: flex;

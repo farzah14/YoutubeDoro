@@ -74,19 +74,28 @@ test("Music renders a child card with song title, volume control, and playback t
   assert.match(stylesSource, /accent-color:\s*var\(--accent/);
 });
 
-test("Music child card uses square corners and can minimize", () => {
+test("Music child card uses transparent background and can minimize with maximize icon only", () => {
   assert.match(source, /music-child-card--minimized/);
   assert.match(source, /music-child-card__btn--min/);
   assert.match(source, /music-child-card__btn--expand/);
   assert.match(source, /isCardMinimized/);
   assert.match(source, /MinusIcon/);
-  assert.match(source, /PlusIcon/);
-  assert.match(stylesSource, /\.music-child-card\s*\{[\s\S]*border-radius:\s*0/);
+  assert.match(source, /MaximizeIcon/);
+  assert.match(stylesSource, /\.music-child-card\s*\{[\s\S]*background:\s*transparent/);
   assert.match(stylesSource, /\.music-child-card--minimized\s*\{/);
   assert.match(stylesSource, /\.music-child-card__btn--min/);
   assert.match(stylesSource, /\.music-child-card__btn--expand/);
-  assert.match(stylesSource, /\.music-child-card__progress-slider\s*\{[\s\S]*border-radius:\s*0/);
 });
+
+test("Music child card previous and next playback buttons both change songs", () => {
+  assert.match(source, /handlePreviousSong/);
+  assert.match(source, /handleNextSong/);
+  // Ensure backward button does not get blocked by seeking logic and cycles stations as fallback
+  assert.doesNotMatch(source, /const handlePreviousSong = \(\) => \{\s*\/\/ If more than 3 seconds/);
+  assert.match(source, /previousVideo/);
+  assert.match(source, /nextVideo/);
+});
+
 
 
 

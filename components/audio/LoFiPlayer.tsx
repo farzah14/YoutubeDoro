@@ -33,7 +33,7 @@ import {
   type YouTubePlaylistSummary,
   type YouTubeSongSummary,
 } from "@/lib/youtubeMusicApi";
-import { MinusIcon, MusicIcon, PauseIcon, PlayIcon, PlusIcon, SkipBackIcon, SkipForwardIcon, SpotifyIcon, SquareIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
+import { MaximizeIcon, MinusIcon, MusicIcon, PauseIcon, PlayIcon, PlusIcon, SkipBackIcon, SkipForwardIcon, SpotifyIcon, SquareIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
 
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
@@ -135,12 +135,6 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   };
 
   const handlePreviousSong = () => {
-    // If more than 3 seconds in, restart song from 0:00 to retry playing song again
-    if (currentTime > 3) {
-      handleSeek(0);
-      return;
-    }
-
     if (activeEmbed) {
       try {
         const rawQueue = window.localStorage.getItem(QUEUE_STORAGE_KEY);
@@ -148,7 +142,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           const queue: QueueSongItem[] = JSON.parse(rawQueue);
           if (queue.length > 1) {
             const currentIdx = queue.findIndex(
-              (item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl
+              (item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl || (activeSongTitle && item.title === activeSongTitle)
             );
             const prevIdx = currentIdx > 0 ? currentIdx - 1 : queue.length - 1;
             const prevSong = queue[prevIdx];
@@ -168,7 +162,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
       } catch {}
 
       if (savedEmbeds.length > 1) {
-        const idx = savedEmbeds.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl);
+        const idx = savedEmbeds.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl);
         const prevIdx = idx > 0 ? idx - 1 : savedEmbeds.length - 1;
         const prevEmbed = savedEmbeds[prevIdx];
         setActiveEmbed(prevEmbed);
@@ -177,7 +171,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
       }
 
       if (heardHistory.length > 1) {
-        const idx = heardHistory.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl);
+        const idx = heardHistory.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl || (activeSongTitle && item.title === activeSongTitle));
         const prevIdx = idx > 0 ? idx - 1 : heardHistory.length - 1;
         const prevItem = heardHistory[prevIdx];
         setActiveEmbed({
@@ -191,7 +185,32 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         return;
       }
 
-      handleSeek(0);
+      const iframe = iframeRef.current;
+      if (iframe?.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage(
+            JSON.stringify({
+              event: "command",
+              func: "previousVideo",
+              args: [],
+            }),
+            "*"
+          );
+        } catch {}
+      }
+
+      // Fallback: cycle backwards through RADIO_STATIONS
+      const currentStationIdx = RADIO_STATIONS.findIndex((item) => activeEmbed.sourceUrl.includes(item.videoId));
+      const prevStationIdx = currentStationIdx > 0 ? currentStationIdx - 1 : RADIO_STATIONS.length - 1;
+      const prevStation = RADIO_STATIONS[prevStationIdx];
+      setActiveSongTitle(prevStation.name);
+      setActiveSongArtist("Lofi Radio");
+      setActiveEmbed({
+        provider: "youtube",
+        sourceUrl: `https://www.youtube.com/watch?v=${prevStation.videoId}`,
+        embedUrl: `https://www.youtube.com/embed/${prevStation.videoId}?autoplay=1&enablejsapi=1`,
+      });
+      setCurrentTime(0);
     } else if (enabled) {
       const currentIdx = RADIO_STATIONS.findIndex((item) => item.id === stationId);
       const prevIdx = currentIdx > 0 ? currentIdx - 1 : RADIO_STATIONS.length - 1;
@@ -208,7 +227,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           const queue: QueueSongItem[] = JSON.parse(rawQueue);
           if (queue.length > 1) {
             const currentIdx = queue.findIndex(
-              (item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl
+              (item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl || (activeSongTitle && item.title === activeSongTitle)
             );
             const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % queue.length : 0;
             const nextSong = queue[nextIdx];
@@ -220,6 +239,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                 sourceUrl: nextSong.sourceUrl,
                 embedUrl: nextSong.embedUrl,
               });
+              setCurrentTime(0);
               return;
             }
           }
@@ -227,15 +247,16 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
       } catch {}
 
       if (savedEmbeds.length > 1) {
-        const idx = savedEmbeds.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl);
+        const idx = savedEmbeds.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl);
         const nextIdx = idx >= 0 ? (idx + 1) % savedEmbeds.length : 0;
         const nextEmbed = savedEmbeds[nextIdx];
         setActiveEmbed(nextEmbed);
+        setCurrentTime(0);
         return;
       }
 
       if (heardHistory.length > 1) {
-        const idx = heardHistory.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl);
+        const idx = heardHistory.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl || (activeSongTitle && item.title === activeSongTitle));
         const nextIdx = idx >= 0 ? (idx + 1) % heardHistory.length : 0;
         const nextItem = heardHistory[nextIdx];
         setActiveEmbed({
@@ -245,6 +266,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         });
         setActiveSongTitle(nextItem.title);
         setActiveSongArtist(nextItem.artist || "");
+        setCurrentTime(0);
         return;
       }
 
@@ -261,12 +283,27 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           );
         } catch {}
       }
+
+      // Fallback: cycle forward through RADIO_STATIONS
+      const currentStationIdx = RADIO_STATIONS.findIndex((item) => activeEmbed.sourceUrl.includes(item.videoId));
+      const nextStationIdx = currentStationIdx >= 0 ? (currentStationIdx + 1) % RADIO_STATIONS.length : 0;
+      const nextStation = RADIO_STATIONS[nextStationIdx];
+      setActiveSongTitle(nextStation.name);
+      setActiveSongArtist("Lofi Radio");
+      setActiveEmbed({
+        provider: "youtube",
+        sourceUrl: `https://www.youtube.com/watch?v=${nextStation.videoId}`,
+        embedUrl: `https://www.youtube.com/embed/${nextStation.videoId}?autoplay=1&enablejsapi=1`,
+      });
+      setCurrentTime(0);
     } else if (enabled) {
       const currentIdx = RADIO_STATIONS.findIndex((item) => item.id === stationId);
       const nextIdx = (currentIdx + 1) % RADIO_STATIONS.length;
       setStationId(RADIO_STATIONS[nextIdx].id);
+      setCurrentTime(0);
     }
   };
+
 
   const togglePlay = () => {
     const iframe = iframeRef.current;
@@ -419,7 +456,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
             <>
               {isMinimized ? (
                 <div
-                  className={`music-child-card ${isCardMinimized ? "music-child-card--minimized" : ""} flex flex-col gap-2.5 p-3 rounded-none bg-slate-900/95 border border-white/20 shadow-2xl`}
+                  className={`music-child-card ${isCardMinimized ? "music-child-card--minimized" : ""} flex flex-col gap-2.5 p-2 bg-transparent border-0 shadow-none`}
                   aria-label="Music player"
                 >
                   {/* Header Row: Provider Icon, Pulse, Title, Play/Pause Button, Skip Button, Minimize Button, Stop Button */}
@@ -450,73 +487,76 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                     </div>
 
                     <div className="music-child-card__actions flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        className="music-child-card__btn music-child-card__btn--prev rounded-none"
-                        onClick={handlePreviousSong}
-                        aria-label="Previous song or restart"
-                        title="Previous / Replay"
-                      >
-                        <SkipBackIcon className="w-3.5 h-3.5 fill-current" />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="music-child-card__btn music-child-card__btn--play rounded-none"
-                        onClick={togglePlay}
-                        aria-label={isPlaying ? "Pause music" : "Play music"}
-                        title={isPlaying ? "Pause" : "Play"}
-                      >
-                        {isPlaying ? (
-                          <PauseIcon className="w-3.5 h-3.5 fill-current" />
-                        ) : (
-                          <PlayIcon className="w-3.5 h-3.5 fill-current" />
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="music-child-card__btn music-child-card__btn--skip rounded-none"
-                        onClick={handleNextSong}
-                        aria-label="Next song"
-                        title="Next song"
-                      >
-                        <SkipForwardIcon className="w-3.5 h-3.5 fill-current" />
-                      </button>
-
                       {isCardMinimized ? (
                         <button
                           type="button"
-                          className="music-child-card__btn music-child-card__btn--expand rounded-none"
+                          className="music-child-card__btn music-child-card__btn--expand"
                           onClick={() => setIsCardMinimized(false)}
-                          aria-label="Expand music card"
-                          title="Expand"
+                          aria-label="Maximize music card"
+                          title="Maximize"
                         >
-                          <PlusIcon className="w-3.5 h-3.5" />
+                          <MaximizeIcon className="w-3.5 h-3.5" />
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          className="music-child-card__btn music-child-card__btn--min rounded-none"
-                          onClick={() => setIsCardMinimized(true)}
-                          aria-label="Minimize music card"
-                          title="Minimize"
-                        >
-                          <MinusIcon className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                        <>
+                          <button
+                            type="button"
+                            className="music-child-card__btn music-child-card__btn--prev"
+                            onClick={handlePreviousSong}
+                            aria-label="Previous song"
+                            title="Previous song"
+                          >
+                            <SkipBackIcon className="w-3.5 h-3.5 fill-current" />
+                          </button>
 
-                      <button
-                        type="button"
-                        className="music-child-card__btn music-child-card__btn--stop music-child-card__btn--close rounded-none"
-                        onClick={() => setActiveEmbed(null)}
-                        aria-label="Stop music"
-                        title="Stop music"
-                      >
-                        <SquareIcon className="w-3 h-3 fill-current" />
-                      </button>
+                          <button
+                            type="button"
+                            className="music-child-card__btn music-child-card__btn--play"
+                            onClick={togglePlay}
+                            aria-label={isPlaying ? "Pause music" : "Play music"}
+                            title={isPlaying ? "Pause" : "Play"}
+                          >
+                            {isPlaying ? (
+                              <PauseIcon className="w-3.5 h-3.5 fill-current" />
+                            ) : (
+                              <PlayIcon className="w-3.5 h-3.5 fill-current" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="music-child-card__btn music-child-card__btn--skip"
+                            onClick={handleNextSong}
+                            aria-label="Next song"
+                            title="Next song"
+                          >
+                            <SkipForwardIcon className="w-3.5 h-3.5 fill-current" />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="music-child-card__btn music-child-card__btn--min"
+                            onClick={() => setIsCardMinimized(true)}
+                            aria-label="Minimize music card"
+                            title="Minimize"
+                          >
+                            <MinusIcon className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="music-child-card__btn music-child-card__btn--stop music-child-card__btn--close"
+                            onClick={() => setActiveEmbed(null)}
+                            aria-label="Stop music"
+                            title="Stop music"
+                          >
+                            <SquareIcon className="w-3 h-3 fill-current" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
+
 
                   {!isCardMinimized && (
                     <>
