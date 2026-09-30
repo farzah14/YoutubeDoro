@@ -714,7 +714,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                             setIsSeeking(false);
                             seekLockUntilRef.current = Date.now() + 1000;
                           }}
-                          className="music-child-card__progress-slider music-child-card__slider flex-1 h-1.5 rounded-none cursor-pointer"
+                          className="music-child-card__progress-slider music-child-card__slider flex-1 h-1.5 rounded-full cursor-pointer"
                           style={{
                             accentColor: "var(--accent, #f6c76d)",
                             background: `linear-gradient(to right, var(--accent, #f6c76d) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%, rgba(255, 255, 255, 0.2) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%)`,
@@ -756,7 +756,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                             if (muted) setMuted(false);
                             sendVolumeToIframe(nextVol, false);
                           }}
-                          className="music-child-card__slider flex-1 h-1.5 rounded-none cursor-pointer"
+                          className="music-child-card__slider flex-1 h-1.5 rounded-full cursor-pointer"
                           style={{
                             accentColor: "var(--accent, #f6c76d)",
                             background: `linear-gradient(to right, var(--accent, #f6c76d) ${muted ? 0 : volume}%, rgba(255, 255, 255, 0.2) ${muted ? 0 : volume}%)`,
@@ -1255,112 +1255,69 @@ export function LoFiPlayer() {
         <div className="music-provider-list music-shelf__provider">
           <div className="music-accounts-grid flex flex-col gap-2.5 mb-3">
             {/* YouTube Music Card */}
-            <div className="music-account-card music-account-card--youtube border border-red-500/20 rounded-xl bg-gradient-to-br from-red-500/[0.08] via-surface-secondary/80 to-surface-secondary/40 p-3.5 transition-all duration-200 hover:border-red-500/35">
+            <div className="music-account-card border border-border-subtle rounded-lg bg-surface-secondary/70 p-3">
               <div className="music-account-card__header flex items-center justify-between gap-3">
                 <div className="music-account-card__identity flex items-center gap-2.5 min-w-0">
-                  <span className="music-account-card__icon music-account-card__badge-icon music-account-card__badge-icon--youtube shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-red-500" aria-hidden="true">
+                  <span className="music-account-card__icon shrink-0 flex items-center justify-center w-7 h-7 text-red-500" aria-hidden="true">
                     <YouTubeIcon className="w-5 h-5" />
                   </span>
-                  <div className="flex flex-col text-left min-w-0">
-                    <div className="flex items-center gap-2">
-                      <strong className="text-xs font-semibold text-foreground leading-tight tracking-tight">YouTube Music</strong>
-                      {googleToken ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                          Linked
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-text-muted bg-surface-secondary border border-border-subtle/60 px-1.5 py-0.5 rounded-full">
-                          Google Sync
-                        </span>
-                      )}
-                    </div>
-                    <small className="text-[11px] text-text-muted leading-tight mt-0.5 block truncate">
-                      {googleToken ? "Access your liked music, search & history" : "Connect Google to load your playlists & liked songs"}
-                    </small>
+                  <div className="flex flex-col text-left">
+                    <strong className="text-xs font-semibold text-foreground leading-tight block">YouTube Music</strong>
+                    <small className="text-[11px] text-text-muted leading-tight block mt-0.5">{googleToken ? "Google Linked" : "Connect Google"}</small>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {googleToken ? (
-                    <button
-                      type="button"
-                      className="music-account-card__action music-account-card__action--sync text-xs font-semibold px-3 py-1.5 rounded-lg border border-border-subtle/80 bg-surface-secondary hover:bg-surface-secondary/80 text-foreground cursor-pointer transition-all disabled:opacity-50"
-                      onClick={() => { void handleSyncYouTube(true); }}
-                      disabled={loadingYouTube}
-                    >
-                      {loadingYouTube ? "Syncing…" : "Reconnect"}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="music-account-card__action music-account-card__action--youtube text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-sm hover:shadow active:scale-95 cursor-pointer transition-all disabled:opacity-50"
-                      onClick={() => { void handleSyncYouTube(true); }}
-                      disabled={loadingYouTube}
-                    >
-                      {loadingYouTube ? "Connecting…" : "Connect"}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className={googleToken ? "music-account-card__disconnect text-[11px] text-text-muted hover:text-foreground underline cursor-pointer" : "music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer"}
+                    onClick={() => { void handleSyncYouTube(true); }}
+                    disabled={loadingYouTube}
+                  >
+                    {googleToken ? "Reconnect" : "Connect"}
+                  </button>
                 </div>
               </div>
 
               {googleToken && (
-                <div className="flex items-center gap-1 mt-3 pt-2.5 border-t border-red-500/15 text-xs">
-                  <div className="flex items-center gap-1 p-0.5 rounded-lg bg-surface-primary/60 border border-border-subtle/40 w-full overflow-x-auto">
-                    <button
-                      type="button"
-                      className={`flex-1 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
-                        ytSubView === "liked"
-                          ? "bg-red-500/20 text-red-300 font-semibold shadow-xs border border-red-500/30"
-                          : "text-text-muted hover:text-foreground hover:bg-surface-secondary/50"
-                      }`}
-                      onClick={() => { setYtSubView("liked"); if (youtubeSongs.length === 0) void handleSyncLikedSongs(); }}
-                    >
-                      Liked Songs
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex-1 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
-                        ytSubView === "search"
-                          ? "bg-red-500/20 text-red-300 font-semibold shadow-xs border border-red-500/30"
-                          : "text-text-muted hover:text-foreground hover:bg-surface-secondary/50"
-                      }`}
-                      onClick={() => setYtSubView("search")}
-                    >
-                      Search
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex-1 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
-                        ytSubView === "playlists"
-                          ? "bg-red-500/20 text-red-300 font-semibold shadow-xs border border-red-500/30"
-                          : "text-text-muted hover:text-foreground hover:bg-surface-secondary/50"
-                      }`}
-                      onClick={() => { setYtSubView("playlists"); if (youtubePlaylists.length === 0) void handleSyncYouTube(false); }}
-                    >
-                      Playlists
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex-1 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
-                        ytSubView === "history"
-                          ? "bg-red-500/20 text-red-300 font-semibold shadow-xs border border-red-500/30"
-                          : "text-text-muted hover:text-foreground hover:bg-surface-secondary/50"
-                      }`}
-                      onClick={() => setYtSubView("history")}
-                    >
-                      History {heardHistory.length > 0 ? `(${heardHistory.length})` : ""}
-                    </button>
-                  </div>
+                <div className="flex items-center gap-1 mt-2.5 pt-2 border-t border-border-subtle/60 text-xs">
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "liked" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
+                    onClick={() => { setYtSubView("liked"); if (youtubeSongs.length === 0) void handleSyncLikedSongs(); }}
+                  >
+                    Liked Songs
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "search" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
+                    onClick={() => setYtSubView("search")}
+                  >
+                    Search
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "playlists" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
+                    onClick={() => { setYtSubView("playlists"); if (youtubePlaylists.length === 0) void handleSyncYouTube(false); }}
+                  >
+                    Playlists
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors cursor-pointer ${ytSubView === "history" ? "bg-accent text-white" : "bg-surface-secondary text-text-muted hover:text-foreground"}`}
+                    onClick={() => setYtSubView("history")}
+                  >
+                    History {heardHistory.length > 0 ? `(${heardHistory.length})` : ""}
+                  </button>
                 </div>
               )}
 
               {youtubeStatus && (
-                <div className="mt-2.5 pt-2 border-t border-border-subtle/40 flex items-center justify-between gap-2">
+                <div className="mt-2 pt-2 border-t border-border-subtle/60 flex items-center justify-between gap-2">
                   <p className="text-[11px] text-text-muted leading-tight flex-1">{youtubeStatus}</p>
                   {!googleToken && (
                     <button
                       type="button"
-                      className="text-[11px] font-semibold text-red-400 hover:text-red-300 shrink-0 hover:underline cursor-pointer"
+                      className="text-[11px] font-bold text-accent shrink-0 hover:underline cursor-pointer"
                       onClick={() => { void handleSyncYouTube(true); }}
                     >
                       Grant Permission
@@ -1640,29 +1597,15 @@ export function LoFiPlayer() {
             </div>
 
             {/* Spotify Card */}
-            <div className="music-account-card music-account-card--spotify border border-emerald-500/20 rounded-xl bg-gradient-to-br from-emerald-500/[0.08] via-surface-secondary/80 to-surface-secondary/40 p-3.5 transition-all duration-200 hover:border-emerald-500/35">
+            <div className="music-account-card border border-border-subtle rounded-lg bg-surface-secondary/70 p-3">
               <div className="music-account-card__header flex items-center justify-between gap-3">
                 <div className="music-account-card__identity flex items-center gap-2.5 min-w-0">
-                  <span className="music-account-card__icon music-account-card__badge-icon music-account-card__badge-icon--spotify shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-[#1DB954]" aria-hidden="true">
+                  <span className="music-account-card__icon shrink-0 flex items-center justify-center w-7 h-7 text-emerald-500" aria-hidden="true">
                     <SpotifyIcon className="w-5 h-5" />
                   </span>
-                  <div className="flex flex-col text-left min-w-0">
-                    <div className="flex items-center gap-2">
-                      <strong className="text-xs font-semibold text-foreground leading-tight tracking-tight">Spotify</strong>
-                      {spotifyToken ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                          Connected
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-text-muted bg-surface-secondary border border-border-subtle/60 px-1.5 py-0.5 rounded-full">
-                          PKCE Auth
-                        </span>
-                      )}
-                    </div>
-                    <small className="text-[11px] text-text-muted leading-tight mt-0.5 block truncate">
-                      {spotifyToken ? (spotifyUser || "Session Active") : "Connect your Spotify account for playlists"}
-                    </small>
+                  <div className="flex flex-col text-left">
+                    <strong className="text-xs font-semibold text-foreground leading-tight block">Spotify</strong>
+                    <small className="text-[11px] text-text-muted leading-tight block mt-0.5">{spotifyToken ? (spotifyUser || "Connected") : "Connect Account"}</small>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -1670,7 +1613,7 @@ export function LoFiPlayer() {
                     <>
                       <button
                         type="button"
-                        className="music-account-card__action music-account-card__action--sync text-xs font-semibold px-3 py-1.5 rounded-lg border border-border-subtle/80 bg-surface-secondary hover:bg-surface-secondary/80 text-foreground cursor-pointer transition-all disabled:opacity-50"
+                        className="music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer disabled:opacity-50"
                         onClick={() => { void handleLoadSpotifyPlaylists(); }}
                         disabled={loadingSpotify}
                       >
@@ -1678,7 +1621,7 @@ export function LoFiPlayer() {
                       </button>
                       <button
                         type="button"
-                        className="text-[11px] font-medium text-text-muted hover:text-rose-400 px-2 py-1 rounded-md hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        className="music-account-card__disconnect text-[11px] text-text-muted hover:text-foreground underline cursor-pointer"
                         onClick={handleDisconnectSpotify}
                       >
                         Disconnect
@@ -1687,7 +1630,7 @@ export function LoFiPlayer() {
                   ) : (
                     <button
                       type="button"
-                      className="music-account-card__action music-account-card__action--spotify text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-[#1DB954] hover:bg-[#1ed760] text-black shadow-sm hover:shadow active:scale-95 cursor-pointer transition-all"
+                      className="music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer"
                       onClick={() => { void handleConnectSpotify(); }}
                     >
                       Connect
@@ -1696,19 +1639,19 @@ export function LoFiPlayer() {
                 </div>
               </div>
               {showSpotifySetup && !spotifyToken && (
-                <div className="music-account-config mt-3 pt-2.5 border-t border-emerald-500/20 flex flex-col gap-2">
+                <div className="music-account-config mt-2.5 pt-2.5 border-t border-border-subtle flex flex-col gap-1.5">
                   <small className="text-[11px] text-text-muted">Spotify Client ID (from developer.spotify.com):</small>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <input
                       type="text"
                       placeholder="Paste Client ID"
                       value={customClientId}
                       onChange={(e) => setCustomClientId(e.target.value)}
-                      className="text-xs px-3 py-1.5 bg-surface-primary/70 border border-emerald-500/25 rounded-lg flex-1 text-foreground placeholder:text-text-muted/50 focus:outline-none focus:border-emerald-500/60"
+                      className="text-xs px-2.5 py-1.5 bg-surface-secondary border border-border-subtle rounded flex-1 text-foreground"
                     />
                     <button
                       type="button"
-                      className="music-account-card__action music-account-card__action--spotify text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-[#1DB954] hover:bg-[#1ed760] text-black cursor-pointer transition-all active:scale-95"
+                      className="music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer"
                       onClick={() => { void handleConnectSpotify(); }}
                     >
                       Authorize
@@ -1717,15 +1660,15 @@ export function LoFiPlayer() {
                 </div>
               )}
               {spotifyPlaylists.length > 0 && (
-                <div className="music-playlist-list mt-3 pt-2.5 border-t border-emerald-500/20 flex flex-col gap-1.5 max-h-36 overflow-y-auto" aria-label="Spotify Playlists">
+                <div className="music-playlist-list mt-2.5 flex flex-col gap-1.5 max-h-36 overflow-y-auto" aria-label="Spotify Playlists">
                   {spotifyPlaylists.map((pl) => (
                     <button
                       key={pl.id}
                       type="button"
-                      className="music-playlist-item flex items-center justify-between p-2 rounded-lg border border-border-subtle/50 bg-surface-primary/40 hover:bg-emerald-500/10 hover:border-emerald-500/30 text-left cursor-pointer transition-all"
+                      className="music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors"
                       onClick={() => handleSelectSpotifyPlaylist(pl)}
                     >
-                      <span className="music-playlist-item__title text-xs text-foreground truncate max-w-[14rem] font-medium">{pl.name}</span>
+                      <span className="music-playlist-item__title text-xs text-foreground truncate max-w-[14rem]">{pl.name}</span>
                       <small className="music-playlist-item__meta text-[10px] text-text-muted font-mono shrink-0 ml-2">{pl.totalTracks} tracks</small>
                     </button>
                   ))}
@@ -1734,27 +1677,14 @@ export function LoFiPlayer() {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-border-subtle/40">
+          <div className="pt-2 border-t border-border-subtle/50">
             <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Or paste playlist / track URL</p>
             <form onSubmit={saveProvider} className="flex gap-2">
-              <input
-                value={url}
-                onChange={(event) => setUrl(event.target.value)}
-                placeholder="Paste Spotify or YouTube Music URL"
-                aria-label="Music provider URL"
-                className="text-xs px-3 py-2 bg-surface-secondary/70 border border-border-subtle rounded-lg flex-1 text-foreground placeholder:text-text-muted/60 focus:outline-none focus:border-accent/60"
-              />
-              <button
-                type="submit"
-                className="text-xs font-semibold px-4 py-2 rounded-lg bg-accent text-white hover:opacity-90 transition-all cursor-pointer shrink-0"
-              >
-                Save
-              </button>
+              <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste Spotify or YouTube Music URL" aria-label="Music provider URL" />
+              <button type="submit">Save</button>
             </form>
-            {error && <p className="audio-panel__error mt-1.5 text-xs text-rose-400" role="alert">{error}</p>}
-            <p className="audio-panel__hint mt-1.5 text-[11px] text-text-muted leading-normal">
-              Provider controls stay in the persistent player. Some providers may block embeds by region or account.
-            </p>
+            {error && <p className="audio-panel__error mt-1.5" role="alert">{error}</p>}
+            <p className="audio-panel__hint mt-1.5">Provider controls stay in the persistent player. Some providers may block embeds by region or account.</p>
           </div>
         </div>
       )}
