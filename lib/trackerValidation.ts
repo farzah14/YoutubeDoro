@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const timerModeSchema = z.enum(["pomodoro", "countdown", "stopwatch", "animedoro", "52-17"]);
+export const timerModeSchema = z.enum(["pomodoro", "stopwatch", "animedoro", "52-17"]);
 export const sessionStatusSchema = z.enum(["active", "completed", "stopped", "interrupted", "legacy"]);
 export const uuidSchema = z.string().uuid();
 const titleSchema = z.string().trim().min(1).max(240);

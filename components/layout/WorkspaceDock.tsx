@@ -5,7 +5,6 @@ import type { TimerMode } from "@/types/focus";
 import type { WorkspaceMode, WorkspacePanel } from "@/types/workspace";
 import {
   CheckIcon,
-  ClockIcon,
   HomeIcon,
   LightbulbIcon,
   MaximizeIcon,
@@ -32,7 +31,6 @@ interface WorkspaceDockProps {
 
 const modes: Array<[TimerMode, string]> = [
   ["pomodoro", "Pomodoro"],
-  ["countdown", "Countdown"],
   ["stopwatch", "Stopwatch"],
   ["animedoro", "Animedoro"],
   ["52-17", "52 / 17"],
@@ -42,7 +40,6 @@ type ModeIcon = (props: ComponentProps<"svg">) => ReactNode;
 
 const modeIcons: Record<TimerMode, ModeIcon> = {
   pomodoro: PomodoroIcon,
-  countdown: ClockIcon,
   stopwatch: WaveformIcon,
   animedoro: MonitorIcon,
   "52-17": TargetIcon,

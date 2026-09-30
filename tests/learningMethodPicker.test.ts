@@ -37,6 +37,11 @@ test("learning methods sit left of settings in the right dock", () => {
   );
 });
 
+test("learning methods omit countdown mode", () => {
+  assert.doesNotMatch(dockSource, /"countdown"/i);
+  assert.doesNotMatch(dockSource, /Countdown/);
+});
+
 test("focus rails do not render the two divider lines", () => {
   const priorityAction =
     stylesSource.match(/\.focus-dashboard__priority-action\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
@@ -103,7 +108,7 @@ test("focus phases use orange Focus and green Break backgrounds", () => {
   );
   assert.match(
     learningCardSource,
-    /const showPhases = timer\.preferences\.mode !== "countdown" && timer\.preferences\.mode !== "stopwatch"/,
+    /const showPhases = timer\.preferences\.mode !== "stopwatch"/,
   );
 });
 

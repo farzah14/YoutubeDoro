@@ -198,7 +198,7 @@ export function LearningCard({
   const isRunning = timer.state.status === "running";
   const isPaused = timer.state.status === "paused";
   const visiblePhase = timer.state.phase === "focus" ? "focus" : "break";
-  const showPhases = timer.preferences.mode !== "countdown" && timer.preferences.mode !== "stopwatch";
+  const showPhases = timer.preferences.mode !== "stopwatch";
   const primaryLabel = isRunning ? "Pause" : isPaused ? "Resume" : visiblePhase === "break" ? "Break" : "Start";
 
   useEffect(() => {

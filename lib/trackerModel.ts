@@ -8,7 +8,7 @@ import type {
 import type { TimerMode } from "../types/focus";
 
 const SESSION_STATUSES: SessionStatus[] = ["active", "completed", "stopped", "interrupted", "legacy"];
-const TIMER_MODES: TimerMode[] = ["pomodoro", "countdown", "stopwatch", "animedoro", "52-17"];
+const TIMER_MODES: TimerMode[] = ["pomodoro", "stopwatch", "animedoro", "52-17"];
 
 function safeInteger(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : fallback;

@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LearningSession, SessionStatus } from "@/types/tracker";
+import type { TimerMode } from "@/types/focus";
 import { trackerApi } from "@/lib/trackerApi";
 
 export interface SessionStartInput {
   taskId?: string | null;
   taskTitleSnapshot: string;
   title: string;
-  timerMode: "pomodoro" | "countdown" | "stopwatch" | "animedoro" | "52-17";
+  timerMode: TimerMode;
   plannedSeconds?: number | null;
 }
 

@@ -21,7 +21,6 @@ const preferences: FocusPreferences = {
   mode: "pomodoro",
   focusMinutes: 25,
   breakMinutes: 5,
-  countdownMinutes: 40,
   autoStartBreaks: false,
   notificationEnabled: false,
   attentionMonitoringEnabled: false,
@@ -125,16 +124,6 @@ test("animedoro uses the shared break length as watch time", () => {
 
   assert.equal(next.phase, "break");
   assert.equal(next.targetSeconds, 11 * 60);
-});
-
-test("countdown completes without creating a break", () => {
-  const configured = { ...preferences, mode: "countdown" as const };
-  const running = startTimer(createTimerState(configured), 0);
-  const done = syncTimer(running, configured, 40 * 60 * 1_000);
-
-  assert.equal(done.phase, "focus");
-  assert.equal(done.status, "done");
-  assert.equal(getDisplaySeconds(done), 0);
 });
 
 test("stopwatch counts upward and never auto-completes", () => {

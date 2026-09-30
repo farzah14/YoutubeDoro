@@ -20,7 +20,6 @@ export interface FocusTimerState {
 function phaseSeconds(mode: TimerMode, phase: TimerPhase, preferences: FocusPreferences): number {
   if (phase === "focus") {
     if (mode === "stopwatch") return 0;
-    if (mode === "countdown") return preferences.countdownMinutes * 60;
     if (mode === "52-17") return 52 * 60;
     if (mode === "pomodoro") return preferences.focusMinutes * 60;
     if (mode === "animedoro") return ANIMEDORO_FOCUS_MINUTES * 60;
@@ -44,7 +43,7 @@ export function createTimerState(preferences: FocusPreferences): FocusTimerState
 }
 
 export function advanceTimer(state: FocusTimerState, preferences: FocusPreferences): FocusTimerState {
-  if (state.mode === "countdown" || state.mode === "stopwatch") {
+  if (state.mode === "stopwatch") {
     return { ...state, status: "done", startedAtMs: null };
   }
 

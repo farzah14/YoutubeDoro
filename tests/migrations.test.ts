@@ -126,7 +126,6 @@ test("sanitizes focus preferences into supported ranges", () => {
       mode: "pomodoro",
       focusMinutes: 25,
       breakMinutes: 120,
-      countdownMinutes: 42,
       autoStartBreaks: false,
       notificationEnabled: true,
       attentionMonitoringEnabled: false,
@@ -135,6 +134,11 @@ test("sanitizes focus preferences into supported ranges", () => {
       showTaskInPip: true,
     }
   );
+});
+
+test("migrates legacy countdown mode to pomodoro", () => {
+  const migrated = migrateFocusPreferences({ mode: "countdown" });
+  assert.equal(migrated.mode, "pomodoro");
 });
 
 test("attention monitoring is opt-in and preserves an explicit enabled value", () => {

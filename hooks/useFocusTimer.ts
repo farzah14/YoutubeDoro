@@ -211,7 +211,7 @@ export function useFocusTimer(options: UseFocusTimerOptions = {}) {
         ? current.phase === "focus"
           ? safe.focusMinutes !== preferences.focusMinutes
           : safe.breakMinutes !== preferences.breakMinutes
-        : current.mode === "countdown" && safe.countdownMinutes !== preferences.countdownMinutes;
+        : false;
       if ((!modeChanged && !durationChanged) || current.status === "running" || current.status === "paused" || current.driver === "media") return current;
       if (current.phase === "break" && !modeChanged) {
         return {

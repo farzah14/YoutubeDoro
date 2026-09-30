@@ -7,7 +7,6 @@ export const DEFAULT_FOCUS_PREFERENCES: FocusPreferences = {
   mode: "pomodoro",
   focusMinutes: 25,
   breakMinutes: 5,
-  countdownMinutes: 25,
   autoStartBreaks: false,
   notificationEnabled: false,
   attentionMonitoringEnabled: false,
@@ -125,7 +124,7 @@ export function migrateThemeSlots<T extends string>(
 
 export function migrateFocusPreferences(value: unknown): FocusPreferences {
   const source = record(value) ?? {};
-  const modes: TimerMode[] = ["pomodoro", "countdown", "stopwatch", "animedoro", "52-17"];
+  const modes: TimerMode[] = ["pomodoro", "stopwatch", "animedoro", "52-17"];
   const mode = typeof source.mode === "string" && modes.includes(source.mode as TimerMode)
     ? (source.mode as TimerMode)
     : DEFAULT_FOCUS_PREFERENCES.mode;
@@ -146,7 +145,6 @@ export function migrateFocusPreferences(value: unknown): FocusPreferences {
     mode,
     focusMinutes: duration(source.focusMinutes, DEFAULT_FOCUS_PREFERENCES.focusMinutes, 120),
     breakMinutes,
-    countdownMinutes: duration(source.countdownMinutes, DEFAULT_FOCUS_PREFERENCES.countdownMinutes, 480),
     autoStartBreaks: source.autoStartBreaks === true,
     notificationEnabled: source.notificationEnabled === true,
     attentionMonitoringEnabled: source.attentionMonitoringEnabled === true,
