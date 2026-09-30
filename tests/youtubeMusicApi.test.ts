@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  DEFAULT_YOUTUBE_SONGS,
   decodeHtmlEntities,
   getYouTubeLikedMusicPlaylist,
   youtubePlaylistToMusicEmbed,
@@ -58,3 +59,14 @@ test("decodeHtmlEntities correctly decodes entities in song titles and artists",
   assert.equal(decodeHtmlEntities("&quot;Hello&quot;"), '"Hello"');
   assert.equal(decodeHtmlEntities("Rock &lt;Pop&gt;"), "Rock <Pop>");
 });
+
+test("DEFAULT_YOUTUBE_SONGS provides fallback YouTube tracks with valid ids and embed URLs", () => {
+  assert.ok(DEFAULT_YOUTUBE_SONGS.length >= 5);
+  for (const song of DEFAULT_YOUTUBE_SONGS) {
+    assert.ok(song.id.length > 0);
+    assert.ok(song.title.length > 0);
+    assert.match(song.embedUrl, /^https:\/\/www\.youtube-nocookie\.com\/embed\//);
+    assert.match(song.externalUrl, /^https:\/\/music\.youtube\.com\/watch\?v=/);
+  }
+});
+

@@ -21,6 +21,7 @@ import {
 } from "@/lib/spotifyApi";
 import {
   decodeHtmlEntities,
+  DEFAULT_YOUTUBE_SONGS,
   fetchGoogleYouTubeLikedVideos,
   fetchGoogleYouTubePlaylistItems,
   fetchGoogleYouTubePlaylists,
@@ -108,7 +109,20 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const [savedEmbeds] = useLocalStorage<MusicEmbed[]>(KEYS.savedMusicEmbeds, []);
   const [heardHistory] = useLocalStorage<HeardSongItem[]>(KEYS.heardMusicHistory, []);
   const [queue] = useLocalStorage<QueueSongItem[]>(QUEUE_STORAGE_KEY, []);
-  const [googleYouTubeSongs] = useLocalStorage<YouTubeSongSummary[]>(GOOGLE_YOUTUBE_SONGS_KEY, []);
+  const [googleYouTubeSongs, setGoogleYouTubeSongs] = useLocalStorage<YouTubeSongSummary[]>(GOOGLE_YOUTUBE_SONGS_KEY, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    void getGoogleProviderToken().then((token) => {
+      if (token) {
+        void fetchGoogleYouTubeLikedVideos(token).then((res) => {
+          if (res.songs.length > 0) {
+            setGoogleYouTubeSongs(res.songs);
+          }
+        });
+      }
+    });
+  }, [setGoogleYouTubeSongs]);
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -169,6 +183,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
             embedUrl: prevSong.embedUrl,
           });
           setCurrentTime(0);
+          setIsPlaying(true);
           return;
         }
       }
@@ -185,11 +200,12 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         );
         const prevIdx = currentIdx > 0 ? currentIdx - 1 : (googleYouTubeSongs.length > 1 ? googleYouTubeSongs.length - 1 : 0);
         const prevSong = googleYouTubeSongs[prevIdx];
-        if (prevSong) {
+        if (prevSong && (googleYouTubeSongs.length > 1 || prevSong.id !== activeVidId)) {
           setActiveSongTitle(prevSong.title);
           setActiveSongArtist(prevSong.artist || "YouTube Music");
           setActiveEmbed(youtubeSongToMusicEmbed(prevSong));
           setCurrentTime(0);
+          setIsPlaying(true);
           return;
         }
       }
@@ -201,6 +217,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         const prevEmbed = savedEmbeds[prevIdx];
         setActiveEmbed(prevEmbed);
         setCurrentTime(0);
+        setIsPlaying(true);
         return;
       }
 
@@ -217,10 +234,32 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         setActiveSongTitle(prevItem.title);
         setActiveSongArtist(prevItem.artist || "");
         setCurrentTime(0);
+        setIsPlaying(true);
         return;
       }
 
-      // 5. Send previousVideo command to iframe (e.g. YouTube playlist)
+      // 5. Fallback to Curated YouTube Songs so navigation ALWAYS works
+      const ytPool = DEFAULT_YOUTUBE_SONGS;
+      const currentIdx = ytPool.findIndex(
+        (item) =>
+          item.id === activeVidId ||
+          item.externalUrl === activeEmbed.sourceUrl ||
+          item.embedUrl === activeEmbed.embedUrl ||
+          (activeVidId && (item.externalUrl.includes(activeVidId) || item.embedUrl.includes(activeVidId))) ||
+          (activeSongTitle && item.title.trim().toLowerCase() === activeSongTitle.trim().toLowerCase())
+      );
+      const prevIdx = currentIdx > 0 ? currentIdx - 1 : ytPool.length - 1;
+      const prevSong = ytPool[prevIdx];
+      if (prevSong) {
+        setActiveSongTitle(prevSong.title);
+        setActiveSongArtist(prevSong.artist || "YouTube Music");
+        setActiveEmbed(youtubeSongToMusicEmbed(prevSong));
+        setCurrentTime(0);
+        setIsPlaying(true);
+        return;
+      }
+
+      // 6. Send previousVideo command to iframe
       const iframe = iframeRef.current;
       if (iframe?.contentWindow) {
         try {
@@ -267,6 +306,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
             embedUrl: nextSong.embedUrl,
           });
           setCurrentTime(0);
+          setIsPlaying(true);
           return;
         }
       }
@@ -283,11 +323,12 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         );
         const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % googleYouTubeSongs.length : 0;
         const nextSong = googleYouTubeSongs[nextIdx];
-        if (nextSong) {
+        if (nextSong && (googleYouTubeSongs.length > 1 || nextSong.id !== activeVidId)) {
           setActiveSongTitle(nextSong.title);
           setActiveSongArtist(nextSong.artist || "YouTube Music");
           setActiveEmbed(youtubeSongToMusicEmbed(nextSong));
           setCurrentTime(0);
+          setIsPlaying(true);
           return;
         }
       }
@@ -299,6 +340,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         const nextEmbed = savedEmbeds[nextIdx];
         setActiveEmbed(nextEmbed);
         setCurrentTime(0);
+        setIsPlaying(true);
         return;
       }
 
@@ -315,10 +357,32 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
         setActiveSongTitle(nextItem.title);
         setActiveSongArtist(nextItem.artist || "");
         setCurrentTime(0);
+        setIsPlaying(true);
         return;
       }
 
-      // 5. Send nextVideo command to iframe (e.g. YouTube playlist)
+      // 5. Fallback to Curated YouTube Songs so navigation ALWAYS works
+      const ytPool = DEFAULT_YOUTUBE_SONGS;
+      const currentIdx = ytPool.findIndex(
+        (item) =>
+          item.id === activeVidId ||
+          item.externalUrl === activeEmbed.sourceUrl ||
+          item.embedUrl === activeEmbed.embedUrl ||
+          (activeVidId && (item.externalUrl.includes(activeVidId) || item.embedUrl.includes(activeVidId))) ||
+          (activeSongTitle && item.title.trim().toLowerCase() === activeSongTitle.trim().toLowerCase())
+      );
+      const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % ytPool.length : 0;
+      const nextSong = ytPool[nextIdx];
+      if (nextSong) {
+        setActiveSongTitle(nextSong.title);
+        setActiveSongArtist(nextSong.artist || "YouTube Music");
+        setActiveEmbed(youtubeSongToMusicEmbed(nextSong));
+        setCurrentTime(0);
+        setIsPlaying(true);
+        return;
+      }
+
+      // 6. Send nextVideo command to iframe
       const iframe = iframeRef.current;
       if (iframe?.contentWindow) {
         try {

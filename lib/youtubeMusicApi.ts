@@ -175,6 +175,65 @@ export function getYouTubeLikedMusicPlaylist(): YouTubePlaylistSummary {
   };
 }
 
+export const DEFAULT_YOUTUBE_SONGS: YouTubeSongSummary[] = [
+  {
+    id: "lTRiuFIWV54",
+    title: "Lofi Study Beats - Chillhop Radio",
+    artist: "Lofi Girl",
+    externalUrl: "https://music.youtube.com/watch?v=lTRiuFIWV54",
+    embedUrl: "https://www.youtube-nocookie.com/embed/lTRiuFIWV54?autoplay=1&enablejsapi=1",
+  },
+  {
+    id: "4xDzrJKXOOY",
+    title: "Synthwave Coding - Chill Retrowave",
+    artist: "Lofi Girl Synthwave",
+    externalUrl: "https://music.youtube.com/watch?v=4xDzrJKXOOY",
+    embedUrl: "https://www.youtube-nocookie.com/embed/4xDzrJKXOOY?autoplay=1&enablejsapi=1",
+  },
+  {
+    id: "h2zkV-l_TbY",
+    title: "Cozy Coffee Shop - Warm Jazz & Rain",
+    artist: "Coffee Relax Music",
+    externalUrl: "https://music.youtube.com/watch?v=h2zkV-l_TbY",
+    embedUrl: "https://www.youtube-nocookie.com/embed/h2zkV-l_TbY?autoplay=1&enablejsapi=1",
+  },
+  {
+    id: "WPni755-Krg",
+    title: "Binaural Alpha Waves - Deep Focus",
+    artist: "Focus Frequency Studio",
+    externalUrl: "https://music.youtube.com/watch?v=WPni755-Krg",
+    embedUrl: "https://www.youtube-nocookie.com/embed/WPni755-Krg?autoplay=1&enablejsapi=1",
+  },
+  {
+    id: "mPZkdNFkNps",
+    title: "Gentle Rain & Thunder - Nature Soundscape",
+    artist: "Rain Sounds Sleep",
+    externalUrl: "https://music.youtube.com/watch?v=mPZkdNFkNps",
+    embedUrl: "https://www.youtube-nocookie.com/embed/mPZkdNFkNps?autoplay=1&enablejsapi=1",
+  },
+  {
+    id: "xNN7iTA57jM",
+    title: "Forest Stream & Birds - Calming Wildlife",
+    artist: "Wild Earth Sounds",
+    externalUrl: "https://music.youtube.com/watch?v=xNN7iTA57jM",
+    embedUrl: "https://www.youtube-nocookie.com/embed/xNN7iTA57jM?autoplay=1&enablejsapi=1",
+  },
+  {
+    id: "jfKfPfyJRdk",
+    title: "Anime Chill Piano & Rain - Peaceful Beats",
+    artist: "Lofi Girl Music",
+    externalUrl: "https://music.youtube.com/watch?v=jfKfPfyJRdk",
+    embedUrl: "https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1&enablejsapi=1",
+  },
+  {
+    id: "5qap5aO4i9A",
+    title: "Lofi Hip Hop Radio - Beats to Sleep/Chill to",
+    artist: "Lofi Girl",
+    externalUrl: "https://music.youtube.com/watch?v=5qap5aO4i9A",
+    embedUrl: "https://www.youtube-nocookie.com/embed/5qap5aO4i9A?autoplay=1&enablejsapi=1",
+  },
+];
+
 export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOnly = true): Promise<FetchYouTubeSongsResult> {
   // Step 1: Attempt to load the official YouTube Music "Liked Music" playlist (ID: LM)
   try {
