@@ -6,19 +6,8 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { KEYS } from "@/lib/constants";
 import { DEFAULT_LOFI_VOLUME, DEFAULT_STATION_ID, RADIO_STATIONS } from "@/lib/audioStreams";
 import { formatMMSS } from "@/lib/time";
-import { parseMusicProviderUrl, type MusicEmbed } from "@/lib/musicProviders";
+import type { MusicEmbed } from "@/lib/musicProviders";
 import type { YouTubeComponentProps } from "@/types";
-import {
-  createSpotifyAuthUrl,
-  disconnectSpotify,
-  fetchSpotifyPlaylists,
-  fetchSpotifyUserProfile,
-  getStoredSpotifyToken,
-  playlistToMusicEmbed,
-  SPOTIFY_STORAGE_KEYS,
-  type SpotifyPlaylistSummary,
-  type SpotifyTokenData,
-} from "@/lib/spotifyApi";
 import {
   decodeHtmlEntities,
   DEFAULT_YOUTUBE_SONGS,
@@ -35,7 +24,7 @@ import {
   type YouTubePlaylistSummary,
   type YouTubeSongSummary,
 } from "@/lib/youtubeMusicApi";
-import { MaximizeIcon, MinusIcon, MusicIcon, PauseIcon, PlayIcon, PlusIcon, SkipBackIcon, SkipForwardIcon, SpotifyIcon, SquareIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
+import { MaximizeIcon, MinusIcon, MusicIcon, PauseIcon, PlayIcon, PlusIcon, SkipBackIcon, SkipForwardIcon, SquareIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
 
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
@@ -414,18 +403,14 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
     if (!iframe?.contentWindow) return;
     try {
       const nextPlaying = !isPlaying;
-      if (activeEmbed?.provider === "spotify") {
-        iframe.contentWindow.postMessage({ command: nextPlaying ? "play" : "pause" }, "*");
-      } else {
-        iframe.contentWindow.postMessage(
-          JSON.stringify({
-            event: "command",
-            func: nextPlaying ? "playVideo" : "pauseVideo",
-            args: [],
-          }),
-          "*"
-        );
-      }
+      iframe.contentWindow.postMessage(
+        JSON.stringify({
+          event: "command",
+          func: nextPlaying ? "playVideo" : "pauseVideo",
+          args: [],
+        }),
+        "*"
+      );
       setIsPlaying(nextPlaying);
     } catch {}
   };
@@ -596,11 +581,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                       title={isCardMinimized ? "Click to expand" : (activeSongTitle || activeEmbed.provider)}
                     >
                       <span className="music-child-card__icon flex items-center justify-center shrink-0" aria-hidden="true">
-                        {activeEmbed.provider === "spotify" ? (
-                          <SpotifyIcon className="w-4 h-4 text-emerald-500" />
-                        ) : (
-                          <YouTubeIcon className="w-4 h-4 text-red-500" />
-                        )}
+                        <YouTubeIcon className="w-4 h-4 text-red-500" />
                       </span>
                       <span
                         className={`music-child-card__pulse ${isPlaying ? "is-playing" : ""}`}
@@ -773,12 +754,8 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
               ) : (
                 <div className="music-provider-player__bar">
                   <div className="music-provider-player__title">
-                    {activeEmbed.provider === "spotify" ? (
-                      <SpotifyIcon className="w-3.5 h-3.5 text-emerald-500" />
-                    ) : (
-                      <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
-                    )}
-                    <span className="truncate max-w-[13rem]">{activeSongTitle || `${activeEmbed.provider} player`}</span>
+                    <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
+                    <span className="truncate max-w-[13rem]">{activeSongTitle || "YouTube Music"}</span>
                   </div>
                   <div className="music-provider-player__actions">
                     <button
@@ -844,17 +821,7 @@ export function LoFiPlayer() {
   const [heardHistory, setHeardHistory] = useLocalStorage<HeardSongItem[]>(KEYS.heardMusicHistory, []);
   const [queue, setQueue] = useLocalStorage<QueueSongItem[]>(QUEUE_STORAGE_KEY, []);
   const [tab, setTab] = useState<MusicTab>("stations");
-  const [url, setUrl] = useState("");
-  const [error, setError] = useState("");
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
-
-  // Spotify state
-  const [spotifyToken, setSpotifyToken] = useState<SpotifyTokenData | null>(null);
-  const [spotifyUser, setSpotifyUser] = useState<string>("");
-  const [spotifyPlaylists, setSpotifyPlaylists] = useState<SpotifyPlaylistSummary[]>([]);
-  const [loadingSpotify, setLoadingSpotify] = useState(false);
-  const [customClientId, setCustomClientId] = useState("");
-  const [showSpotifySetup, setShowSpotifySetup] = useState(false);
 
   const [activeSongTitle, setActiveSongTitle] = useLocalStorage<string>("ytdoro:music:active-title", "");
   const [activeSongArtist, setActiveSongArtist] = useLocalStorage<string>("ytdoro:music:active-artist", "");
@@ -877,12 +844,6 @@ export function LoFiPlayer() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token = getStoredSpotifyToken();
-    setSpotifyToken(token);
-    const user = window.localStorage.getItem(SPOTIFY_STORAGE_KEYS.userName) || "";
-    setSpotifyUser(user);
-    const savedClientId = window.localStorage.getItem(SPOTIFY_STORAGE_KEYS.clientId) || "";
-    setCustomClientId(savedClientId);
 
     void getGoogleProviderToken().then((t) => {
       setGoogleToken(t);
@@ -923,48 +884,6 @@ export function LoFiPlayer() {
       };
       return [nextItem, ...filtered].slice(0, 50);
     });
-  };
-
-  const handleConnectSpotify = async () => {
-    setError("");
-    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || customClientId.trim();
-    if (!clientId) {
-      setShowSpotifySetup(true);
-      setError("Please provide a Spotify Client ID to connect your account.");
-      return;
-    }
-    const redirectUri = `${window.location.origin}/auth/spotify-callback`;
-    const authUrl = await createSpotifyAuthUrl(clientId, redirectUri);
-    window.location.href = authUrl;
-  };
-
-  const handleLoadSpotifyPlaylists = async () => {
-    if (!spotifyToken?.accessToken) return;
-    setLoadingSpotify(true);
-    setError("");
-    const lists = await fetchSpotifyPlaylists(spotifyToken.accessToken);
-    setSpotifyPlaylists(lists);
-    setLoadingSpotify(false);
-    if (lists.length === 0) {
-      setError("No Spotify playlists found or access token expired. Reconnect Spotify if needed.");
-    }
-  };
-
-  const handleDisconnectSpotify = () => {
-    disconnectSpotify();
-    setSpotifyToken(null);
-    setSpotifyUser("");
-    setSpotifyPlaylists([]);
-  };
-
-  const handleSelectSpotifyPlaylist = (playlist: SpotifyPlaylistSummary) => {
-    const embed = playlistToMusicEmbed(playlist);
-    setSavedEmbeds((items) => items.some((item) => item.sourceUrl === embed.sourceUrl) ? items : [...items, embed]);
-    setActiveSongTitle(playlist.name);
-    setActiveSongArtist("Spotify");
-    setActiveEmbed(embed);
-    setEnabled(false);
-    recordHeardTrack(playlist.name, "spotify", playlist.externalUrl, playlist.embedUrl);
   };
 
   const handleSyncYouTube = async (forceReconnect = false) => {
@@ -1190,22 +1109,6 @@ export function LoFiPlayer() {
     }
   };
 
-  const saveProvider = (event: FormEvent) => {
-    event.preventDefault();
-    const parsed = parseMusicProviderUrl(url);
-    if (!parsed) {
-      setError("Use a valid HTTPS Spotify, Apple Music, YouTube, SoundCloud, or Amazon Music URL.");
-      return;
-    }
-    setSavedEmbeds((items) => items.some((item) => item.sourceUrl === parsed.sourceUrl) ? items : [...items, parsed]);
-    setActiveSongTitle(parsed.provider === "youtube" ? "YouTube Music" : `${parsed.provider} Track`);
-    setActiveSongArtist(parsed.provider);
-    setActiveEmbed(parsed);
-    setEnabled(false);
-    setUrl("");
-    setError("");
-  };
-
   const selectStation = (id: string) => {
     setStationId(id);
     setActiveEmbed(null);
@@ -1218,8 +1121,8 @@ export function LoFiPlayer() {
     <div className="audio-panel music-panel music-shelf">
       <header className="music-shelf__header">
         <div>
-          <h3>{activeSongTitle || (activeEmbed ? activeEmbed.provider : station.name)}</h3>
-          <p className="music-shelf__now-playing">{activeSongArtist || (activeEmbed ? "External provider" : station.genre)}</p>
+          <h3>{activeSongTitle || (activeEmbed ? "YouTube Music" : station.name)}</h3>
+          <p className="music-shelf__now-playing">{activeSongArtist || (activeEmbed ? "YouTube Music" : station.genre)}</p>
         </div>
       </header>
 
@@ -1596,95 +1499,6 @@ export function LoFiPlayer() {
               )}
             </div>
 
-            {/* Spotify Card */}
-            <div className="music-account-card border border-border-subtle rounded-lg bg-surface-secondary/70 p-3">
-              <div className="music-account-card__header flex items-center justify-between gap-3">
-                <div className="music-account-card__identity flex items-center gap-2.5 min-w-0">
-                  <span className="music-account-card__icon shrink-0 flex items-center justify-center w-7 h-7 text-emerald-500" aria-hidden="true">
-                    <SpotifyIcon className="w-5 h-5" />
-                  </span>
-                  <div className="flex flex-col text-left">
-                    <strong className="text-xs font-semibold text-foreground leading-tight block">Spotify</strong>
-                    <small className="text-[11px] text-text-muted leading-tight block mt-0.5">{spotifyToken ? (spotifyUser || "Connected") : "Connect Account"}</small>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {spotifyToken ? (
-                    <>
-                      <button
-                        type="button"
-                        className="music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer disabled:opacity-50"
-                        onClick={() => { void handleLoadSpotifyPlaylists(); }}
-                        disabled={loadingSpotify}
-                      >
-                        {loadingSpotify ? "Loading…" : "Sync"}
-                      </button>
-                      <button
-                        type="button"
-                        className="music-account-card__disconnect text-[11px] text-text-muted hover:text-foreground underline cursor-pointer"
-                        onClick={handleDisconnectSpotify}
-                      >
-                        Disconnect
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer"
-                      onClick={() => { void handleConnectSpotify(); }}
-                    >
-                      Connect
-                    </button>
-                  )}
-                </div>
-              </div>
-              {showSpotifySetup && !spotifyToken && (
-                <div className="music-account-config mt-2.5 pt-2.5 border-t border-border-subtle flex flex-col gap-1.5">
-                  <small className="text-[11px] text-text-muted">Spotify Client ID (from developer.spotify.com):</small>
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      placeholder="Paste Client ID"
-                      value={customClientId}
-                      onChange={(e) => setCustomClientId(e.target.value)}
-                      className="text-xs px-2.5 py-1.5 bg-surface-secondary border border-border-subtle rounded flex-1 text-foreground"
-                    />
-                    <button
-                      type="button"
-                      className="music-account-card__action text-xs font-bold px-3 py-1.5 rounded-md bg-accent text-white hover:opacity-90 cursor-pointer"
-                      onClick={() => { void handleConnectSpotify(); }}
-                    >
-                      Authorize
-                    </button>
-                  </div>
-                </div>
-              )}
-              {spotifyPlaylists.length > 0 && (
-                <div className="music-playlist-list mt-2.5 flex flex-col gap-1.5 max-h-36 overflow-y-auto" aria-label="Spotify Playlists">
-                  {spotifyPlaylists.map((pl) => (
-                    <button
-                      key={pl.id}
-                      type="button"
-                      className="music-playlist-item flex items-center justify-between p-2 rounded-md border border-border-subtle bg-surface-primary/40 hover:bg-surface-hover text-left cursor-pointer transition-colors"
-                      onClick={() => handleSelectSpotifyPlaylist(pl)}
-                    >
-                      <span className="music-playlist-item__title text-xs text-foreground truncate max-w-[14rem]">{pl.name}</span>
-                      <small className="music-playlist-item__meta text-[10px] text-text-muted font-mono shrink-0 ml-2">{pl.totalTracks} tracks</small>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-border-subtle/50">
-            <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Or paste playlist / track URL</p>
-            <form onSubmit={saveProvider} className="flex gap-2">
-              <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Paste Spotify or YouTube Music URL" aria-label="Music provider URL" />
-              <button type="submit">Save</button>
-            </form>
-            {error && <p className="audio-panel__error mt-1.5" role="alert">{error}</p>}
-            <p className="audio-panel__hint mt-1.5">Provider controls stay in the persistent player. Some providers may block embeds by region or account.</p>
           </div>
         </div>
       )}

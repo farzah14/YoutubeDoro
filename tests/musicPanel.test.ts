@@ -114,8 +114,11 @@ test("Music engine synchronizes song title and artist dynamically from YouTube i
   assert.match(source, /data\?\.info\?\.videoData/);
   assert.match(source, /setActiveSongTitle\(cleanTitle\)/);
 });
-
-
-
-
-
+test("Music exclusively uses YouTube Music, removing Spotify card and paste URL form", () => {
+  assert.doesNotMatch(source, /SpotifyIcon/);
+  assert.doesNotMatch(source, /<strong[^>]*>Spotify<\/strong>/);
+  assert.doesNotMatch(source, /handleConnectSpotify/);
+  assert.doesNotMatch(source, /Or paste playlist \/ track URL/i);
+  assert.doesNotMatch(source, /placeholder="Paste Spotify or YouTube Music URL"/);
+  assert.match(source, /YouTube Music/);
+});
