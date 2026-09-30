@@ -56,13 +56,22 @@ test("Music renders a child card with song title, volume control, and playback t
   assert.match(source, /music-child-card__volume/);
   assert.match(source, /music-child-card__btn--play/);
   assert.match(source, /music-child-card__btn--skip/);
+  assert.match(source, /music-child-card__btn--prev/);
+  assert.match(source, /music-child-card__duration/);
   assert.match(source, /togglePlay/);
+  assert.match(source, /handlePreviousSong/);
+  assert.match(source, /handleSeek/);
   assert.match(source, /handleNextSong/);
+  assert.match(source, /SkipBackIcon/);
   assert.match(source, /SkipForwardIcon/);
   assert.match(stylesSource, /\.music-child-card\s*\{/);
   assert.match(stylesSource, /\.music-child-card__header\s*\{/);
   assert.match(stylesSource, /\.music-child-card__volume\s*\{/);
+  assert.match(stylesSource, /\.music-child-card__btn--prev\s*\{/);
   assert.match(stylesSource, /\.music-child-card__btn--skip\s*\{/);
+  assert.match(stylesSource, /\.music-child-card__duration\s*\{/);
+  assert.match(stylesSource, /\.music-child-card__progress-slider\s*\{/);
   assert.match(stylesSource, /accent-color:\s*var\(--accent/);
 });
+
 

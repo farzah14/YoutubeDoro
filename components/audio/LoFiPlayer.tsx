@@ -5,6 +5,7 @@ import { ComponentType, FormEvent, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { KEYS } from "@/lib/constants";
 import { DEFAULT_LOFI_VOLUME, DEFAULT_STATION_ID, RADIO_STATIONS } from "@/lib/audioStreams";
+import { formatMMSS } from "@/lib/time";
 import { parseMusicProviderUrl, type MusicEmbed } from "@/lib/musicProviders";
 import type { YouTubeComponentProps } from "@/types";
 import {
@@ -32,7 +33,7 @@ import {
   type YouTubePlaylistSummary,
   type YouTubeSongSummary,
 } from "@/lib/youtubeMusicApi";
-import { MusicIcon, PauseIcon, PlayIcon, SkipForwardIcon, SpotifyIcon, SquareIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
+import { MusicIcon, PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon, SpotifyIcon, SquareIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
 
@@ -96,9 +97,106 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const [savedEmbeds] = useLocalStorage<MusicEmbed[]>(KEYS.savedMusicEmbeds, []);
   const [heardHistory] = useLocalStorage<HeardSongItem[]>(KEYS.heardMusicHistory, []);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
   const playerRef = useRef<MinimalYTPlayer | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
+
+  const handleSeek = (newTime: number) => {
+    setCurrentTime(newTime);
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      try {
+        iframe.contentWindow.postMessage(
+          JSON.stringify({
+            event: "command",
+            func: "seekTo",
+            args: [newTime, true],
+          }),
+          "*"
+        );
+        if (newTime === 0) {
+          iframe.contentWindow.postMessage(
+            JSON.stringify({
+              event: "command",
+              func: "playVideo",
+              args: [],
+            }),
+            "*"
+          );
+          setIsPlaying(true);
+        }
+      } catch {}
+    }
+  };
+
+  const handlePreviousSong = () => {
+    // If more than 3 seconds in, restart song from 0:00 to retry playing song again
+    if (currentTime > 3) {
+      handleSeek(0);
+      return;
+    }
+
+    if (activeEmbed) {
+      try {
+        const rawQueue = window.localStorage.getItem(QUEUE_STORAGE_KEY);
+        if (rawQueue) {
+          const queue: QueueSongItem[] = JSON.parse(rawQueue);
+          if (queue.length > 1) {
+            const currentIdx = queue.findIndex(
+              (item) => item.sourceUrl === activeEmbed.sourceUrl || item.embedUrl === activeEmbed.embedUrl
+            );
+            const prevIdx = currentIdx > 0 ? currentIdx - 1 : queue.length - 1;
+            const prevSong = queue[prevIdx];
+            if (prevSong) {
+              setActiveSongTitle(prevSong.title);
+              setActiveSongArtist(prevSong.artist || "");
+              setActiveEmbed({
+                provider: prevSong.provider,
+                sourceUrl: prevSong.sourceUrl,
+                embedUrl: prevSong.embedUrl,
+              });
+              setCurrentTime(0);
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      if (savedEmbeds.length > 1) {
+        const idx = savedEmbeds.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl);
+        const prevIdx = idx > 0 ? idx - 1 : savedEmbeds.length - 1;
+        const prevEmbed = savedEmbeds[prevIdx];
+        setActiveEmbed(prevEmbed);
+        setCurrentTime(0);
+        return;
+      }
+
+      if (heardHistory.length > 1) {
+        const idx = heardHistory.findIndex((item) => item.sourceUrl === activeEmbed.sourceUrl);
+        const prevIdx = idx > 0 ? idx - 1 : heardHistory.length - 1;
+        const prevItem = heardHistory[prevIdx];
+        setActiveEmbed({
+          provider: prevItem.provider,
+          sourceUrl: prevItem.sourceUrl,
+          embedUrl: prevItem.embedUrl,
+        });
+        setActiveSongTitle(prevItem.title);
+        setActiveSongArtist(prevItem.artist || "");
+        setCurrentTime(0);
+        return;
+      }
+
+      handleSeek(0);
+    } else if (enabled) {
+      const currentIdx = RADIO_STATIONS.findIndex((item) => item.id === stationId);
+      const prevIdx = currentIdx > 0 ? currentIdx - 1 : RADIO_STATIONS.length - 1;
+      setStationId(RADIO_STATIONS[prevIdx].id);
+      setCurrentTime(0);
+    }
+  };
 
   const handleNextSong = () => {
     if (activeEmbed) {
@@ -192,6 +290,8 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   useEffect(() => {
     if (activeEmbed) {
       setIsPlaying(true);
+      setCurrentTime(0);
+      setDuration(0);
     }
   }, [activeEmbed?.embedUrl]);
 
@@ -203,11 +303,38 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           if (data.info === 1) setIsPlaying(true);
           else if (data.info === 2 || data.info === 0) setIsPlaying(false);
         }
+        if (data?.info) {
+          if (typeof data.info.duration === "number" && data.info.duration > 0) {
+            setDuration(Math.round(data.info.duration));
+          }
+          if (typeof data.info.currentTime === "number" && !isSeeking) {
+            setCurrentTime(Math.round(data.info.currentTime));
+          }
+        }
       } catch {}
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [isSeeking]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      const iframe = iframeRef.current;
+      if (iframe?.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage(JSON.stringify({ event: "listening" }), "*");
+        } catch {}
+      }
+      if (!isSeeking) {
+        setCurrentTime((prev) => {
+          if (duration > 0 && prev >= duration) return prev;
+          return prev + 1;
+        });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPlaying, isSeeking, duration]);
 
   const sendVolumeToIframe = (vol: number, isMuted: boolean) => {
     const iframe = iframeRef.current;
@@ -319,6 +446,16 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                     <div className="music-child-card__actions flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
+                        className="music-child-card__btn music-child-card__btn--prev"
+                        onClick={handlePreviousSong}
+                        aria-label="Previous song or restart"
+                        title="Previous / Replay"
+                      >
+                        <SkipBackIcon className="w-3.5 h-3.5 fill-current" />
+                      </button>
+
+                      <button
+                        type="button"
                         className="music-child-card__btn music-child-card__btn--play"
                         onClick={togglePlay}
                         aria-label={isPlaying ? "Pause music" : "Play music"}
@@ -351,6 +488,37 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                         <SquareIcon className="w-3 h-3 fill-current" />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Duration Seekbar Row: Current Time, Progress Bar, Total Duration */}
+                  <div className="music-child-card__duration flex items-center gap-2 w-full" aria-label="Song duration progress">
+                    <span className="music-child-card__time music-child-card__time--current text-accent font-mono text-[11px] font-bold min-w-[2.2rem] text-left">
+                      {formatMMSS(currentTime)}
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max={duration > 0 ? duration : Math.max(currentTime, 180)}
+                      value={currentTime}
+                      onMouseDown={() => setIsSeeking(true)}
+                      onTouchStart={() => setIsSeeking(true)}
+                      onChange={(e) => {
+                        const newTime = Number(e.target.value);
+                        setCurrentTime(newTime);
+                        handleSeek(newTime);
+                      }}
+                      onMouseUp={() => setIsSeeking(false)}
+                      onTouchEnd={() => setIsSeeking(false)}
+                      className="music-child-card__progress-slider music-child-card__slider flex-1 h-1.5 rounded-full cursor-pointer"
+                      style={{
+                        accentColor: "var(--accent, #f6c76d)",
+                        background: `linear-gradient(to right, var(--accent, #f6c76d) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%, rgba(255, 255, 255, 0.2) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%)`,
+                      }}
+                      aria-label="Song progress"
+                    />
+                    <span className="music-child-card__time music-child-card__time--total text-text-muted font-mono text-[11px] font-semibold min-w-[2.2rem] text-right">
+                      {duration > 0 ? formatMMSS(duration) : (currentTime > 0 ? formatMMSS(Math.max(currentTime, 180)) : "--:--")}
+                    </span>
                   </div>
 
                   {/* Volume Row: Mute Toggle, Range Slider, Percentage */}
@@ -408,11 +576,27 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                   <div className="music-provider-player__actions">
                     <button
                       type="button"
+                      onClick={handlePreviousSong}
+                      title="Previous / Replay"
+                      aria-label="Previous / Replay"
+                    >
+                      <SkipBackIcon className="w-3 h-3 fill-current" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={togglePlay}
                       title={isPlaying ? "Pause" : "Play"}
                       aria-label={isPlaying ? "Pause" : "Play"}
                     >
                       {isPlaying ? <PauseIcon className="w-3 h-3" /> : <PlayIcon className="w-3 h-3 fill-current" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextSong}
+                      title="Next song"
+                      aria-label="Next song"
+                    >
+                      <SkipForwardIcon className="w-3 h-3 fill-current" />
                     </button>
                     <button
                       type="button"
@@ -428,7 +612,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                       title="Stop music"
                       aria-label="Stop music"
                     >
-                      ×
+                      <SquareIcon className="w-2.5 h-2.5 fill-current" />
                     </button>
                   </div>
                 </div>
