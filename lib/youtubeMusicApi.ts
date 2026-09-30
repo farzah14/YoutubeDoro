@@ -44,7 +44,13 @@ export async function getGoogleProviderToken(): Promise<string | null> {
   }
 }
 
-export async function fetchGoogleYouTubePlaylists(accessToken: string): Promise<YouTubePlaylistSummary[]> {
+export interface FetchYouTubePlaylistsResult {
+  playlists: YouTubePlaylistSummary[];
+  error?: "EXPIRED_TOKEN" | "INSUFFICIENT_SCOPE" | "API_DISABLED" | "FETCH_ERROR";
+  errorMessage?: string;
+}
+
+export async function fetchGoogleYouTubePlaylistsResult(accessToken: string): Promise<FetchYouTubePlaylistsResult> {
   try {
     const url = new URL("https://www.googleapis.com/youtube/v3/playlists");
     url.searchParams.set("part", "snippet,contentDetails");
@@ -58,12 +64,30 @@ export async function fetchGoogleYouTubePlaylists(accessToken: string): Promise<
       },
     });
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const errorJson = await res.json().catch(() => null);
+      const rawMessage = (errorJson && typeof errorJson === "object" && "error" in errorJson && typeof (errorJson as Record<string, unknown>).error === "object" && (errorJson.error as Record<string, unknown>)?.message) ? String((errorJson.error as Record<string, unknown>).message) : res.statusText;
+      let errorType: FetchYouTubePlaylistsResult["error"] = "FETCH_ERROR";
+
+      if (res.status === 401) {
+        errorType = "EXPIRED_TOKEN";
+      } else if (rawMessage.toLowerCase().includes("not enabled") || rawMessage.toLowerCase().includes("has not been used")) {
+        errorType = "API_DISABLED";
+      } else if (res.status === 403 || rawMessage.toLowerCase().includes("insufficient") || rawMessage.toLowerCase().includes("permission")) {
+        errorType = "INSUFFICIENT_SCOPE";
+      }
+
+      return {
+        playlists: [],
+        error: errorType,
+        errorMessage: rawMessage,
+      };
+    }
 
     const data = await res.json();
     const items = Array.isArray(data.items) ? data.items : [];
 
-    return items
+    const playlists: YouTubePlaylistSummary[] = items
       .filter((item: Record<string, unknown>) => item && typeof item.id === "string")
       .map((item: {
         id: string;
@@ -94,9 +118,20 @@ export async function fetchGoogleYouTubePlaylists(accessToken: string): Promise<
           embedUrl,
         };
       });
-  } catch {
-    return [];
+
+    return { playlists };
+  } catch (err) {
+    return {
+      playlists: [],
+      error: "FETCH_ERROR",
+      errorMessage: err instanceof Error ? err.message : "Network error contacting YouTube API",
+    };
   }
+}
+
+export async function fetchGoogleYouTubePlaylists(accessToken: string): Promise<YouTubePlaylistSummary[]> {
+  const result = await fetchGoogleYouTubePlaylistsResult(accessToken);
+  return result.playlists;
 }
 
 export function youtubePlaylistToMusicEmbed(playlist: YouTubePlaylistSummary): MusicEmbed {

@@ -3244,80 +3244,82 @@ textarea:focus-visible,
 }
 
 .music-accounts-grid {
-  display: grid;
-  gap: 0.65rem;
-  margin-bottom: 0.75rem;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.65rem !important;
+  margin-bottom: 0.75rem !important;
 }
 
 .music-account-card {
-  border: 1px solid var(--border-subtle);
-  border-radius: 9px;
-  background: var(--surface-secondary);
-  padding: 0.75rem;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 9px !important;
+  background: var(--surface-secondary) !important;
+  padding: 0.75rem !important;
 }
 
 .music-account-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
 }
 
 .music-account-card__identity {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  min-width: 0;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  min-width: 0 !important;
 }
 
 .music-account-card__icon svg {
-  height: 1.35rem;
-  width: 1.35rem;
-  flex-shrink: 0;
+  height: 1.35rem !important;
+  width: 1.35rem !important;
+  flex-shrink: 0 !important;
 }
 
 .music-account-card__identity strong {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--fg);
-  line-height: 1.2;
+  display: block !important;
+  font-size: 0.75rem !important;
+  color: var(--fg) !important;
+  line-height: 1.25 !important;
 }
 
 .music-account-card__identity small {
-  display: block;
-  font-size: 0.62rem;
-  color: var(--text-muted);
-  line-height: 1.2;
+  display: block !important;
+  font-size: 0.62rem !important;
+  color: var(--text-muted) !important;
+  line-height: 1.25 !important;
+  margin-top: 0.15rem !important;
 }
 
 .music-account-card__action {
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.3rem 0.65rem;
-  border-radius: 6px;
-  background: var(--studio-lamplight);
-  color: white;
-  border: 0;
-  cursor: pointer;
-  white-space: nowrap;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  padding: 0.35rem 0.75rem !important;
+  border-radius: 6px !important;
+  background: var(--studio-lamplight) !important;
+  color: white !important;
+  border: 0 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
 }
 
 .music-account-card__action:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
 }
 
 .music-account-card__disconnect {
-  font-size: 0.62rem;
-  color: var(--text-muted);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  text-decoration: underline;
+  font-size: 0.62rem !important;
+  color: var(--text-muted) !important;
+  background: transparent !important;
+  border: 0 !important;
+  cursor: pointer !important;
+  text-decoration: underline !important;
 }
 
 .music-account-card__disconnect:hover {
-  color: var(--fg);
+  color: var(--fg) !important;
 }
 
 .music-playlist-list {
