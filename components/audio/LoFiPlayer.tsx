@@ -45,7 +45,8 @@ export function MusicEngine() {
   const [stationId] = useLocalStorage(KEYS.lofiStation, DEFAULT_STATION_ID);
   const [volume] = useLocalStorage(KEYS.lofiVolume, DEFAULT_LOFI_VOLUME);
   const [muted] = useLocalStorage(KEYS.lofiMuted, false);
-  const [activeEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
+  const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
+  const [isMinimized, setIsMinimized] = useLocalStorage("ytdoro:music:player-minimized", true);
   const playerRef = useRef<MinimalYTPlayer | null>(null);
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
 
@@ -73,14 +74,79 @@ export function MusicEngine() {
         />
       </div>
       {activeEmbed && (
-        <aside className="music-provider-player" aria-label={`${activeEmbed.provider} player`}>
-          <iframe
-            src={activeEmbed.embedUrl}
-            title={`${activeEmbed.provider} music player`}
-            sandbox="allow-scripts allow-same-origin allow-presentation"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            loading="eager"
-          />
+        <aside
+          className={`music-provider-player ${isMinimized ? "music-provider-player--minimized" : "music-provider-player--expanded"}`}
+          aria-label={`${activeEmbed.provider} player`}
+        >
+          <div className="music-provider-player__iframe-wrap">
+            <iframe
+              src={activeEmbed.embedUrl}
+              title={`${activeEmbed.provider} music player`}
+              sandbox="allow-scripts allow-same-origin allow-presentation"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              loading="eager"
+            />
+          </div>
+
+          {isMinimized ? (
+            <div className="music-provider-badge">
+              <button
+                type="button"
+                className="music-provider-badge__icon-btn"
+                onClick={() => setIsMinimized(false)}
+                title={`Click to expand ${activeEmbed.provider} player`}
+                aria-label={`Expand ${activeEmbed.provider} player`}
+              >
+                <span className="music-provider-badge__icon" aria-hidden="true">
+                  {activeEmbed.provider === "spotify" ? (
+                    <SpotifyIcon className="w-4 h-4 text-emerald-500" />
+                  ) : (
+                    <YouTubeIcon className="w-4 h-4 text-red-500" />
+                  )}
+                </span>
+                <span className="music-provider-badge__pulse" aria-hidden="true" />
+                <span className="music-provider-badge__label">{activeEmbed.provider}</span>
+              </button>
+              <button
+                type="button"
+                className="music-provider-badge__close"
+                onClick={() => setActiveEmbed(null)}
+                title="Stop music"
+                aria-label="Stop music"
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <div className="music-provider-player__bar">
+              <div className="music-provider-player__title">
+                {activeEmbed.provider === "spotify" ? (
+                  <SpotifyIcon className="w-3.5 h-3.5 text-emerald-500" />
+                ) : (
+                  <YouTubeIcon className="w-3.5 h-3.5 text-red-500" />
+                )}
+                <span>{activeEmbed.provider} player</span>
+              </div>
+              <div className="music-provider-player__actions">
+                <button
+                  type="button"
+                  onClick={() => setIsMinimized(true)}
+                  title="Minimize to icon only"
+                  aria-label="Minimize to icon only"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveEmbed(null)}
+                  title="Stop music"
+                  aria-label="Stop music"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
         </aside>
       )}
     </>
