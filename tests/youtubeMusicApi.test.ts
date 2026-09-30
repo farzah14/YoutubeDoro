@@ -4,6 +4,7 @@ import {
   DEFAULT_YOUTUBE_SONGS,
   decodeHtmlEntities,
   getYouTubeLikedMusicPlaylist,
+  parseIsoDuration,
   youtubePlaylistToMusicEmbed,
   youtubeSongToMusicEmbed,
   type YouTubePlaylistSummary,
@@ -69,4 +70,14 @@ test("DEFAULT_YOUTUBE_SONGS provides fallback YouTube tracks with valid ids and 
     assert.match(song.externalUrl, /^https:\/\/music\.youtube\.com\/watch\?v=/);
   }
 });
+
+test("parseIsoDuration correctly parses ISO 8601 YouTube durations into seconds", () => {
+  assert.equal(parseIsoDuration("PT14S"), 14);
+  assert.equal(parseIsoDuration("PT3M45S"), 225);
+  assert.equal(parseIsoDuration("PT1H2M3S"), 3723);
+  assert.equal(parseIsoDuration("PT5M"), 300);
+  assert.equal(parseIsoDuration(""), 0);
+  assert.equal(parseIsoDuration(undefined), 0);
+});
+
 

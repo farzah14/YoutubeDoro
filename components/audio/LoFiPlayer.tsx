@@ -127,12 +127,15 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
+  const lastIframeMsgTimeRef = useRef<number>(0);
+  const seekLockUntilRef = useRef<number>(0);
   const playerRef = useRef<MinimalYTPlayer | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const station = RADIO_STATIONS.find((item) => item.id === stationId) ?? RADIO_STATIONS[0];
 
   const handleSeek = (newTime: number) => {
     setCurrentTime(newTime);
+    seekLockUntilRef.current = Date.now() + 1000;
     const iframe = iframeRef.current;
     if (iframe?.contentWindow) {
       try {
@@ -432,6 +435,8 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
       setIsPlaying(true);
       setCurrentTime(0);
       setDuration(0);
+      lastIframeMsgTimeRef.current = 0;
+      seekLockUntilRef.current = Date.now() + 1200;
     }
   }, [activeEmbed?.embedUrl]);
 
@@ -461,8 +466,16 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           if (typeof data.info.duration === "number" && data.info.duration > 0) {
             setDuration(Math.round(data.info.duration));
           }
-          if (typeof data.info.currentTime === "number" && !isSeeking) {
-            setCurrentTime(Math.round(data.info.currentTime));
+          if (typeof data.info.currentTime === "number") {
+            lastIframeMsgTimeRef.current = Date.now();
+            if (!isSeeking && Date.now() > seekLockUntilRef.current) {
+              const seconds = Math.floor(data.info.currentTime);
+              setCurrentTime((prev) => {
+                if (seconds >= prev) return seconds;
+                if (prev - seconds > 3) return seconds;
+                return prev;
+              });
+            }
           }
         }
       } catch {}
@@ -480,7 +493,8 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
           iframe.contentWindow.postMessage(JSON.stringify({ event: "listening" }), "*");
         } catch {}
       }
-      if (!isSeeking) {
+      const timeSinceLastIframe = Date.now() - lastIframeMsgTimeRef.current;
+      if (!isSeeking && Date.now() > seekLockUntilRef.current && timeSinceLastIframe > 2000) {
         setCurrentTime((prev) => {
           if (duration > 0 && prev >= duration) return prev;
           return prev + 1;
@@ -692,8 +706,14 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                             setCurrentTime(newTime);
                             handleSeek(newTime);
                           }}
-                          onMouseUp={() => setIsSeeking(false)}
-                          onTouchEnd={() => setIsSeeking(false)}
+                          onMouseUp={() => {
+                            setIsSeeking(false);
+                            seekLockUntilRef.current = Date.now() + 1000;
+                          }}
+                          onTouchEnd={() => {
+                            setIsSeeking(false);
+                            seekLockUntilRef.current = Date.now() + 1000;
+                          }}
                           className="music-child-card__progress-slider music-child-card__slider flex-1 h-1.5 rounded-none cursor-pointer"
                           style={{
                             accentColor: "var(--accent, #f6c76d)",

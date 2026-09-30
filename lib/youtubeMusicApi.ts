@@ -165,6 +165,16 @@ export interface FetchYouTubeSongsResult {
   errorMessage?: string;
 }
 
+export function parseIsoDuration(durationStr?: string): number {
+  if (!durationStr || typeof durationStr !== "string") return 0;
+  const match = durationStr.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const hours = parseInt(match[1] || "0", 10);
+  const minutes = parseInt(match[2] || "0", 10);
+  const seconds = parseInt(match[3] || "0", 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
 export function getYouTubeLikedMusicPlaylist(): YouTubePlaylistSummary {
   return {
     id: "LM",
@@ -328,6 +338,12 @@ export async function fetchGoogleYouTubeLikedVideos(accessToken: string, musicOn
       .filter((item: Record<string, unknown>) => {
         if (!item || typeof item.id !== "string") return false;
         if (!musicOnly) return true;
+
+        const contentDetails = item.contentDetails as Record<string, unknown> | undefined;
+        if (typeof contentDetails?.duration === "string") {
+          const durationSec = parseIsoDuration(contentDetails.duration);
+          if (durationSec > 0 && durationSec < 30) return false;
+        }
 
         const snippet = item.snippet as Record<string, unknown> | undefined;
         const topicDetails = item.topicDetails as Record<string, unknown> | undefined;
