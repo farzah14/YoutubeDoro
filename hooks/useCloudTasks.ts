@@ -61,7 +61,10 @@ export function useCloudTasks() {
   const reload = useCallback(async (silent = false) => {
     if (pendingSubtasks.current.size) return;
     const sequence = ++requestSequence.current;
-    if (!silent) setLoading(true);
+    if (!silent) {
+      setLoading(true);
+      pollAllowed.current = true;
+    }
     try {
       const result = await trackerApi.listTasks();
       if (sequence !== requestSequence.current) return;
@@ -72,7 +75,9 @@ export function useCloudTasks() {
       pollAllowed.current = true;
     } catch (cause) {
       if (sequence !== requestSequence.current) return;
-      if (cause instanceof TrackerApiError && cause.status === 401) pollAllowed.current = false;
+      if (cause instanceof TrackerApiError && (cause.status === 401 || cause.status === 500)) {
+        pollAllowed.current = false;
+      }
       setError(cause instanceof Error ? cause.message : "Could not load tasks.");
     } finally {
       if (sequence === requestSequence.current) setLoading(false);

@@ -151,8 +151,15 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
   const [showInterruptedNotice, setShowInterruptedNotice] = useState(true);
   const [migrationKey] = useLocalStorage(BROWSER_MIGRATION_KEY, "");
   const [migrationHidden, setMigrationHidden] = useState(false);
+  const [trackerErrorDismissed, setTrackerErrorDismissed] = useState(false);
   const sessionNoteRef = useRef("");
   const topicToday = activeTask?.text ?? "";
+
+  const handleTrackerRetry = useCallback(() => {
+    setTrackerErrorDismissed(false);
+    void reloadTasks();
+    void reloadHistory();
+  }, [reloadHistory, reloadTasks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -336,7 +343,26 @@ export default function YouTubeRestTimer({ accountEmail }: { accountEmail?: stri
           greetingStyle={greetingStyle}
         />
 
-        {(taskError || recorderError) && <aside className="session-recovery-notice session-recovery-notice--error" role="alert"><div><strong>Tracker save problem.</strong><p>{taskError || recorderError}</p></div><button type="button" onClick={() => { void reloadTasks(); void reloadHistory(); }}>Retry</button></aside>}
+        {(taskError || recorderError) && !trackerErrorDismissed && (
+          <aside className="session-recovery-notice session-recovery-notice--error mb-20 relative z-20" role="alert">
+            <div className="min-w-0 flex-1">
+              <strong>Tracker save problem.</strong>
+              <p className="break-words">{taskError || recorderError}</p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <button type="button" onClick={handleTrackerRetry}>
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrackerErrorDismissed(true)}
+                aria-label="Dismiss tracker problem notice"
+              >
+                Dismiss
+              </button>
+            </div>
+          </aside>
+        )}
         {tasksLoading && <p className="tracker-loading" role="status">Loading your account tracker…</p>}
 
         {!isHomeMode && (
