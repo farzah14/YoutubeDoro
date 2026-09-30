@@ -3653,12 +3653,19 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
   gap: 0.55rem;
   background: #0f172a;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 0.65rem 0.85rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   width: min(22.5rem, calc(100vw - 2rem));
   color: var(--fg);
-  transition: transform 150ms ease, border-color 150ms ease;
+  transition: transform 150ms ease, border-color 150ms ease, padding 150ms ease;
+}
+
+.music-child-card--minimized {
+  gap: 0;
+  padding: 0.45rem 0.75rem;
+  width: max-content;
+  max-width: min(22.5rem, calc(100vw - 2rem));
 }
 
 .music-child-card:hover {
@@ -3691,7 +3698,7 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
   display: inline-block;
   width: 0.4rem;
   height: 0.4rem;
-  border-radius: 50%;
+  border-radius: 0;
   background: #22c55e;
   box-shadow: 0 0 6px #22c55e;
   flex-shrink: 0;
@@ -3727,7 +3734,7 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
   justify-content: center;
   width: 1.85rem;
   height: 1.85rem;
-  border-radius: 6px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--fg);
@@ -3777,6 +3784,17 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
   border-color: rgba(246, 199, 109, 0.4);
 }
 
+.music-child-card__btn--min,
+.music-child-card__btn--expand {
+  color: var(--text-secondary, #c5d0db);
+}
+
+.music-child-card__btn--min:hover,
+.music-child-card__btn--expand:hover {
+  color: var(--accent, #f6c76d);
+  border-color: rgba(246, 199, 109, 0.4);
+}
+
 .music-child-card__btn--stop {
   color: var(--text-muted);
 }
@@ -3819,7 +3837,7 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
   -webkit-appearance: none;
   appearance: none;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
+  border-radius: 0;
   outline: none;
   cursor: pointer;
   accent-color: var(--accent, #f6c76d) !important;
@@ -3828,9 +3846,9 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
 .music-child-card__progress-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
   background: var(--accent, #f6c76d);
   box-shadow: 0 0 8px rgba(246, 199, 109, 0.6);
   cursor: pointer;
@@ -3842,9 +3860,9 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
 }
 
 .music-child-card__progress-slider::-moz-range-thumb {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
   background: var(--accent, #f6c76d);
   box-shadow: 0 0 8px rgba(246, 199, 109, 0.6);
   cursor: pointer;
@@ -3853,7 +3871,7 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
 
 .music-child-card__progress-slider::-moz-range-progress {
   background: var(--accent, #f6c76d);
-  border-radius: 999px;
+  border-radius: 0;
   height: 5px;
 }
 
@@ -3889,7 +3907,7 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
   -webkit-appearance: none;
   appearance: none;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
+  border-radius: 0;
   outline: none;
   cursor: pointer;
   accent-color: var(--accent, #f6c76d) !important;
@@ -3898,9 +3916,9 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
 .music-child-card__slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
   background: var(--accent, #f6c76d);
   box-shadow: 0 0 8px rgba(246, 199, 109, 0.6);
   cursor: pointer;
@@ -3912,9 +3930,9 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
 }
 
 .music-child-card__slider::-moz-range-thumb {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
   background: var(--accent, #f6c76d);
   box-shadow: 0 0 8px rgba(246, 199, 109, 0.6);
   cursor: pointer;
@@ -3923,7 +3941,7 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
 
 .music-child-card__slider::-moz-range-progress {
   background: var(--accent, #f6c76d);
-  border-radius: 999px;
+  border-radius: 0;
   height: 5px;
 }
 
@@ -3933,6 +3951,7 @@ body:has(.overlay-panel:has(.audio-overlay)) .music-provider-player {
   font-weight: 700;
   color: var(--accent, #f6c76d);
   min-width: 2.2rem;
+
   text-align: right;
   flex-shrink: 0;
 }

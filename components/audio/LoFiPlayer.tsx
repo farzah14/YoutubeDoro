@@ -33,7 +33,8 @@ import {
   type YouTubePlaylistSummary,
   type YouTubeSongSummary,
 } from "@/lib/youtubeMusicApi";
-import { MusicIcon, PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon, SpotifyIcon, SquareIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
+import { MinusIcon, MusicIcon, PauseIcon, PlayIcon, PlusIcon, SkipBackIcon, SkipForwardIcon, SpotifyIcon, SquareIcon, TrashIcon, Volume2Icon, VolumeXIcon, YouTubeIcon } from "../icons";
+
 
 const YouTube = dynamic(() => import("react-youtube"), { ssr: false }) as unknown as ComponentType<YouTubeComponentProps>;
 
@@ -92,6 +93,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
   const [muted, setMuted] = useLocalStorage(KEYS.lofiMuted, false);
   const [activeEmbed, setActiveEmbed] = useLocalStorage<MusicEmbed | null>(KEYS.activeMusicEmbed, null);
   const [isMinimized, setIsMinimized] = useLocalStorage("ytdoro:music:player-minimized", true);
+  const [isCardMinimized, setIsCardMinimized] = useLocalStorage("ytdoro:music:card-minimized", false);
   const [activeSongTitle, setActiveSongTitle] = useLocalStorage<string>("ytdoro:music:active-title", "");
   const [activeSongArtist, setActiveSongArtist] = useLocalStorage<string>("ytdoro:music:active-artist", "");
   const [savedEmbeds] = useLocalStorage<MusicEmbed[]>(KEYS.savedMusicEmbeds, []);
@@ -417,12 +419,16 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
             <>
               {isMinimized ? (
                 <div
-                  className="music-child-card flex flex-col gap-2.5 p-3 rounded-xl bg-slate-900/95 border border-white/20 shadow-2xl"
+                  className={`music-child-card ${isCardMinimized ? "music-child-card--minimized" : ""} flex flex-col gap-2.5 p-3 rounded-none bg-slate-900/95 border border-white/20 shadow-2xl`}
                   aria-label="Music player"
                 >
-                  {/* Header Row: Provider Icon, Pulse, Title, Play/Pause Button, Skip Button, Stop Button */}
+                  {/* Header Row: Provider Icon, Pulse, Title, Play/Pause Button, Skip Button, Minimize Button, Stop Button */}
                   <div className="music-child-card__header flex items-center justify-between gap-2.5">
-                    <div className="music-child-card__info flex items-center gap-1.5 min-w-0 flex-1">
+                    <div
+                      className={`music-child-card__info flex items-center gap-1.5 min-w-0 flex-1 ${isCardMinimized ? "cursor-pointer" : ""}`}
+                      onClick={() => isCardMinimized && setIsCardMinimized(false)}
+                      title={isCardMinimized ? "Click to expand" : (activeSongTitle || activeEmbed.provider)}
+                    >
                       <span className="music-child-card__icon flex items-center justify-center shrink-0" aria-hidden="true">
                         {activeEmbed.provider === "spotify" ? (
                           <SpotifyIcon className="w-4 h-4 text-emerald-500" />
@@ -436,7 +442,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                         title={isPlaying ? "Playing" : "Paused"}
                       />
                       <span
-                        className="music-child-card__title truncate text-xs font-bold text-foreground max-w-[9.5rem]"
+                        className="music-child-card__title truncate text-xs font-bold text-foreground max-w-[8.5rem]"
                         title={activeSongTitle || activeEmbed.provider}
                       >
                         {activeSongTitle || activeEmbed.provider}
@@ -446,7 +452,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                     <div className="music-child-card__actions flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
-                        className="music-child-card__btn music-child-card__btn--prev"
+                        className="music-child-card__btn music-child-card__btn--prev rounded-none"
                         onClick={handlePreviousSong}
                         aria-label="Previous song or restart"
                         title="Previous / Replay"
@@ -456,7 +462,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
 
                       <button
                         type="button"
-                        className="music-child-card__btn music-child-card__btn--play"
+                        className="music-child-card__btn music-child-card__btn--play rounded-none"
                         onClick={togglePlay}
                         aria-label={isPlaying ? "Pause music" : "Play music"}
                         title={isPlaying ? "Pause" : "Play"}
@@ -470,7 +476,7 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
 
                       <button
                         type="button"
-                        className="music-child-card__btn music-child-card__btn--skip"
+                        className="music-child-card__btn music-child-card__btn--skip rounded-none"
                         onClick={handleNextSong}
                         aria-label="Next song"
                         title="Next song"
@@ -478,9 +484,31 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                         <SkipForwardIcon className="w-3.5 h-3.5 fill-current" />
                       </button>
 
+                      {isCardMinimized ? (
+                        <button
+                          type="button"
+                          className="music-child-card__btn music-child-card__btn--expand rounded-none"
+                          onClick={() => setIsCardMinimized(false)}
+                          aria-label="Expand music card"
+                          title="Expand"
+                        >
+                          <PlusIcon className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="music-child-card__btn music-child-card__btn--min rounded-none"
+                          onClick={() => setIsCardMinimized(true)}
+                          aria-label="Minimize music card"
+                          title="Minimize"
+                        >
+                          <MinusIcon className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
                       <button
                         type="button"
-                        className="music-child-card__btn music-child-card__btn--stop music-child-card__btn--close"
+                        className="music-child-card__btn music-child-card__btn--stop music-child-card__btn--close rounded-none"
                         onClick={() => setActiveEmbed(null)}
                         aria-label="Stop music"
                         title="Stop music"
@@ -490,78 +518,82 @@ export function MusicEngine({ hidden = false }: MusicEngineProps = {}) {
                     </div>
                   </div>
 
-                  {/* Duration Seekbar Row: Current Time, Progress Bar, Total Duration */}
-                  <div className="music-child-card__duration flex items-center gap-2 w-full" aria-label="Song duration progress">
-                    <span className="music-child-card__time music-child-card__time--current text-accent font-mono text-[11px] font-bold min-w-[2.2rem] text-left">
-                      {formatMMSS(currentTime)}
-                    </span>
-                    <input
-                      type="range"
-                      min="0"
-                      max={duration > 0 ? duration : Math.max(currentTime, 180)}
-                      value={currentTime}
-                      onMouseDown={() => setIsSeeking(true)}
-                      onTouchStart={() => setIsSeeking(true)}
-                      onChange={(e) => {
-                        const newTime = Number(e.target.value);
-                        setCurrentTime(newTime);
-                        handleSeek(newTime);
-                      }}
-                      onMouseUp={() => setIsSeeking(false)}
-                      onTouchEnd={() => setIsSeeking(false)}
-                      className="music-child-card__progress-slider music-child-card__slider flex-1 h-1.5 rounded-full cursor-pointer"
-                      style={{
-                        accentColor: "var(--accent, #f6c76d)",
-                        background: `linear-gradient(to right, var(--accent, #f6c76d) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%, rgba(255, 255, 255, 0.2) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%)`,
-                      }}
-                      aria-label="Song progress"
-                    />
-                    <span className="music-child-card__time music-child-card__time--total text-text-muted font-mono text-[11px] font-semibold min-w-[2.2rem] text-right">
-                      {duration > 0 ? formatMMSS(duration) : (currentTime > 0 ? formatMMSS(Math.max(currentTime, 180)) : "--:--")}
-                    </span>
-                  </div>
+                  {!isCardMinimized && (
+                    <>
+                      {/* Duration Seekbar Row: Current Time, Progress Bar, Total Duration */}
+                      <div className="music-child-card__duration flex items-center gap-2 w-full" aria-label="Song duration progress">
+                        <span className="music-child-card__time music-child-card__time--current text-accent font-mono text-[11px] font-bold min-w-[2.2rem] text-left">
+                          {formatMMSS(currentTime)}
+                        </span>
+                        <input
+                          type="range"
+                          min="0"
+                          max={duration > 0 ? duration : Math.max(currentTime, 180)}
+                          value={currentTime}
+                          onMouseDown={() => setIsSeeking(true)}
+                          onTouchStart={() => setIsSeeking(true)}
+                          onChange={(e) => {
+                            const newTime = Number(e.target.value);
+                            setCurrentTime(newTime);
+                            handleSeek(newTime);
+                          }}
+                          onMouseUp={() => setIsSeeking(false)}
+                          onTouchEnd={() => setIsSeeking(false)}
+                          className="music-child-card__progress-slider music-child-card__slider flex-1 h-1.5 rounded-none cursor-pointer"
+                          style={{
+                            accentColor: "var(--accent, #f6c76d)",
+                            background: `linear-gradient(to right, var(--accent, #f6c76d) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%, rgba(255, 255, 255, 0.2) ${(currentTime / (duration || Math.max(currentTime, 180))) * 100}%)`,
+                          }}
+                          aria-label="Song progress"
+                        />
+                        <span className="music-child-card__time music-child-card__time--total text-text-muted font-mono text-[11px] font-semibold min-w-[2.2rem] text-right">
+                          {duration > 0 ? formatMMSS(duration) : (currentTime > 0 ? formatMMSS(Math.max(currentTime, 180)) : "--:--")}
+                        </span>
+                      </div>
 
-                  {/* Volume Row: Mute Toggle, Range Slider, Percentage */}
-                  <div className="music-child-card__volume flex items-center gap-2 w-full" aria-label="Music volume control">
-                    <button
-                      type="button"
-                      className="music-child-card__mute shrink-0 text-accent transition-colors"
-                      onClick={() => {
-                        const nextMuted = !muted;
-                        setMuted(nextMuted);
-                        sendVolumeToIframe(volume, nextMuted);
-                      }}
-                      aria-label={muted ? "Unmute YouTube Music" : "Mute YouTube Music"}
-                      title={muted ? "Unmute" : "Mute"}
-                    >
-                      {muted || volume === 0 ? (
-                        <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-accent" />
-                      ) : (
-                        <Volume2Icon className="w-3.5 h-3.5 text-accent hover:text-accent-hover" />
-                      )}
-                    </button>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={muted ? 0 : volume}
-                      onChange={(e) => {
-                        const nextVol = Number(e.target.value);
-                        setVolume(nextVol);
-                        if (muted) setMuted(false);
-                        sendVolumeToIframe(nextVol, false);
-                      }}
-                      className="music-child-card__slider flex-1 h-1.5 rounded-full cursor-pointer"
-                      style={{
-                        accentColor: "var(--accent, #f6c76d)",
-                        background: `linear-gradient(to right, var(--accent, #f6c76d) ${muted ? 0 : volume}%, rgba(255, 255, 255, 0.2) ${muted ? 0 : volume}%)`,
-                      }}
-                      aria-label="YouTube Music Volume"
-                    />
-                    <span className="music-child-card__vol-text text-accent font-mono text-[11px] font-bold min-w-[2.2rem] text-right">
-                      {muted ? "0%" : `${volume}%`}
-                    </span>
-                  </div>
+                      {/* Volume Row: Mute Toggle, Range Slider, Percentage */}
+                      <div className="music-child-card__volume flex items-center gap-2 w-full" aria-label="Music volume control">
+                        <button
+                          type="button"
+                          className="music-child-card__mute shrink-0 text-accent transition-colors"
+                          onClick={() => {
+                            const nextMuted = !muted;
+                            setMuted(nextMuted);
+                            sendVolumeToIframe(volume, nextMuted);
+                          }}
+                          aria-label={muted ? "Unmute YouTube Music" : "Mute YouTube Music"}
+                          title={muted ? "Unmute" : "Mute"}
+                        >
+                          {muted || volume === 0 ? (
+                            <VolumeXIcon className="w-3.5 h-3.5 text-text-muted hover:text-accent" />
+                          ) : (
+                            <Volume2Icon className="w-3.5 h-3.5 text-accent hover:text-accent-hover" />
+                          )}
+                        </button>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={muted ? 0 : volume}
+                          onChange={(e) => {
+                            const nextVol = Number(e.target.value);
+                            setVolume(nextVol);
+                            if (muted) setMuted(false);
+                            sendVolumeToIframe(nextVol, false);
+                          }}
+                          className="music-child-card__slider flex-1 h-1.5 rounded-none cursor-pointer"
+                          style={{
+                            accentColor: "var(--accent, #f6c76d)",
+                            background: `linear-gradient(to right, var(--accent, #f6c76d) ${muted ? 0 : volume}%, rgba(255, 255, 255, 0.2) ${muted ? 0 : volume}%)`,
+                          }}
+                          aria-label="YouTube Music Volume"
+                        />
+                        <span className="music-child-card__vol-text text-accent font-mono text-[11px] font-bold min-w-[2.2rem] text-right">
+                          {muted ? "0%" : `${volume}%`}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="music-provider-player__bar">

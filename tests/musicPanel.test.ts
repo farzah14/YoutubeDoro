@@ -74,4 +74,19 @@ test("Music renders a child card with song title, volume control, and playback t
   assert.match(stylesSource, /accent-color:\s*var\(--accent/);
 });
 
+test("Music child card uses square corners and can minimize", () => {
+  assert.match(source, /music-child-card--minimized/);
+  assert.match(source, /music-child-card__btn--min/);
+  assert.match(source, /music-child-card__btn--expand/);
+  assert.match(source, /isCardMinimized/);
+  assert.match(source, /MinusIcon/);
+  assert.match(source, /PlusIcon/);
+  assert.match(stylesSource, /\.music-child-card\s*\{[\s\S]*border-radius:\s*0/);
+  assert.match(stylesSource, /\.music-child-card--minimized\s*\{/);
+  assert.match(stylesSource, /\.music-child-card__btn--min/);
+  assert.match(stylesSource, /\.music-child-card__btn--expand/);
+  assert.match(stylesSource, /\.music-child-card__progress-slider\s*\{[\s\S]*border-radius:\s*0/);
+});
+
+
 
