@@ -1,3 +1,4 @@
+import { updateSessionCookies } from "./lib/supabase/sessionCookies";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -16,11 +17,7 @@ export async function proxy(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        for (const { name, value, options } of cookiesToSet) {
-          request.cookies.set(name, value);
-          response = NextResponse.next({ request });
-          response.cookies.set(name, value, options);
-        }
+        response = updateSessionCookies(request, response, cookiesToSet);
       },
     },
   });
