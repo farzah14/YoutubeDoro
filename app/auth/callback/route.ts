@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const next = safeNext(url.searchParams.get("next"));
   const supabase = await createSupabaseServerClient();
   if (!supabase || !code) {
-    return authErrorRedirect(request, providerError === "bad_oauth_state" ? providerError : undefined);
+    return authErrorRedirect(request, providerError ?? undefined);
   }
 
   const { error } = await supabase.auth.exchangeCodeForSession(
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     flowId ? { flowId } : undefined,
   );
   if (error) {
-    return authErrorRedirect(request, error.code === "bad_oauth_state" ? error.code : undefined);
+    return authErrorRedirect(request, error.code);
   }
 
   const { data, error: userError } = await supabase.auth.getUser();

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createOAuthAttempt } from "@/lib/supabase/oauthAttempt";
 import { LoginHomeBackdrop } from "@/components/auth/LoginHomeBackdrop";
 
 interface AuthScreenProps {
@@ -22,6 +23,7 @@ function GoogleIcon() {
 
 export function AuthScreen({ initialError, next = "/" }: AuthScreenProps) {
   const [busy, setBusy] = useState(false);
+  const [runOAuthAttempt] = useState(() => createOAuthAttempt());
   const [error, setError] = useState(initialError ?? "");
 
   const signInWithGoogle = async () => {
@@ -32,19 +34,23 @@ export function AuthScreen({ initialError, next = "/" }: AuthScreenProps) {
       return;
     }
 
-    setBusy(true);
-    const callback = new URL("/auth/callback", window.location.origin);
-    callback.searchParams.set("next", next);
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: callback.toString(),
-        scopes: "https://www.googleapis.com/auth/youtube.readonly",
-      },
-    });
-    if (oauthError) {
+    try {
+      await runOAuthAttempt(async () => {
+        setBusy(true);
+        const callback = new URL("/auth/callback", window.location.origin);
+        callback.searchParams.set("next", next);
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: callback.toString(),
+            scopes: "https://www.googleapis.com/auth/youtube.readonly",
+          },
+        });
+        if (oauthError) throw oauthError;
+      });
+    } catch (error) {
       setBusy(false);
-      setError(oauthError.message);
+      setError(error instanceof Error ? error.message : "Google sign-in could not be started. Please try again.");
     }
   };
 
